@@ -13,23 +13,35 @@ def cast_money(v: MoneyValue):
     return v.units + v.nano / 1e9
 
 
-with Client(TOKEN) as client:
-    accounts = client.users.get_accounts()
+def get_payment():
+    with Client(TOKEN) as client:
+        accounts = client.users.get_accounts()
 
-    amount_total = 0
-    today_midnight = datetime.combine(datetime.today().date(), time.min)
-    for account in accounts.accounts:
-        print(f"Account name: {account.name}")
-        operations = client.operations.get_operations(account_id=account.id, from_=today_midnight)
+        total_amount = 0
+        message = "<b>💰 Купоныне выплаты за сегодня:</b>\n\n"
+        today_midnight = datetime.combine(datetime.today().date(), time.min)
 
-        amount = 0
-        for operation in operations.operations:
-            if not operation:
-                print("No operations")
-            if operation.operation_type == OperationType.OPERATION_TYPE_COUPON:
-                operation_amount = cast_money(operation.payment)
-                amount += operation_amount
-        amount_total += amount
-        print(f"Payments: {amount:,.2f}")
-        print()
-    print(f"Total Payments: {amount_total:,.2f}")
+        for account in accounts.accounts:
+            # message += f"📂 <b>{account.name}</b>\n"
+            operations = client.operations.get_operations(
+                account_id=account.id, from_=today_midnight
+            )
+
+            account_amount = 0
+            if not operations.operations:
+                message += f"<b>{account.name}</b>: 0₽\n\n"
+                # message += "    Нет купонных выплат\n\n"
+                continue
+
+            for operation in operations.operations:
+                if operation.operation_type == OperationType.OPERATION_TYPE_COUPON:
+                    operation_amount = cast_money(operation.payment)
+                    account_amount += operation_amount
+
+            total_amount += account_amount
+            message += f"<b>{account.name}</b>: {account_amount:,.2f}₽\n\n"
+            # message += f"   💵 Выплаты: <b>{account_amount:,.2f}</b>\n\n"
+
+        message += f"<b>🧾 Сумма выплат:</b> {total_amount:,.2f}₽"
+
+        return message
