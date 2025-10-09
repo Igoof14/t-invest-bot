@@ -16,23 +16,18 @@ def cast_money(v: MoneyValue):
 with Client(TOKEN) as client:
     accounts = client.users.get_accounts()
 
-
-with Client(TOKEN) as client:
-    # today_midnight = datetime.combine(datetime.today().date(), time.min)
-    yesterday_midnight = datetime.combine((datetime.today() - timedelta(days=1)).date(), time.min)
+    today_midnight = datetime.combine(datetime.today().date(), time.min)
     for account in accounts.accounts:
         print(f"Account name: {account.name}")
-        operations = client.operations.get_operations(
-            account_id=account.id, from_=yesterday_midnight
-        )
+        operations = client.operations.get_operations(account_id=account.id, from_=today_midnight)
 
         amount = 0
         for operation in operations.operations:
             if not operation:
                 print("No operations")
             if operation.operation_type == OperationType.OPERATION_TYPE_COUPON:
-                amount = cast_money(operation.payment)
+                operation_amount = cast_money(operation.payment)
+                amount += operation_amount
 
-        print(f"Payments: {amount}")
-
+        print(f"Payments: {amount:,.2f}")
         print()
