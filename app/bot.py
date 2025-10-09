@@ -1,12 +1,11 @@
 import asyncio
 import os
 
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 from aiogram.types import Message
 from dotenv import load_dotenv
-
-from main import get_payment
+from invest import get_payment
 
 _ = load_dotenv(".env")
 TOKEN = str(os.environ.get("bot_token"))
@@ -18,13 +17,13 @@ dp = Dispatcher()
 
 @dp.message(Command(commands=["start"]))
 async def start_handler(message: Message):
-    await message.answer(get_payment(), parse_mode="HTML")
+    """Start handler."""
+    _ = await message.answer(get_payment(), parse_mode="HTML")
 
 
-# функция для запуска бота
 async def main():
-    # запускаем polling
-    await dp.start_polling(bot)
+    """Start the bot."""
+    await dp.start_polling(bot)  # type: ignore[reportUnknownMemberType]
 
 
 if __name__ == "__main__":
