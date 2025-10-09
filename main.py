@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, time, timedelta
+from datetime import datetime, time
 
 from dotenv import load_dotenv
 from tinkoff.invest import Client, MoneyValue, OperationType
