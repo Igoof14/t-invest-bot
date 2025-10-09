@@ -14,6 +14,7 @@ def cast_money(v: MoneyValue):
 
 
 def get_payment():
+    """Get payment amount for today."""
     with Client(TOKEN) as client:
         accounts = client.users.get_accounts()
 
