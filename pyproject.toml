@@ -1,0 +1,12 @@
+[project]
+name = "tinek-invest"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "aiohttp>=3.13.0",
+    "certifi>=2025.10.5",
+    "dotenv>=0.9.9",
+    "tinkoff-investments>=0.2.0b117",
+]
