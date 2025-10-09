@@ -28,7 +28,7 @@ def get_payment():
 
             account_amount = 0
             if not operations.operations:
-                message += f"<b>{account.name}</b>: 0₽\n\n"
+                message += f"<b>{account.name}</b>: 0₽\n"
                 continue
 
             for operation in operations.operations:
@@ -37,8 +37,8 @@ def get_payment():
                     account_amount += operation_amount
 
             total_amount += account_amount
-            message += f"   <b>{account.name}</b>: {account_amount:,.2f}₽\n\n"
+            message += f"<b>{account.name}</b>: {account_amount:,.2f}₽\n"
 
-        message += f"<b> Сумма выплат:</b> {total_amount:,.2f}₽"
+        message += f"\n<b>Сумма выплат:</b> {total_amount:,.2f}₽"
 
         return message
