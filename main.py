@@ -18,11 +18,10 @@ def get_payment():
         accounts = client.users.get_accounts()
 
         total_amount = 0
-        message = "<b>💰 Купоныне выплаты за сегодня:</b>\n\n"
+        message = "<b>Купоныне выплаты за сегодня:</b>\n\n"
         today_midnight = datetime.combine(datetime.today().date(), time.min)
 
         for account in accounts.accounts:
-            # message += f"📂 <b>{account.name}</b>\n"
             operations = client.operations.get_operations(
                 account_id=account.id, from_=today_midnight
             )
@@ -30,7 +29,6 @@ def get_payment():
             account_amount = 0
             if not operations.operations:
                 message += f"<b>{account.name}</b>: 0₽\n\n"
-                # message += "    Нет купонных выплат\n\n"
                 continue
 
             for operation in operations.operations:
@@ -39,9 +37,8 @@ def get_payment():
                     account_amount += operation_amount
 
             total_amount += account_amount
-            message += f"<b>{account.name}</b>: {account_amount:,.2f}₽\n\n"
-            # message += f"   💵 Выплаты: <b>{account_amount:,.2f}</b>\n\n"
+            message += f"   <b>{account.name}</b>: {account_amount:,.2f}₽\n\n"
 
-        message += f"<b>🧾 Сумма выплат:</b> {total_amount:,.2f}₽"
+        message += f"<b> Сумма выплат:</b> {total_amount:,.2f}₽"
 
         return message

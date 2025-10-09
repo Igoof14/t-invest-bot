@@ -4,18 +4,18 @@ import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message
+from dotenv import load_dotenv
 
 from main import get_payment
 
-# токен вашего бота
-TOKEN = "8248723238:AAHN_nOUmeQ6t7tZg3iBEaesQ8Jvk4amgDc"
+_ = load_dotenv(".env")
+TOKEN = str(os.environ.get("bot_token"))
 
-# создаём объекты бота и диспетчера
+
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
 
-# обработчик команды /start
 @dp.message(Command(commands=["start"]))
 async def start_handler(message: Message):
     await message.answer(get_payment(), parse_mode="HTML")
