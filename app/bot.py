@@ -48,7 +48,7 @@ async def send_daily_report():
 async def main():
     """Start the bot."""
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
-    _ = scheduler.add_job(send_daily_report, CronTrigger(hour=16, minute=42))
+    _ = scheduler.add_job(send_daily_report, CronTrigger(hour=18, minute=10))
     scheduler.start()
 
     await dp.start_polling(bot)
