@@ -3,12 +3,11 @@ import os
 
 from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
-from aiogram.types import Message
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
+from aiogram.types import BotCommand, KeyboardButton, Message, ReplyKeyboardMarkup
+from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore
+from apscheduler.triggers.cron import CronTrigger  # type: ignore
 from dotenv import load_dotenv
-
-from app.invest import get_payment
+from invest import get_payment
 
 _ = load_dotenv(".env")
 TOKEN = str(os.environ.get("bot_token"))
@@ -21,9 +20,31 @@ user_ids: set[int] = set()
 
 @dp.message(Command("start"))
 async def start_handler(message: Message):
-    """обработка /start."""
     user_ids.add(message.chat.id)
-    _ = await message.answer(text="Привет! Я Bondelo, делюсь информациец о облигациях")
+    _ = await message.answer(text="Привет! Я Bondelo, делюсь информацией о облигациях")
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Купоны сегодня")],
+            [KeyboardButton(text="Мои отчеты")],
+            [KeyboardButton(text="Доступные отчеты")],
+            [KeyboardButton(text="Помощь")],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=False,
+    )
+
+    _ = await message.answer(
+        text="Привет! Я Bondelo, делюсь информацией о облигациях", reply_markup=keyboard
+    )
+
+
+@dp.message()
+async def handle_buttons(message: Message):
+    """Hangle buttons."""
+    if message.text == "Получить отчёт":
+        await message.answer(get_payment(), parse_mode="HTML")
+    elif message.text == "Помощь":
+        await message.answer("Обратитесь к поддержке: https://t.me/your_support_bot")
 
 
 @dp.message(Command("report"))
@@ -42,7 +63,7 @@ async def send_daily_report():
         try:
             await bot.send_message(uid, text, parse_mode="HTML")
         except Exception as e:
-            print(f"❌ ошибка при отправке {uid}: {e}")
+            print(f"Ошибка при отправке {uid}: {e}")
 
 
 async def main():

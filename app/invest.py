@@ -19,7 +19,7 @@ def get_payment():
         accounts = client.users.get_accounts()
 
         total_amount = 0
-        message = "<b>Купоныне выплаты за сегодня:</b>\n\n"
+        message = "<b>Купонные выплаты за сегодня:</b>\n\n"
         today_midnight = datetime.combine(datetime.today().date(), time.min)
 
         for account in accounts.accounts:
