@@ -21,13 +21,10 @@ user_ids: set[int] = set()
 @dp.message(Command("start"))
 async def start_handler(message: Message):
     user_ids.add(message.chat.id)
-    _ = await message.answer(text="Привет! Я Bondelo, делюсь информацией о облигациях")
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="Купоны сегодня")],
-            [KeyboardButton(text="Мои отчеты")],
-            [KeyboardButton(text="Доступные отчеты")],
-            [KeyboardButton(text="Помощь")],
+            [KeyboardButton(text="Купоны сегодня"), KeyboardButton(text="Мои отчеты")],
+            [KeyboardButton(text="Доступные отчеты"), KeyboardButton(text="Помощь")],
         ],
         resize_keyboard=True,
         one_time_keyboard=False,
@@ -41,7 +38,7 @@ async def start_handler(message: Message):
 @dp.message()
 async def handle_buttons(message: Message):
     """Hangle buttons."""
-    if message.text == "Получить отчёт":
+    if message.text == "Купоны сегодня":
         await message.answer(get_payment(), parse_mode="HTML")
     elif message.text == "Помощь":
         await message.answer("Обратитесь к поддержке: https://t.me/your_support_bot")
