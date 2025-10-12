@@ -11,4 +11,5 @@ dependencies = [
     "dotenv>=0.9.9",
     "pytz>=2025.2",
     "tinkoff-investments>=0.2.0b117",
+    "watchfiles>=1.1.0",
 ]
