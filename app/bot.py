@@ -9,15 +9,11 @@ from aiogram.types import BotCommand, KeyboardButton, Message, ReplyKeyboardMark
 from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore
 from apscheduler.triggers.cron import CronTrigger  # type: ignore
 from dotenv import load_dotenv
+from enums import ReportType
 from invest import get_coupon_payment_today
 
 _ = load_dotenv(".env")
 TOKEN = str(os.environ.get("bot_token"))
-
-
-class ReportType(Enum):
-    DAILY = "daily"
-    WEEKLY = "weekly"
 
 
 bot = Bot(token=TOKEN)
