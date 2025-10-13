@@ -1,5 +1,5 @@
 import os
-from datetime import date, datetime, time, timedelta
+from datetime import datetime
 
 from dotenv import load_dotenv
 from tinkoff.invest import Client, MoneyValue, OperationType
@@ -19,8 +19,7 @@ def get_coupon_payment(start_datetime: datetime):
         accounts = client.users.get_accounts()
 
         total_amount = 0
-        message = "<b>Купонные выплаты за сегодня:</b>\n\n"
-
+        message = ""
         for account in accounts.accounts:
             operations = client.operations.get_operations(
                 account_id=account.id, from_=start_datetime
