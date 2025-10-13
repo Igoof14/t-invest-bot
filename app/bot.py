@@ -1,25 +1,63 @@
 import asyncio
+import logging
 import os
 from datetime import datetime, time, timedelta
-from enum import Enum
+from random import randint
 
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
-from aiogram.types import BotCommand, KeyboardButton, Message, ReplyKeyboardMarkup
+from aiogram.types import (
+    BotCommand,
+    CallbackQuery,
+    InlineKeyboardButton,
+    KeyboardButton,
+    Message,
+    ReplyKeyboardMarkup,
+)
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore
 from apscheduler.triggers.cron import CronTrigger  # type: ignore
+from config import config
 from dotenv import load_dotenv
 from enums import ReportType
 from invest import get_coupon_payment_today
 
-_ = load_dotenv(".env")
-TOKEN = str(os.environ.get("bot_token"))
+logging.basicConfig(level=logging.INFO)
 
-
-bot = Bot(token=TOKEN)
+bot = Bot(token=config.bot_token.get_secret_value())
 dp = Dispatcher()
 
 user_ids: set[int] = set()
+
+
+@dp.message(Command("inline_url"))
+async def cmd_inline_url(message: Message, bot: Bot):
+    """Inline URL handler."""
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="GitHub", url="https://github.com"))
+    builder.row(InlineKeyboardButton(text="Оф. канал Telegram", url="tg://resolve?domain=telegram"))
+
+    await message.answer(
+        "Выберите ссылку",
+        reply_markup=builder.as_markup(),
+    )
+
+
+@dp.callback_query(F.data == "random_value")
+async def send_random_value(callback: CallbackQuery):
+    await callback.message.answer(str(randint(1, 10)))  # type: ignore
+    await callback.answer(text="Спасибо, что воспользовались ботом!", show_alert=True)
+
+
+@dp.message(Command("random"))
+async def cmd_random(message: Message):
+    """Get Callback handler."""
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="Нажми меня", callback_data="random_value"))
+    builder.add(InlineKeyboardButton(text="Нажми меня 2", callback_data="random_value"))
+    await message.answer(
+        "Нажмите на кнопку, чтобы бот отправил число от 1 до 10", reply_markup=builder.as_markup()
+    )
 
 
 @dp.message(Command("start"))
@@ -35,6 +73,9 @@ async def start_handler(message: Message):
                 KeyboardButton(text="Мои отчеты"),
                 KeyboardButton(text="Доступные отчеты"),
             ],
+            [
+                KeyboardButton(text="Донат"),
+            ],
         ],
         resize_keyboard=True,
         one_time_keyboard=False,
@@ -43,7 +84,7 @@ async def start_handler(message: Message):
         user_ids.add(message.chat.id)
 
         _ = await message.answer(
-            text=f"Привет! Я Bondelo, делюсь информацией о облигациях, user_id: {message.chat.id}",
+            text=f"Привет! Я Bondelo, делюсь информацией о облигациях",
             reply_markup=keyboard,
         )
     else:
@@ -121,6 +162,7 @@ async def main():
     )
     scheduler.start()
 
+    await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 
