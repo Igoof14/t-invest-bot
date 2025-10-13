@@ -45,6 +45,7 @@ async def cmd_inline_url(message: Message, bot: Bot):
 
 @dp.callback_query(F.data == "random_value")
 async def send_random_value(callback: CallbackQuery):
+    """Send random value."""
     await callback.message.answer(str(randint(1, 10)))  # type: ignore
     await callback.answer(text="Спасибо, что воспользовались ботом!", show_alert=True)
 
