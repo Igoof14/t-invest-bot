@@ -13,7 +13,7 @@ def cast_money(v: MoneyValue):
     return v.units + v.nano / 1e9
 
 
-def get_coupon_payment_today(start_datetime: datetime):
+def get_coupon_payment(start_datetime: datetime):
     """Get payment amount for today."""
     with Client(TOKEN) as client:
         accounts = client.users.get_accounts()

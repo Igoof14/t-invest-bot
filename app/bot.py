@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 from datetime import datetime, time, timedelta
 from random import randint
 
@@ -20,7 +19,7 @@ from apscheduler.triggers.cron import CronTrigger  # type: ignore
 from config import config
 from dotenv import load_dotenv
 from enums import ReportType
-from invest import get_coupon_payment_today
+from invest import get_coupon_payment
 
 logging.basicConfig(level=logging.INFO)
 
@@ -97,18 +96,14 @@ async def handle_buttons(message: Message):
     """Hangle buttons."""
     if message.text == "Купоны сегодня":
         today_midnight = datetime.combine(datetime.today().date(), time.min)
-        await message.answer(
-            get_coupon_payment_today(start_datetime=today_midnight), parse_mode="HTML"
-        )
+        await message.answer(get_coupon_payment(start_datetime=today_midnight), parse_mode="HTML")
     elif message.text == "Купоны за неделю":
         today = datetime.today()
         start_datetime = datetime.combine(
             today.date() - timedelta(days=today.weekday()),
             time.min,
         )
-        await message.answer(
-            get_coupon_payment_today(start_datetime=start_datetime), parse_mode="HTML"
-        )
+        await message.answer(get_coupon_payment(start_datetime=start_datetime), parse_mode="HTML")
     elif message.text == "Помощь":
         await message.answer("Обратитесь к поддержке: https://t.me/your_support_bot")
 
@@ -139,7 +134,7 @@ async def send_report(report_type: ReportType):
             time.min,
         )
 
-    text = get_coupon_payment_today(start_datetime=start_datetime)
+    text = get_coupon_payment(start_datetime=start_datetime)
     for uid in user_ids:
         try:
             await bot.send_message(uid, text, parse_mode="HTML")
