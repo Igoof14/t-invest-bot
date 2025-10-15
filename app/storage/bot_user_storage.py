@@ -106,6 +106,24 @@ class BotUserStorage:
         return False
 
     @classmethod
+    async def get_token_by_telegram_id(cls, telegram_id: int) -> str | None:
+        """Достает токен пользователя по телеграм id."""
+        async for session in get_session():
+            try:
+                result = await session.execute(
+                    select(User.tinvest_token).where(User.telegram_id == telegram_id)
+                )
+                token = result.scalar_one_or_none()
+                logger.info(
+                    f"Токен пользователя {telegram_id}: {'найден' if token else 'не найден'}"
+                )
+                return token
+            except Exception as e:
+                logger.error(f"Ошибка при получении токена для пользователя {telegram_id}: {e}")
+                return None
+        return None
+
+    @classmethod
     async def add_token(cls, telegram_id: int, token: str) -> bool:
         """Добавляет токен пользователя в базу данных."""
         async for session in get_session():
