@@ -3,10 +3,10 @@
 import logging
 from datetime import datetime
 
-from database import get_session
+from core.database import get_session
 from models.user import User
 from sqlalchemy import func, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.engine import CursorResult
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +59,7 @@ class UserStorage:
                 await session.rollback()
                 logger.error(f"Ошибка при добавлении пользователя {telegram_id}: {e}")
                 raise e
+        return False
 
     @classmethod
     async def get_user_by_telegram_id(cls, telegram_id: int) -> User | None:
@@ -77,13 +78,14 @@ class UserStorage:
         async for session in get_session():
             try:
                 result = await session.execute(
-                    select(User.id).where(User.telegram_id == telegram_id, User.is_active == True)
+                    select(User.id).where(User.telegram_id == telegram_id, User.is_active)
                 )
                 user_id = result.scalar_one_or_none()
                 return user_id is not None
             except Exception as e:
                 logger.error(f"Ошибка при проверке пользователя {telegram_id}: {e}")
                 return False
+        return False
 
     @classmethod
     async def has_token(cls, telegram_id: int) -> bool:
@@ -117,6 +119,7 @@ class UserStorage:
                 logger.error(f"Ошибка при добавлении токена пользователя {telegram_id}: {e}")
                 await session.rollback()
                 return False
+        return False
 
     @classmethod
     async def remove_token(cls, telegram_id: int) -> bool:
@@ -132,32 +135,32 @@ class UserStorage:
                 logger.error(f"Ошибка при удалении токена пользователя {telegram_id}: {e}")
                 await session.rollback()
                 return False
+        return False
 
     @classmethod
     async def get_all_active_users(cls) -> list[int]:
         """Возвращает список telegram_id всех активных пользователей."""
+        result = []
         async for session in get_session():
             try:
-                result = await session.execute(
-                    select(User.telegram_id).where(User.is_active == True)
-                )
+                result = await session.execute(select(User.telegram_id).where(User.is_active))
                 return list(result.scalars().all())
             except Exception as e:
                 logger.error(f"Ошибка при получении активных пользователей: {e}")
                 return []
+        return []
 
     @classmethod
     async def get_user_count(cls) -> int:
         """Возвращает количество активных пользователей."""
         async for session in get_session():
             try:
-                result = await session.execute(
-                    select(func.count(User.id)).where(User.is_active == True)
-                )
+                result = await session.execute(select(func.count(User.id)).where(User.is_active))
                 return result.scalar() or 0
             except Exception as e:
                 logger.error(f"Ошибка при подсчете пользователей: {e}")
                 return 0
+        return 0
 
     @classmethod
     async def update_last_activity(cls, telegram_id: int) -> bool:
@@ -171,7 +174,8 @@ class UserStorage:
                 )
                 await session.commit()
 
-                if result.rowcount > 0:
+                affected = getattr(result, "rowcount", 0)
+                if affected > 0:
                     logger.debug(f"Обновлена активность пользователя: {telegram_id}")
                     return True
                 else:
@@ -184,6 +188,7 @@ class UserStorage:
                 await session.rollback()
                 logger.error(f"Ошибка при обновлении активности {telegram_id}: {e}")
                 return False
+        return False
 
     @classmethod
     async def deactivate_user(cls, telegram_id: int) -> bool:
@@ -195,14 +200,15 @@ class UserStorage:
                 )
                 await session.commit()
 
-                if result.rowcount > 0:
+                affected = getattr(result, "rowcount", 0)
+                if affected > 0:
                     logger.info(f"Деактивирован пользователь: {telegram_id}")
                     return True
-                else:
-                    logger.warning(f"Пользователь {telegram_id} не найден для деактивации")
-                    return False
+                logger.warning(f"Пользователь {telegram_id} не найден для деактивации")
+                return False
 
             except Exception as e:
                 await session.rollback()
                 logger.error(f"Ошибка при деактивации пользователя {telegram_id}: {e}")
                 return False
+        return False
