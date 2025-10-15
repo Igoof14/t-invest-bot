@@ -6,7 +6,7 @@ from aiogram import F
 from aiogram.types import Message
 from core.enums import Messages
 from keyboards import KeyboardHelper
-from storage.user_storage import UserStorage
+from storage import BotUserStorage
 
 logger = logging.getLogger(__name__)
 
@@ -17,13 +17,13 @@ async def start_handler(message: Message) -> None:
         main_keyboard = KeyboardHelper.create_main_keyboard()
         new_user_keyboard = KeyboardHelper.create_new_user_keyboard()
 
-        is_new_user = await UserStorage.add_user(
+        is_new_user = await BotUserStorage.add_user(
             telegram_id=message.chat.id,
             username=message.from_user.username if message.from_user else None,
             first_name=message.from_user.first_name if message.from_user else None,
             last_name=message.from_user.last_name if message.from_user else None,
         )
-        user_has_token = await UserStorage.has_token(telegram_id=message.chat.id)
+        user_has_token = await BotUserStorage.has_token(telegram_id=message.chat.id)
         logger.info(f"Токет пользователя: {user_has_token}")
         if is_new_user:
             await message.answer(Messages.WELCOME.value, reply_markup=new_user_keyboard)
@@ -32,7 +32,7 @@ async def start_handler(message: Message) -> None:
         else:
             await message.answer(Messages.ALREADY_KNOWN.value, reply_markup=main_keyboard)
 
-        logger.info(f"Всего пользователей: {await UserStorage.get_user_count()}")
+        logger.info(f"Всего пользователей: {await BotUserStorage.get_user_count()}")
 
     except Exception as e:
         logger.error(f"Ошибка в start handler: {e}")

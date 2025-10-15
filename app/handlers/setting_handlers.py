@@ -8,7 +8,7 @@ from aiogram.types import CallbackQuery, Message
 from core.enums import CallbackData
 from invest.invest import check_token
 from keyboards import KeyboardHelper
-from storage import UserStorage
+from storage import BotUserStorage
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class SettingHandler:
         telegram_id = message.chat.id
         token = str(message.text).strip()
         if check_token(token):
-            await UserStorage.add_token(telegram_id=telegram_id, token=token)
+            await BotUserStorage.add_token(telegram_id=telegram_id, token=token)
             main_keyboard = KeyboardHelper.create_main_keyboard()
             await message.answer("Токен успешно сохранён!", reply_markup=main_keyboard)
             await state.clear()

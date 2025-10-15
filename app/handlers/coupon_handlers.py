@@ -40,8 +40,8 @@ class CouponHandler:
 
             date_func, title = cls.PERIOD_MAPPING[callback.data]
             start_datetime = date_func()
-
-            coupon_data = get_coupon_payment(start_datetime)
+            user_id = callback.from_user.id
+            coupon_data = await get_coupon_payment(user_id, start_datetime)
             message_text = title + coupon_data
 
             if callback.message:
