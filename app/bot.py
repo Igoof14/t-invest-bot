@@ -6,6 +6,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore
 from apscheduler.triggers.cron import CronTrigger  # type: ignore
 from core.config import config
 from core.enums import ReportType
+from database import db_manager
 from handlers.registration import register_handlers
 from services.report_service import ReportService
 from utils.bot_utils import BotUtils
@@ -18,6 +19,7 @@ dp = Dispatcher()
 
 async def main():
     """Start the bot."""
+    await db_manager.create_tables()
     register_handlers(dp, bot)
     await BotUtils.set_commands(bot)
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
