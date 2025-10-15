@@ -1,5 +1,5 @@
 """Модуль для работы с хранилищем данных."""
 
-from .user_storage import UserStorage
+from .bot_user_storage import BotUserStorage
 
-__all__ = ["UserStorage"]
+__all__ = ["BotUserStorage"]
