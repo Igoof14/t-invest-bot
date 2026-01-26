@@ -1,11 +1,7 @@
-import os
 from datetime import datetime
 
-from dotenv import load_dotenv
-from tinkoff.invest import Client, MoneyValue, OperationType, exceptions
-
-_ = load_dotenv(".env")
-TOKEN = str(os.environ.get("tInvest"))
+from storage import BotUserStorage
+from tinkoff.invest import Client, MoneyValue, OperationType
 
 
 def cast_money(v: MoneyValue):
@@ -13,9 +9,11 @@ def cast_money(v: MoneyValue):
     return v.units + v.nano / 1e9
 
 
-def get_coupon_payment(start_datetime: datetime):
+async def get_coupon_payment(user_id: int, start_datetime: datetime):
     """Get payment amount for today."""
-    with Client(TOKEN) as client:
+    TOKEN = await BotUserStorage.get_token_by_telegram_id(telegram_id=user_id)
+
+    with Client(str(TOKEN)) as client:
         accounts = client.users.get_accounts()
 
         total_amount = 0

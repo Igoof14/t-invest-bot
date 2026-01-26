@@ -3,9 +3,10 @@
 import logging
 
 from aiogram import Bot
+from aiogram.types import ChatIdUnion
 from core.enums import ReportType
 from invest.invest import get_coupon_payment
-from storage.user_storage import UserStorage
+from storage import BotUserStorage
 from utils.datetime_utils import DateTimeHelper
 
 logger = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ class ReportService:
             report_type: Тип отчёта (дневной/недельный)
 
         """
-        user_count = await UserStorage.get_user_count()
+        user_count = await BotUserStorage.get_user_count()
         if user_count == 0:
             logger.info("Нет пользователей для рассылки")
             return
@@ -37,14 +38,11 @@ class ReportService:
                 logger.error(f"Неизвестный тип отчета: {report_type.value}")
                 return
 
-            # Получаем данные о купонах
-            text = get_coupon_payment(start_datetime=start_datetime)
-
-            # Рассылаем отчёт всем пользователям
             failed_users = []
-            all_users = await UserStorage.get_all_active_users()
+            all_users = await BotUserStorage.get_all_active_users()
 
             for uid in all_users:
+                text = get_coupon_payment(user_id=uid, start_datetime=start_datetime)
                 try:
                     await bot.send_message(uid, text, parse_mode="HTML")
                 except Exception as e:
@@ -53,7 +51,7 @@ class ReportService:
 
             # Деактивируем пользователей, которым не удалось отправить сообщение
             for uid in failed_users:
-                await UserStorage.deactivate_user(uid)
+                await BotUserStorage.deactivate_user(uid)
 
             successful_sends = user_count - len(failed_users)
             logger.info(f"Отчет '{report_type.value}' отправлен {successful_sends} пользователям")

@@ -5,6 +5,7 @@ import logging
 from aiogram import F
 from aiogram.types import Message
 from core.enums import Messages
+from invest.bonds import get_nearest_maturities, get_nearest_offers
 from keyboards import KeyboardHelper
 from storage import BotUserStorage
 
@@ -75,3 +76,39 @@ async def handle_settings_button(message: Message) -> None:
     except Exception as e:
         logger.error(f"Ошибка при обработке кнопки 'Настройки': {e}")
         await message.answer("Произошла ошибка")
+
+
+async def handle_maturities_button(message: Message) -> None:
+    """Обработка кнопки 'Погашения'."""
+    try:
+        await message.answer("Загружаю данные о погашениях...")
+        user_id = message.from_user.id if message.from_user else message.chat.id
+        maturities_data = await get_nearest_maturities(user_id)
+
+        if maturities_data:
+            response = Messages.MATURITIES_TITLE.value + maturities_data
+        else:
+            response = Messages.NO_BONDS.value
+
+        await message.answer(response, parse_mode="HTML")
+    except Exception as e:
+        logger.error(f"Ошибка при получении погашений: {e}")
+        await message.answer("Произошла ошибка при получении данных о погашениях")
+
+
+async def handle_offers_button(message: Message) -> None:
+    """Обработка кнопки 'Оферты'."""
+    try:
+        await message.answer("Загружаю данные об офертах...")
+        user_id = message.from_user.id if message.from_user else message.chat.id
+        offers_data = await get_nearest_offers(user_id)
+
+        if offers_data:
+            response = Messages.OFFERS_TITLE.value + offers_data
+        else:
+            response = Messages.NO_OFFERS.value
+
+        await message.answer(response, parse_mode="HTML")
+    except Exception as e:
+        logger.error(f"Ошибка при получении оферт: {e}")
+        await message.answer("Произошла ошибка при получении данных об офертах")
