@@ -9,12 +9,14 @@ from core.enums import ButtonTexts, CallbackData
 from .base_handlers import (
     handle_coupons_button,
     handle_help_button,
+    handle_maturities_button,
     handle_my_reports_button,
+    handle_offers_button,
     handle_settings_button,
     start_handler,
 )
 from .coupon_handlers import CouponHandler
-from .setting_handlers import SettingHandler, TokenStates
+from .setting_handlers import AlertSettingsHandler, SettingHandler, ThresholdStates, TokenStates
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +34,8 @@ def register_handlers(dp: Dispatcher, bot: Bot) -> None:
 
     # Обработчики кнопок основной клавиатуры
     dp.message.register(handle_coupons_button, F.text == ButtonTexts.COUPONS.value)
+    dp.message.register(handle_maturities_button, F.text == ButtonTexts.MATURITIES.value)
+    dp.message.register(handle_offers_button, F.text == ButtonTexts.OFFERS.value)
     dp.message.register(handle_help_button, F.text == ButtonTexts.HELP.value)
     dp.message.register(handle_my_reports_button, F.text == ButtonTexts.MY_REPORTS.value)
     dp.message.register(handle_settings_button, F.text == ButtonTexts.SETTINGS.value)
@@ -51,5 +55,44 @@ def register_handlers(dp: Dispatcher, bot: Bot) -> None:
     }
     dp.callback_query.register(SettingHandler.handle_settings, F.data.in_(callback_values))
     dp.message.register(SettingHandler.handle_token_message, TokenStates.waiting_for_token)
+
+    # Обработчики уведомлений о ценах
+    dp.callback_query.register(
+        AlertSettingsHandler.handle_price_alerts_menu,
+        F.data == CallbackData.PRICE_ALERTS_SETTINGS.value,
+    )
+    dp.callback_query.register(
+        AlertSettingsHandler.handle_toggle_alerts,
+        F.data == CallbackData.PRICE_ALERTS_TOGGLE.value,
+    )
+    dp.callback_query.register(
+        AlertSettingsHandler.handle_thresholds_menu,
+        F.data == CallbackData.PRICE_ALERTS_SETTINGS.value + "_thresholds",
+    )
+
+    # Обработчики выбора порогов
+    threshold_callbacks = {
+        CallbackData.PRICE_ALERTS_DROP_WARNING.value,
+        CallbackData.PRICE_ALERTS_DROP_CRITICAL.value,
+        CallbackData.PRICE_ALERTS_RISE_WARNING.value,
+        CallbackData.PRICE_ALERTS_RISE_CRITICAL.value,
+    }
+    dp.callback_query.register(
+        AlertSettingsHandler.handle_threshold_select, F.data.in_(threshold_callbacks)
+    )
+
+    # Обработчики ввода порогов
+    dp.message.register(
+        AlertSettingsHandler.handle_threshold_input, ThresholdStates.waiting_for_drop_warning
+    )
+    dp.message.register(
+        AlertSettingsHandler.handle_threshold_input, ThresholdStates.waiting_for_drop_critical
+    )
+    dp.message.register(
+        AlertSettingsHandler.handle_threshold_input, ThresholdStates.waiting_for_rise_warning
+    )
+    dp.message.register(
+        AlertSettingsHandler.handle_threshold_input, ThresholdStates.waiting_for_rise_critical
+    )
 
     logger.info("Все обработчики успешно зарегистрированы")

@@ -20,10 +20,11 @@ class Base(DeclarativeBase):
 
 # Импортируем все модели здесь, чтобы SQLAlchemy их видел при создании таблиц
 try:
+    from models.alerts import BondPriceHistory, SentAlert, UserAlertSettings
     from models.user import User
 
     # Добавляем все модели в список для явного экспорта
-    __all__ = ["Base", "User"]
+    __all__ = ["Base", "User", "UserAlertSettings", "BondPriceHistory", "SentAlert"]
 except ImportError as e:
     # Если модель не может быть импортирована, логируем предупреждение
     import logging
