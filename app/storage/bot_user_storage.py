@@ -93,13 +93,12 @@ class BotUserStorage:
         async for session in get_session():
             try:
                 result = await session.execute(
-                    select(User.tinvest_token).where(
-                        User.telegram_id == telegram_id, User.tinvest_token.isnot(None)
-                    )
+                    select(User.tinvest_token).where(User.telegram_id == telegram_id)
                 )
-                logger.info(f"result: {result}")
                 token = result.scalar_one_or_none()
-                return token is not None
+                has_valid_token = token is not None and token != ""
+                logger.info(f"Проверка токена для {telegram_id}: {has_valid_token}")
+                return has_valid_token
             except Exception as e:
                 logger.error(f"Ошибка при проверке токена пользователя {telegram_id}: {e}")
                 return False

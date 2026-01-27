@@ -25,13 +25,15 @@ async def start_handler(message: Message) -> None:
             last_name=message.from_user.last_name if message.from_user else None,
         )
         user_has_token = await BotUserStorage.has_token(telegram_id=message.chat.id)
-        logger.info(f"Токет пользователя: {user_has_token}")
-        if is_new_user:
-            await message.answer(Messages.WELCOME.value, reply_markup=new_user_keyboard)
-        elif not user_has_token:
-            await message.answer(Messages.NOT_TOKEN.value, reply_markup=new_user_keyboard)
-        else:
+        logger.info(
+            f"Пользователь {message.chat.id}: новый={is_new_user}, есть_токен={user_has_token}"
+        )
+        if user_has_token:
             await message.answer(Messages.ALREADY_KNOWN.value, reply_markup=main_keyboard)
+        elif is_new_user:
+            await message.answer(Messages.WELCOME.value, reply_markup=new_user_keyboard)
+        else:
+            await message.answer(Messages.NOT_TOKEN.value, reply_markup=new_user_keyboard)
 
         logger.info(f"Всего пользователей: {await BotUserStorage.get_user_count()}")
 
