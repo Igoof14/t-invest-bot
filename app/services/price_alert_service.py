@@ -172,17 +172,17 @@ class PriceAlertService:
         lines = ["<b>Множественные изменения цен облигаций</b>\n"]
 
         if critical:
-            lines.append(f"🚨 <b>Критических: {len(critical)}</b>")
+            lines.append(f"<b>Критических: {len(critical)}</b>")
             for a in critical[:5]:  # Показываем максимум 5
-                direction = "📉" if a.change_percent < 0 else "📈"
+                direction = "[-]" if a.change_percent < 0 else "[+]"
                 lines.append(
                     f"  {direction} <code>{a.ticker}</code>: {a.change_percent:+.1f}%"
                 )
 
         if warnings:
-            lines.append(f"\n⚠️ <b>Предупреждений: {len(warnings)}</b>")
+            lines.append(f"\n<b>Предупреждений: {len(warnings)}</b>")
             for a in warnings[:5]:  # Показываем максимум 5
-                direction = "📉" if a.change_percent < 0 else "📈"
+                direction = "[-]" if a.change_percent < 0 else "[+]"
                 lines.append(
                     f"  {direction} <code>{a.ticker}</code>: {a.change_percent:+.1f}%"
                 )
@@ -190,7 +190,7 @@ class PriceAlertService:
         if len(anomalies) > 10:
             lines.append(f"\n... и ещё {len(anomalies) - 10} изменений")
 
-        lines.append("\n💡 <i>Рекомендуем проверить портфель</i>")
+        lines.append("\n<i>Рекомендуем проверить портфель</i>")
 
         message = "\n".join(lines)
 
@@ -228,14 +228,13 @@ class PriceAlertService:
         # Заголовок
         if is_critical:
             if is_drop:
-                header = "🚨 <b>КРИТИЧЕСКОЕ падение цены!</b>"
+                header = "<b>КРИТИЧЕСКОЕ падение цены!</b>"
             else:
-                header = "🚨 <b>КРИТИЧЕСКИЙ рост цены!</b>"
+                header = "<b>КРИТИЧЕСКИЙ рост цены!</b>"
         else:
-            header = "⚠️ <b>Внимание: изменение цены облигации</b>"
+            header = "<b>Внимание: изменение цены облигации</b>"
 
         # Направление изменения
-        direction = "📉" if is_drop else "📈"
         direction_text = "упала" if is_drop else "выросла"
 
         # Основное сообщение
@@ -243,10 +242,10 @@ class PriceAlertService:
             header,
             "",
             f"<code>{anomaly.ticker}</code> {anomaly.name}",
-            f"{direction} Цена {direction_text} на {anomaly.change_percent:+.1f}%",
-            f"   Было: {anomaly.old_price:.2f}%  →  Стало: {anomaly.new_price:.2f}%",
+            f"Цена {direction_text} на {anomaly.change_percent:+.1f}%",
+            f"   Было: {anomaly.old_price:.2f}%  ->  Стало: {anomaly.new_price:.2f}%",
             "",
-            f"💼 Счёт: {anomaly.account_name}",
+            f"Счёт: {anomaly.account_name}",
         ]
 
         # Рекомендация для критических
