@@ -2,15 +2,18 @@
 
 import logging
 from collections.abc import AsyncGenerator
+from pathlib import Path
 
 from models.base import Base
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 logger = logging.getLogger(__name__)
 
-# DATABASE_URL = "sqlite+aiosqlite:///./bot_data.db"
+# Путь к директории data относительно этого файла (core/database.py -> app/data/)
+DATA_DIR = Path(__file__).parent.parent / "data"
+DATA_DIR.mkdir(exist_ok=True)
 
-DATABASE_URL = "sqlite+aiosqlite:////app/data/bot_data.db"
+DATABASE_URL = f"sqlite+aiosqlite:///{DATA_DIR}/bot_data.db"
 
 
 class DatabaseManager:
