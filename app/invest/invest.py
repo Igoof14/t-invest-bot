@@ -1,36 +1,48 @@
+"""Функции для работы с T-Invest API."""
+
 from datetime import datetime
 
 from storage import BotUserStorage
-from tinkoff.invest import Client, MoneyValue, OperationType
+
+from .models import OperationType
+from .tbank_client import TBankClient, check_token_sync
 
 
-def cast_money(v: MoneyValue):
-    """Cast MoneyValue to float."""
-    return v.units + v.nano / 1e9
+async def get_coupon_payment(user_id: int, start_datetime: datetime) -> str:
+    """Получает сумму выплат купонов за период.
 
+    Args:
+        user_id: Telegram ID пользователя
+        start_datetime: Начало периода
 
-async def get_coupon_payment(user_id: int, start_datetime: datetime):
-    """Get payment amount for today."""
-    TOKEN = await BotUserStorage.get_token_by_telegram_id(telegram_id=user_id)
+    Returns:
+        Отформатированное сообщение с суммами выплат
 
-    with Client(str(TOKEN)) as client:
-        accounts = client.users.get_accounts()
+    """
+    token = await BotUserStorage.get_token_by_telegram_id(telegram_id=user_id)
+    if not token:
+        return "Токен не найден. Добавьте токен в настройках."
 
-        total_amount = 0
+    async with TBankClient(token) as client:
+        accounts = await client.get_accounts()
+
+        total_amount = 0.0
         message = ""
-        for account in accounts.accounts:
-            operations = client.operations.get_operations(
-                account_id=account.id, from_=start_datetime
+
+        for account in accounts:
+            operations = await client.get_operations(
+                account_id=account.id,
+                from_=start_datetime,
             )
 
-            account_amount = 0
-            if not operations.operations:
+            account_amount = 0.0
+            if not operations:
                 message += f"<b>{account.name}</b>: 0₽\n"
                 continue
 
-            for operation in operations.operations:
-                if operation.operation_type == OperationType.OPERATION_TYPE_COUPON:
-                    operation_amount = cast_money(operation.payment)
+            for operation in operations:
+                if operation.operation_type == OperationType.OPERATION_TYPE_COUPON.value:
+                    operation_amount = operation.payment.to_float()
                     account_amount += operation_amount
 
             total_amount += account_amount
@@ -42,13 +54,13 @@ async def get_coupon_payment(user_id: int, start_datetime: datetime):
 
 
 def check_token(token: str) -> bool:
-    """Проверяет, что токен действителен."""
-    try:
-        with Client(token) as client:
-            _ = client.users.get_info()
-            ...
-        return True
+    """Проверяет, что токен действителен.
 
-    except Exception as e:
-        print(f"Ошибка при проверке токена: {e}")
-        return False
+    Args:
+        token: API токен
+
+    Returns:
+        True если токен валиден
+
+    """
+    return check_token_sync(token)

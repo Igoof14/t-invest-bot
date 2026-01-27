@@ -1,19 +1,11 @@
+"""Функции для работы с облигациями через T-Invest API."""
+
 from datetime import UTC, datetime, timedelta
 
 from storage import BotUserStorage
-from tinkoff.invest import Client
-from tinkoff.invest.schemas import EventType, GetBondEventsRequest
 
-
-async def get_bonds(telegram_id: int):
-    """Получает список облигаций пользователя."""
-    token = await BotUserStorage.get_token_by_telegram_id(telegram_id=telegram_id)
-    if not token:
-        return []
-
-    with Client(token) as client:
-        bonds = client.instruments.get_bond_events()
-        return bonds.instruments
+from .models import EventType
+from .tbank_client import TBankClient
 
 
 async def get_nearest_maturities(telegram_id: int, limit: int = 5) -> str | None:
@@ -33,15 +25,15 @@ async def get_nearest_maturities(telegram_id: int, limit: int = 5) -> str | None
 
     bonds_with_maturity: list[dict] = []
 
-    with Client(token) as client:
+    async with TBankClient(token) as client:
         # Получаем все облигации одним запросом и строим кэш по figi
-        all_bonds = client.instruments.bonds()
-        bonds_cache = {bond.figi: bond for bond in all_bonds.instruments}
+        all_bonds = await client.get_bonds()
+        bonds_cache = {bond.figi: bond for bond in all_bonds}
 
-        accounts = client.users.get_accounts()
+        accounts = await client.get_accounts()
 
-        for account in accounts.accounts:
-            portfolio = client.operations.get_portfolio(account_id=account.id)
+        for account in accounts:
+            portfolio = await client.get_portfolio(account_id=account.id)
 
             for position in portfolio.positions:
                 if position.instrument_type != "bond":
@@ -51,11 +43,9 @@ async def get_nearest_maturities(telegram_id: int, limit: int = 5) -> str | None
                 if not bond or not bond.maturity_date:
                     continue
 
-                quantity = int(position.quantity.units)
-                current_price = (
-                    position.current_price.units + position.current_price.nano / 1e9
-                )
-                nominal = bond.nominal.units + bond.nominal.nano / 1e9
+                quantity = int(position.quantity.to_float())
+                current_price = position.current_price.to_float()
+                nominal = bond.nominal.to_float()
 
                 bonds_with_maturity.append(
                     {
@@ -118,17 +108,17 @@ async def get_nearest_offers(telegram_id: int, limit: int = 5) -> str | None:
     now = datetime.now(UTC)
     future_date = now + timedelta(days=365 * 5)
 
-    with Client(token) as client:
+    async with TBankClient(token) as client:
         # 1. Получаем все облигации одним запросом и строим кэш по figi
-        all_bonds = client.instruments.bonds()
-        bonds_cache = {bond.figi: bond for bond in all_bonds.instruments}
+        all_bonds = await client.get_bonds()
+        bonds_cache = {bond.figi: bond for bond in all_bonds}
 
         # 2. Собираем позиции из портфелей
         positions_by_figi: dict[str, list[dict]] = {}  # figi -> [{account_name, quantity}]
-        accounts = client.users.get_accounts()
+        accounts = await client.get_accounts()
 
-        for account in accounts.accounts:
-            portfolio = client.operations.get_portfolio(account_id=account.id)
+        for account in accounts:
+            portfolio = await client.get_portfolio(account_id=account.id)
 
             for position in portfolio.positions:
                 if position.instrument_type != "bond":
@@ -140,7 +130,7 @@ async def get_nearest_offers(telegram_id: int, limit: int = 5) -> str | None:
 
                 positions_by_figi[figi].append({
                     "account_name": account.name,
-                    "quantity": int(position.quantity.units),
+                    "quantity": int(position.quantity.to_float()),
                 })
 
         # 3. Запрашиваем события только для уникальных figi
@@ -152,17 +142,15 @@ async def get_nearest_offers(telegram_id: int, limit: int = 5) -> str | None:
                 continue
 
             try:
-                events = client.instruments.get_bond_events(
-                    request=GetBondEventsRequest(
-                        instrument_id=figi,
-                        from_=now,
-                        to=future_date,
-                        type=EventType.EVENT_TYPE_CALL,
-                    )
+                events = await client.get_bond_events(
+                    instrument_id=figi,
+                    from_=now,
+                    to=future_date,
+                    event_type=EventType.EVENT_TYPE_CALL,
                 )
 
-                for event in events.events:
-                    nominal = bond.nominal.units + bond.nominal.nano / 1e9
+                for event in events:
+                    nominal = bond.nominal.to_float()
 
                     # Добавляем запись для каждого счёта, где есть эта облигация
                     for pos in positions:

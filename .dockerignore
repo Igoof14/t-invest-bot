@@ -1,0 +1,13 @@
+.git
+.github
+.venv
+.env
+.ruff_cache
+.claude
+__pycache__
+*.py[cod]
+*.db
+.DS_Store
+*.md
+ruff.toml
+pyrightconfig.json

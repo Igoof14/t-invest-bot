@@ -5,7 +5,8 @@ from dataclasses import dataclass
 from enum import Enum
 
 from storage import AlertStorage, BotUserStorage
-from tinkoff.invest import Client
+
+from .tbank_client import TBankClient
 
 logger = logging.getLogger(__name__)
 
@@ -62,16 +63,16 @@ async def get_portfolio_bond_prices(telegram_id: int) -> list[BondPrice]:
     bond_prices: list[BondPrice] = []
 
     try:
-        with Client(token) as client:
+        async with TBankClient(token) as client:
             # Получаем все облигации для кэша
-            all_bonds = client.instruments.bonds()
-            bonds_cache = {bond.figi: bond for bond in all_bonds.instruments}
+            all_bonds = await client.get_bonds()
+            bonds_cache = {bond.figi: bond for bond in all_bonds}
 
-            accounts = client.users.get_accounts()
+            accounts = await client.get_accounts()
 
-            for account in accounts.accounts:
+            for account in accounts:
                 try:
-                    portfolio = client.operations.get_portfolio(account_id=account.id)
+                    portfolio = await client.get_portfolio(account_id=account.id)
 
                     for position in portfolio.positions:
                         if position.instrument_type != "bond":
@@ -82,9 +83,7 @@ async def get_portfolio_bond_prices(telegram_id: int) -> list[BondPrice]:
                             continue
 
                         # Цена в процентах от номинала
-                        current_price = (
-                            position.current_price.units + position.current_price.nano / 1e9
-                        )
+                        current_price = position.current_price.to_float()
 
                         bond_prices.append(
                             BondPrice(
