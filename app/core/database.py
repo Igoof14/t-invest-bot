@@ -8,7 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 logger = logging.getLogger(__name__)
 
-DATABASE_URL = "sqlite+aiosqlite:///./bot_data.db"
+# DATABASE_URL = "sqlite+aiosqlite:///./bot_data.db"
+
+DATABASE_URL = "sqlite+aiosqlite:////app/data/bot_data.db"
 
 
 class DatabaseManager:
