@@ -8,9 +8,14 @@ services:
     volumes:
       - ./data:/app/data
       # - ./bot_data.db:/app/bot_data.db
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   watchtower:
-    image: containrrr/watchtower
+    image: containrrr/watchtower:v2.23.2
     container_name: watchtower
     restart: unless-stopped
     volumes:
