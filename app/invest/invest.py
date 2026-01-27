@@ -5,7 +5,7 @@ from datetime import datetime
 from storage import BotUserStorage
 
 from .models import OperationType
-from .tbank_client import TBankClient, check_token_sync
+from .tbank_client import TBankClient
 
 
 async def get_coupon_payment(user_id: int, start_datetime: datetime) -> str:
@@ -53,7 +53,7 @@ async def get_coupon_payment(user_id: int, start_datetime: datetime) -> str:
         return message
 
 
-def check_token(token: str) -> bool:
+async def check_token(token: str) -> bool:
     """Проверяет, что токен действителен.
 
     Args:
@@ -63,4 +63,9 @@ def check_token(token: str) -> bool:
         True если токен валиден
 
     """
-    return check_token_sync(token)
+    try:
+        async with TBankClient(token) as client:
+            await client.get_info()
+        return True
+    except Exception:
+        return False

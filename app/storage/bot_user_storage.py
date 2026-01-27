@@ -128,11 +128,16 @@ class BotUserStorage:
         """Добавляет токен пользователя в базу данных."""
         async for session in get_session():
             try:
-                await session.execute(
+                result = await session.execute(
                     update(User).where(User.telegram_id == telegram_id).values(tinvest_token=token)
                 )
                 await session.commit()
-                return True
+                affected = getattr(result, "rowcount", 0)
+                if affected > 0:
+                    logger.info(f"Токен добавлен для пользователя {telegram_id}")
+                    return True
+                logger.warning(f"Пользователь {telegram_id} не найден при добавлении токена")
+                return False
             except Exception as e:
                 logger.error(f"Ошибка при добавлении токена пользователя {telegram_id}: {e}")
                 await session.rollback()

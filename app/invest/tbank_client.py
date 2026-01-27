@@ -206,20 +206,3 @@ class TBankClient:
         result = await self._request(endpoint, data)
         response = GetBondEventsResponse(**result)
         return response.events
-
-
-# Синхронная обёртка для проверки токена
-def check_token_sync(token: str) -> bool:
-    """Синхронная проверка токена (для совместимости)."""
-    import asyncio
-
-    async def _check():
-        try:
-            async with TBankClient(token) as client:
-                await client.get_info()
-            return True
-        except Exception as e:
-            logger.error(f"Ошибка проверки токена: {e}")
-            return False
-
-    return asyncio.run(_check())

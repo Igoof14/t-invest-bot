@@ -55,6 +55,9 @@ def register_handlers(dp: Dispatcher, bot: Bot) -> None:
     }
     dp.callback_query.register(SettingHandler.handle_settings, F.data.in_(callback_values))
     dp.message.register(SettingHandler.handle_token_message, TokenStates.waiting_for_token)
+    dp.message.register(
+        SettingHandler.handle_delete_confirmation, TokenStates.waiting_for_delete_confirmation
+    )
 
     # Обработчики уведомлений о ценах
     dp.callback_query.register(

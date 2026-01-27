@@ -17,6 +17,7 @@ waiting_for_token: set[int] = set()
 
 class TokenStates(StatesGroup):
     waiting_for_token = State()
+    waiting_for_delete_confirmation = State()
 
 
 class SettingHandler:
@@ -35,8 +36,9 @@ class SettingHandler:
             elif callback.data == CallbackData.RM_TOKEN.value:
                 if callback.message:
                     await callback.message.answer(
-                        "Для удаленния напиши 'удалить' без кавычек.", parse_mode="HTML"
+                        "Для удаления напиши 'удалить' без кавычек.", parse_mode="HTML"
                     )
+                    await state.set_state(TokenStates.waiting_for_delete_confirmation)
                 await callback.answer()
 
         except Exception as e:
@@ -49,13 +51,40 @@ class SettingHandler:
         """Обработчик для токена."""
         telegram_id = message.chat.id
         token = str(message.text).strip()
-        if check_token(token):
-            await BotUserStorage.add_token(telegram_id=telegram_id, token=token)
-            main_keyboard = KeyboardHelper.create_main_keyboard()
-            await message.answer("Токен успешно сохранён!", reply_markup=main_keyboard)
+        logger.info(f"Получен токен от пользователя {telegram_id}")
+        if await check_token(token):
+            logger.info(f"Токен пользователя {telegram_id} валиден")
+            success = await BotUserStorage.add_token(telegram_id=telegram_id, token=token)
+            if success:
+                main_keyboard = KeyboardHelper.create_main_keyboard()
+                await message.answer("Токен успешно сохранён!", reply_markup=main_keyboard)
+                await state.clear()
+            else:
+                logger.warning(f"Не удалось сохранить токен для {telegram_id}")
+                await message.answer(
+                    "Ошибка сохранения токена. Попробуйте /start и повторите попытку."
+                )
+                await state.clear()
+        else:
+            logger.warning(f"Токен пользователя {telegram_id} невалиден")
+            await message.answer("Некорректный токен! Попробуйте ещё раз")
+
+    @staticmethod
+    async def handle_delete_confirmation(message: Message, state: FSMContext) -> None:
+        """Обработчик подтверждения удаления токена."""
+        telegram_id = message.chat.id
+        text = str(message.text).strip().lower()
+        if text == "удалить":
+            success = await BotUserStorage.remove_token(telegram_id=telegram_id)
+            if success:
+                new_user_keyboard = KeyboardHelper.create_new_user_keyboard()
+                await message.answer("Токен успешно удалён!", reply_markup=new_user_keyboard)
+            else:
+                await message.answer("Ошибка при удалении токена.")
             await state.clear()
         else:
-            await message.answer("Некорректный токен! Попробуйте ещё раз")
+            await message.answer("Удаление отменено.")
+            await state.clear()
 
 
 class ThresholdStates(StatesGroup):
