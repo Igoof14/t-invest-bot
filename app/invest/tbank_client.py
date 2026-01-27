@@ -1,12 +1,15 @@
 """REST клиент для T-Invest API."""
 
 import logging
+import ssl
 from datetime import datetime
 from typing import Any
 
 import aiohttp
+import certifi
 
 from .models import (
+    Account,
     Bond,
     BondEvent,
     BondsResponse,
@@ -16,9 +19,7 @@ from .models import (
     GetOperationsResponse,
     GetPortfolioResponse,
     Operation,
-    PortfolioPosition,
     UserInfo,
-    Account,
 )
 
 logger = logging.getLogger(__name__)
@@ -50,11 +51,16 @@ class TBankClient:
 
     async def __aenter__(self) -> "TBankClient":
         """Вход в контекстный менеджер."""
+        # Создаём SSL контекст с актуальными сертификатами
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+
+        connector = aiohttp.TCPConnector(ssl=ssl_context)
         self._session = aiohttp.ClientSession(
+            connector=connector,
             headers={
                 "Authorization": f"Bearer {self.token}",
                 "Content-Type": "application/json",
-            }
+            },
         )
         return self
 
@@ -180,12 +186,12 @@ class TBankClient:
         to: datetime,
         event_type: EventType = EventType.EVENT_TYPE_CALL,
     ) -> list[BondEvent]:
-        """Получает события по облигации.
+        """Получает события по облигации (купоны, оферты, погашения).
 
         Args:
-            instrument_id: FIGI облигации
-            from_: Начало периода
-            to: Конец периода
+            instrument_id: FIGI или UID облигации
+            from_: Начало периода (UTC)
+            to: Конец периода (UTC)
             event_type: Тип события
 
         """
