@@ -42,8 +42,8 @@ class ReportService:
             all_users = await BotUserStorage.get_all_active_users()
 
             for uid in all_users:
-                text = get_coupon_payment(user_id=uid, start_datetime=start_datetime)
                 try:
+                    text = await get_coupon_payment(user_id=uid, start_datetime=start_datetime)
                     await bot.send_message(uid, text, parse_mode="HTML")
                 except Exception as e:
                     logger.error(f"Ошибка при отправке пользователю {uid}: {e}")
