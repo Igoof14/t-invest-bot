@@ -24,4 +24,5 @@ services:
       - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_POLL_INTERVAL=60
       - WATCHTOWER_INCLUDE_RESTARTING=true
+      - DOCKER_API_VERSION=1.44
     command: t-invest-bot
