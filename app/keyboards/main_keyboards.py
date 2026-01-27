@@ -69,7 +69,9 @@ class KeyboardHelper:
         builder = InlineKeyboardBuilder()
 
         # Кнопка вкл/выкл
-        toggle_text = ButtonTexts.ALERTS_OFF.value if alerts_enabled else ButtonTexts.ALERTS_ON.value
+        toggle_text = (
+            ButtonTexts.ALERTS_OFF.value if alerts_enabled else ButtonTexts.ALERTS_ON.value
+        )
         builder.add(
             InlineKeyboardButton(
                 text=toggle_text,
@@ -135,14 +137,14 @@ class KeyboardHelper:
             keyboard=[
                 [
                     KeyboardButton(text=ButtonTexts.COUPONS.value),
-                    KeyboardButton(text=ButtonTexts.MATURITIES.value),
+                    KeyboardButton(text=ButtonTexts.HELP.value),
                     KeyboardButton(text=ButtonTexts.OFFERS.value),
                 ],
                 [
                     KeyboardButton(text=ButtonTexts.MY_REPORTS.value),
                     KeyboardButton(text=ButtonTexts.SETTINGS.value),
+                    KeyboardButton(text=ButtonTexts.MATURITIES.value),
                 ],
-                [KeyboardButton(text=ButtonTexts.HELP.value)],
             ],
             resize_keyboard=True,
             one_time_keyboard=False,
