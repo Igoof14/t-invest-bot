@@ -15,7 +15,7 @@ services:
         max-file: "3"
 
   watchtower:
-    image: containrrr/watchtower:v2.23.2
+    image: containrrr/watchtower:latest
     container_name: watchtower
     restart: unless-stopped
     volumes:
