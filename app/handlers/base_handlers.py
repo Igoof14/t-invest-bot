@@ -134,11 +134,11 @@ async def handle_monitoring_button(message: Message) -> None:
             message_text += (
                 f"\n\n<b>Текущие пороги:</b>\n\n"
                 f"Падение:\n"
-                f"  • Warning: {settings.drop_warning_threshold}%\n"
-                f"  • Critical: {settings.drop_critical_threshold}%\n\n"
+                f"  • Умеренное: {settings.drop_warning_threshold}%\n"
+                f"  • Сильное: {settings.drop_critical_threshold}%\n\n"
                 f"Рост:\n"
-                f"  • Warning: {settings.rise_warning_threshold}%\n"
-                f"  • Critical: {settings.rise_critical_threshold}%"
+                f"  • Умеренное: {settings.rise_warning_threshold}%\n"
+                f"  • Сильное: {settings.rise_critical_threshold}%"
             )
 
         builder = KeyboardHelper.create_price_alerts_keyboard(settings.alerts_enabled)

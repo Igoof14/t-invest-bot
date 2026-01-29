@@ -92,25 +92,25 @@ class KeyboardHelper:
 
         builder.add(
             InlineKeyboardButton(
-                text="Падение Warning",
+                text="Падение умеренное",
                 callback_data=CallbackData.PRICE_ALERTS_DROP_WARNING.value,
             )
         )
         builder.add(
             InlineKeyboardButton(
-                text="Падение Critical",
+                text="Падение сильное",
                 callback_data=CallbackData.PRICE_ALERTS_DROP_CRITICAL.value,
             )
         )
         builder.add(
             InlineKeyboardButton(
-                text="Рост Warning",
+                text="Рост умеренный",
                 callback_data=CallbackData.PRICE_ALERTS_RISE_WARNING.value,
             )
         )
         builder.add(
             InlineKeyboardButton(
-                text="Рост Critical",
+                text="Рост сильный",
                 callback_data=CallbackData.PRICE_ALERTS_RISE_CRITICAL.value,
             )
         )

@@ -117,11 +117,11 @@ class AlertSettingsHandler:
                 message_text += (
                     f"\n\n<b>Текущие пороги:</b>\n\n"
                     f"Падение:\n"
-                    f"  • Warning: {settings.drop_warning_threshold}%\n"
-                    f"  • Critical: {settings.drop_critical_threshold}%\n\n"
+                    f"  • Умеренное: {settings.drop_warning_threshold}%\n"
+                    f"  • Сильное: {settings.drop_critical_threshold}%\n\n"
                     f"Рост:\n"
-                    f"  • Warning: {settings.rise_warning_threshold}%\n"
-                    f"  • Critical: {settings.rise_critical_threshold}%"
+                    f"  • Умеренное: {settings.rise_warning_threshold}%\n"
+                    f"  • Сильное: {settings.rise_critical_threshold}%"
                 )
 
             builder = KeyboardHelper.create_price_alerts_keyboard(settings.alerts_enabled)
@@ -179,11 +179,11 @@ class AlertSettingsHandler:
             message_text = (
                 f"{Messages.PRICE_ALERTS_SETTINGS_TITLE.value}\n"
                 f"Падение:\n"
-                f"  • Warning: <b>{settings.drop_warning_threshold}%</b>\n"
-                f"  • Critical: <b>{settings.drop_critical_threshold}%</b>\n\n"
+                f"  • Умеренное: <b>{settings.drop_warning_threshold}%</b>\n"
+                f"  • Сильное: <b>{settings.drop_critical_threshold}%</b>\n\n"
                 f"Рост:\n"
-                f"  • Warning: <b>{settings.rise_warning_threshold}%</b>\n"
-                f"  • Critical: <b>{settings.rise_critical_threshold}%</b>\n\n"
+                f"  • Умеренное: <b>{settings.rise_warning_threshold}%</b>\n"
+                f"  • Сильное: <b>{settings.rise_critical_threshold}%</b>\n\n"
                 f"Нажмите на кнопку, чтобы изменить порог."
             )
 
@@ -209,19 +209,19 @@ class AlertSettingsHandler:
 
             prompts = {
                 CallbackData.PRICE_ALERTS_DROP_WARNING.value: (
-                    "Введите новый порог падения для предупреждения (в %).\n"
+                    "Введите порог умеренного падения (в %).\n"
                     "Например: 2"
                 ),
                 CallbackData.PRICE_ALERTS_DROP_CRITICAL.value: (
-                    "Введите новый порог падения для критического уведомления (в %).\n"
+                    "Введите порог сильного падения (в %).\n"
                     "Например: 5"
                 ),
                 CallbackData.PRICE_ALERTS_RISE_WARNING.value: (
-                    "Введите новый порог роста для предупреждения (в %).\n"
+                    "Введите порог умеренного роста (в %).\n"
                     "Например: 3"
                 ),
                 CallbackData.PRICE_ALERTS_RISE_CRITICAL.value: (
-                    "Введите новый порог роста для критического уведомления (в %).\n"
+                    "Введите порог сильного роста (в %).\n"
                     "Например: 7"
                 ),
             }
