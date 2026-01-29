@@ -115,11 +115,13 @@ class AlertSettingsHandler:
 
             if settings.alerts_enabled:
                 message_text += (
-                    f"\n\nТекущие пороги:\n"
-                    f"Падение: warning {settings.drop_warning_threshold}%, "
-                    f"critical {settings.drop_critical_threshold}%\n"
-                    f"Рост: warning {settings.rise_warning_threshold}%, "
-                    f"critical {settings.rise_critical_threshold}%"
+                    f"\n\n<b>Текущие пороги:</b>\n\n"
+                    f"Падение:\n"
+                    f"  • Warning: {settings.drop_warning_threshold}%\n"
+                    f"  • Critical: {settings.drop_critical_threshold}%\n\n"
+                    f"Рост:\n"
+                    f"  • Warning: {settings.rise_warning_threshold}%\n"
+                    f"  • Critical: {settings.rise_critical_threshold}%"
                 )
 
             builder = KeyboardHelper.create_price_alerts_keyboard(settings.alerts_enabled)
@@ -175,11 +177,13 @@ class AlertSettingsHandler:
                 return
 
             message_text = (
-                f"{Messages.PRICE_ALERTS_SETTINGS_TITLE.value}"
-                f"Падение warning: <b>{settings.drop_warning_threshold}%</b>\n"
-                f"Падение critical: <b>{settings.drop_critical_threshold}%</b>\n"
-                f"Рост warning: <b>{settings.rise_warning_threshold}%</b>\n"
-                f"Рост critical: <b>{settings.rise_critical_threshold}%</b>\n\n"
+                f"{Messages.PRICE_ALERTS_SETTINGS_TITLE.value}\n"
+                f"Падение:\n"
+                f"  • Warning: <b>{settings.drop_warning_threshold}%</b>\n"
+                f"  • Critical: <b>{settings.drop_critical_threshold}%</b>\n\n"
+                f"Рост:\n"
+                f"  • Warning: <b>{settings.rise_warning_threshold}%</b>\n"
+                f"  • Critical: <b>{settings.rise_critical_threshold}%</b>\n\n"
                 f"Нажмите на кнопку, чтобы изменить порог."
             )
 
