@@ -7,6 +7,7 @@ from datetime import datetime
 from aiogram.types import CallbackQuery
 from core.enums import CallbackData, Messages
 from invest.invest import get_coupon_payment
+from keyboards import KeyboardHelper
 from utils.datetime_utils import DateTimeHelper
 
 logger = logging.getLogger(__name__)
@@ -45,11 +46,18 @@ class CouponHandler:
             message_text = title + coupon_data
 
             if callback.message:
-                await callback.message.answer(message_text, parse_mode="HTML")
+                keyboard = KeyboardHelper.create_coupons_inline_keyboard()
+                await callback.message.edit_text(
+                    message_text,
+                    parse_mode="HTML",
+                    reply_markup=keyboard.as_markup(),
+                )
             await callback.answer()
 
         except Exception as e:
             logger.error(f"Ошибка при получении купонов: {e}")
             if callback.message:
-                await callback.message.answer("Произошла ошибка при получении данных о купонах")
+                await callback.message.edit_text(
+                    "Произошла ошибка при получении данных о купонах"
+                )
             await callback.answer()
