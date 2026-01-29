@@ -7,7 +7,7 @@ from aiogram.types import Message
 from core.enums import Messages
 from invest.bonds import get_nearest_maturities, get_nearest_offers
 from keyboards import KeyboardHelper
-from storage import BotUserStorage
+from storage import AlertStorage, BotUserStorage
 
 logger = logging.getLogger(__name__)
 
@@ -114,3 +114,34 @@ async def handle_offers_button(message: Message) -> None:
     except Exception as e:
         logger.error(f"Ошибка при получении оферт: {e}")
         await message.answer("Произошла ошибка при получении данных об офертах")
+
+
+async def handle_monitoring_button(message: Message) -> None:
+    """Обработка кнопки 'Мониторинг'."""
+    try:
+        telegram_id = message.from_user.id if message.from_user else message.chat.id
+        settings = await AlertStorage.get_or_create_user_settings(telegram_id)
+
+        status_text = "включен" if settings.alerts_enabled else "выключен"
+        message_text = (
+            f"<b>Мониторинг цен облигаций</b>\n\n"
+            f"Получайте уведомления при значительных изменениях цен "
+            f"облигаций в вашем портфеле.\n\n"
+            f"Статус: <b>{status_text}</b>"
+        )
+
+        if settings.alerts_enabled:
+            message_text += (
+                f"\n\nТекущие пороги:\n"
+                f"Падение: warning {settings.drop_warning_threshold}%, "
+                f"critical {settings.drop_critical_threshold}%\n"
+                f"Рост: warning {settings.rise_warning_threshold}%, "
+                f"critical {settings.rise_critical_threshold}%"
+            )
+
+        builder = KeyboardHelper.create_price_alerts_keyboard(settings.alerts_enabled)
+        await message.answer(message_text, reply_markup=builder.as_markup(), parse_mode="HTML")
+
+    except Exception as e:
+        logger.error(f"Ошибка при обработке кнопки 'Мониторинг': {e}")
+        await message.answer("Произошла ошибка")

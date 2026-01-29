@@ -48,13 +48,7 @@ class KeyboardHelper:
                 callback_data=CallbackData.RM_TOKEN.value,
             )
         )
-        builder.add(
-            InlineKeyboardButton(
-                text=ButtonTexts.PRICE_ALERTS.value,
-                callback_data=CallbackData.PRICE_ALERTS_SETTINGS.value,
-            )
-        )
-        builder.adjust(2, 1)  # 2 кнопки в первом ряду, 1 в следующем
+        builder.adjust(2)
 
         return builder
 
@@ -137,13 +131,13 @@ class KeyboardHelper:
             keyboard=[
                 [
                     KeyboardButton(text=ButtonTexts.COUPONS.value),
-                    KeyboardButton(text=ButtonTexts.HELP.value),
+                    KeyboardButton(text=ButtonTexts.MATURITIES.value),
                     KeyboardButton(text=ButtonTexts.OFFERS.value),
                 ],
                 [
-                    KeyboardButton(text=ButtonTexts.MY_REPORTS.value),
+                    KeyboardButton(text=ButtonTexts.MONITORING.value),
                     KeyboardButton(text=ButtonTexts.SETTINGS.value),
-                    KeyboardButton(text=ButtonTexts.MATURITIES.value),
+                    KeyboardButton(text=ButtonTexts.HELP.value),
                 ],
             ],
             resize_keyboard=True,

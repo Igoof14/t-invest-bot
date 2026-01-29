@@ -37,6 +37,7 @@ class ButtonTexts(Enum):
     MATURITIES = "Погашения"
     OFFERS = "Оферты"
     MY_REPORTS = "Мои отчеты"
+    MONITORING = "Мониторинг"
     HELP = "Помощь"
     SETTINGS = "Настройки"
     ADD_TOKEN = "Добавить токен"
