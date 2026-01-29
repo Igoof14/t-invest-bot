@@ -27,20 +27,20 @@ async def main():
 
     scheduler.add_job(
         ReportService.send_report,
-        CronTrigger(hour=18, minute=10),
+        CronTrigger(hour=18, minute=10, timezone="Europe/Moscow"),
         kwargs={"bot": bot, "report_type": ReportType.DAILY},
     )
 
     scheduler.add_job(
         ReportService.send_report,
-        CronTrigger(day_of_week="fri", hour=18, minute=10, second=1),
+        CronTrigger(day_of_week="fri", hour=18, minute=10, second=1, timezone="Europe/Moscow"),
         kwargs={"bot": bot, "report_type": ReportType.WEEKLY},
     )
 
     # Проверка аномалий цен облигаций каждый час в торговое время (10:00-18:00 МСК, пн-пт)
     scheduler.add_job(
         PriceAlertService.check_price_anomalies,
-        CronTrigger(day_of_week="mon-fri", hour="10-18", minute=0),
+        CronTrigger(day_of_week="mon-fri", hour="10-18", minute=0, timezone="Europe/Moscow"),
         kwargs={"bot": bot},
     )
 
