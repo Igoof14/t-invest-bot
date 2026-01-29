@@ -111,7 +111,7 @@ async def get_nearest_offers(telegram_id: int, limit: int = 5) -> str | None:
         return "Токен не найден. Добавьте токен в настройках."
 
     now = datetime.now(UTC)
-    future_date = now + timedelta(days=365 * 5)
+    future_date = now + timedelta(days=365)
     logger.info(f"Searching offers from {now.isoformat()} to {future_date.isoformat()}")
 
     async with TBankClient(token) as client:
@@ -182,6 +182,7 @@ async def get_nearest_offers(telegram_id: int, limit: int = 5) -> str | None:
                 continue
 
     if not offers_dict:
+        logger.info("No offers found for the next year")
         return None
 
     offers_list = sorted(offers_dict.values(), key=lambda x: x["offer_date"])

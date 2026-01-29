@@ -199,10 +199,13 @@ class TBankClient:
 
         """
         endpoint = "tinkoff.public.invest.api.contract.v1.InstrumentsService/GetBondEvents"
+        # Убираем timezone info и добавляем Z для UTC формата
+        from_str = from_.replace(tzinfo=None).isoformat() + "Z"
+        to_str = to.replace(tzinfo=None).isoformat() + "Z"
         data = {
             "instrumentId": instrument_id,
-            "from": from_.isoformat() + "Z",
-            "to": to.isoformat() + "Z",
+            "from": from_str,
+            "to": to_str,
             "type": event_type.value,
         }
 
