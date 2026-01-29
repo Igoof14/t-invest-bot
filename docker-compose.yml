@@ -5,9 +5,32 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@postgres:5432/tinvest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: tinvest-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=tinvest
     volumes:
-      - ./data:/app/data
-      # - ./bot_data.db:/app/bot_data.db
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tinvest"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     logging:
       driver: json-file
       options:
@@ -26,3 +49,6 @@ services:
       - WATCHTOWER_INCLUDE_RESTARTING=true
       - DOCKER_API_VERSION=1.44
     command: t-invest-bot
+
+volumes:
+  postgres_data:

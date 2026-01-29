@@ -2,29 +2,25 @@
 
 import logging
 from collections.abc import AsyncGenerator
-from pathlib import Path
 
+from core.config import config
 from models.base import Base
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 logger = logging.getLogger(__name__)
 
-# Путь к директории data относительно этого файла (core/database.py -> app/data/)
-DATA_DIR = Path(__file__).parent.parent / "data"
-DATA_DIR.mkdir(exist_ok=True)
-
-DATABASE_URL = f"sqlite+aiosqlite:///{DATA_DIR}/bot_data.db"
-
 
 class DatabaseManager:
     """Менеджер базы данных."""
 
-    def __init__(self, database_url: str = DATABASE_URL):
+    def __init__(self, database_url: str):
         """Инициализирует менеджер базы данных."""
         self.engine = create_async_engine(
             database_url,
             echo=False,
             future=True,
+            pool_size=5,
+            max_overflow=10,
         )
         self.session_factory = async_sessionmaker(
             self.engine, class_=AsyncSession, expire_on_commit=False
@@ -41,7 +37,7 @@ class DatabaseManager:
         await self.engine.dispose()
 
 
-db_manager = DatabaseManager()
+db_manager = DatabaseManager(config.database_url)
 
 
 async def get_session() -> AsyncGenerator[AsyncSession]:
