@@ -1,5 +1,6 @@
 """Функции для работы с облигациями через T-Invest API."""
 
+import asyncio
 import logging
 from datetime import UTC, datetime, timedelta
 
@@ -180,6 +181,9 @@ async def get_nearest_offers(telegram_id: int, limit: int = 5) -> str | None:
             except Exception as e:
                 logger.error(f"Error getting bond events for figi={figi}, ticker={bond.ticker}: {e}")
                 continue
+
+            # Небольшая задержка между запросами чтобы не перегружать API
+            await asyncio.sleep(0.05)
 
     if not offers_dict:
         logger.info("No offers found for the next year")

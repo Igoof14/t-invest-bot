@@ -1,5 +1,6 @@
 """REST клиент для T-Invest API."""
 
+import asyncio
 import logging
 import ssl
 from datetime import datetime
@@ -70,12 +71,15 @@ class TBankClient:
             await self._session.close()
             self._session = None
 
-    async def _request(self, endpoint: str, data: dict | None = None) -> dict[str, Any]:
-        """Выполняет POST запрос к API.
+    async def _request(
+        self, endpoint: str, data: dict | None = None, max_retries: int = 3
+    ) -> dict[str, Any]:
+        """Выполняет POST запрос к API с retry для 5xx ошибок.
 
         Args:
             endpoint: Путь endpoint (без base URL)
             data: Тело запроса
+            max_retries: Максимальное количество повторных попыток
 
         Returns:
             JSON ответ
@@ -90,24 +94,53 @@ class TBankClient:
         url = f"{BASE_URL}/{endpoint}"
         payload = data or {}
 
-        try:
-            async with self._session.post(url, json=payload) as response:
-                result = await response.json()
+        for attempt in range(max_retries):
+            try:
+                async with self._session.post(url, json=payload) as response:
+                    # Для 5xx ошибок - retry с задержкой
+                    if response.status >= 500:
+                        body = await response.text()
+                        if attempt < max_retries - 1:
+                            delay = (attempt + 1) * 0.5  # 0.5s, 1s, 1.5s
+                            logger.warning(
+                                f"Server error {response.status}, retrying in {delay}s "
+                                f"(attempt {attempt + 1}/{max_retries})"
+                            )
+                            await asyncio.sleep(delay)
+                            continue
+                        logger.error(f"Server error {response.status} after {max_retries} retries: {body}")
+                        raise TBankAPIError(f"Server error: {response.status}", str(response.status))
 
-                if response.status != 200:
-                    error_msg = result.get("message", "Unknown error")
-                    error_code = result.get("code", "")
-                    logger.error(
-                        f"API error: endpoint={endpoint}, code={error_code}, "
-                        f"message={error_msg}, payload={payload}, full_response={result}"
-                    )
-                    raise TBankAPIError(error_msg, error_code)
+                    # Проверяем content-type перед парсингом JSON
+                    content_type = response.headers.get("Content-Type", "")
+                    if "application/json" not in content_type:
+                        body = await response.text()
+                        logger.error(f"Unexpected content type: {content_type}, body: {body[:200]}")
+                        raise TBankAPIError(f"Unexpected content type: {content_type}")
 
-                return result
+                    result = await response.json()
 
-        except aiohttp.ClientError as e:
-            logger.error(f"HTTP error: {e}")
-            raise TBankAPIError(f"HTTP error: {e}")
+                    if response.status != 200:
+                        error_msg = result.get("message", "Unknown error")
+                        error_code = result.get("code", "")
+                        logger.error(
+                            f"API error: endpoint={endpoint}, code={error_code}, "
+                            f"message={error_msg}, payload={payload}, full_response={result}"
+                        )
+                        raise TBankAPIError(error_msg, str(error_code))
+
+                    return result
+
+            except aiohttp.ClientError as e:
+                if attempt < max_retries - 1:
+                    delay = (attempt + 1) * 0.5
+                    logger.warning(f"HTTP error: {e}, retrying in {delay}s")
+                    await asyncio.sleep(delay)
+                    continue
+                logger.error(f"HTTP error after {max_retries} retries: {e}")
+                raise TBankAPIError(f"HTTP error: {e}")
+
+        raise TBankAPIError("Max retries exceeded")
 
     # === UsersService ===
 
