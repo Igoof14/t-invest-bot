@@ -97,7 +97,10 @@ class TBankClient:
                 if response.status != 200:
                     error_msg = result.get("message", "Unknown error")
                     error_code = result.get("code", "")
-                    logger.error(f"API error: {error_code} - {error_msg}")
+                    logger.error(
+                        f"API error: endpoint={endpoint}, code={error_code}, "
+                        f"message={error_msg}, payload={payload}, full_response={result}"
+                    )
                     raise TBankAPIError(error_msg, error_code)
 
                 return result

@@ -1,11 +1,14 @@
 """Функции для работы с облигациями через T-Invest API."""
 
+import logging
 from datetime import UTC, datetime, timedelta
 
 from storage import BotUserStorage
 
 from .models import EventType
 from .tbank_client import TBankClient
+
+logger = logging.getLogger(__name__)
 
 
 async def get_nearest_maturities(telegram_id: int, limit: int = 5) -> str | None:
@@ -101,12 +104,15 @@ async def get_nearest_offers(telegram_id: int, limit: int = 5) -> str | None:
         Отформатированное сообщение со списком оферт
 
     """
+    logger.info(f"Getting nearest offers for telegram_id={telegram_id}")
     token = await BotUserStorage.get_token_by_telegram_id(telegram_id=telegram_id)
     if not token:
+        logger.warning(f"Token not found for telegram_id={telegram_id}")
         return "Токен не найден. Добавьте токен в настройках."
 
     now = datetime.now(UTC)
     future_date = now + timedelta(days=365 * 5)
+    logger.info(f"Searching offers from {now.isoformat()} to {future_date.isoformat()}")
 
     async with TBankClient(token) as client:
         # 1. Получаем все облигации одним запросом и строим кэш по figi
@@ -134,6 +140,7 @@ async def get_nearest_offers(telegram_id: int, limit: int = 5) -> str | None:
                 })
 
         # 3. Запрашиваем события только для уникальных figi
+        logger.info(f"Found {len(positions_by_figi)} unique bonds to check for offers")
         offers_dict: dict[tuple, dict] = {}  # ключ: (ticker, offer_date, account_name)
 
         for figi, positions in positions_by_figi.items():
@@ -142,12 +149,17 @@ async def get_nearest_offers(telegram_id: int, limit: int = 5) -> str | None:
                 continue
 
             try:
+                logger.debug(
+                    f"Requesting bond events for figi={figi}, ticker={bond.ticker}, "
+                    f"from={now.isoformat()}, to={future_date.isoformat()}"
+                )
                 events = await client.get_bond_events(
                     instrument_id=figi,
                     from_=now,
                     to=future_date,
                     event_type=EventType.EVENT_TYPE_CALL,
                 )
+                logger.debug(f"Got {len(events)} events for {bond.ticker}")
 
                 for event in events:
                     nominal = bond.nominal.to_float()
@@ -165,7 +177,8 @@ async def get_nearest_offers(telegram_id: int, limit: int = 5) -> str | None:
                                 "currency": bond.currency,
                                 "account_name": pos["account_name"],
                             }
-            except Exception:
+            except Exception as e:
+                logger.error(f"Error getting bond events for figi={figi}, ticker={bond.ticker}: {e}")
                 continue
 
     if not offers_dict:
