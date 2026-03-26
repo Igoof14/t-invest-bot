@@ -1,7 +1,7 @@
 """Модуль для управления пользователями с использованием SQLAlchemy."""
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 from core.database import get_session
 from models.user import User
@@ -34,7 +34,7 @@ class BotUserStorage:
                     await session.execute(
                         update(User)
                         .where(User.telegram_id == telegram_id)
-                        .values(last_activity=datetime.utcnow())
+                        .values(last_activity=datetime.now(UTC))
                     )
                     await session.commit()
                     logger.info(f"Обновлена активность пользователя: {telegram_id}")
@@ -46,7 +46,7 @@ class BotUserStorage:
                     username=username,
                     first_name=first_name,
                     last_name=last_name,
-                    last_activity=datetime.utcnow(),
+                    last_activity=datetime.now(UTC),
                 )
 
                 session.add(user)
@@ -192,7 +192,7 @@ class BotUserStorage:
                 result = await session.execute(
                     update(User)
                     .where(User.telegram_id == telegram_id)
-                    .values(last_activity=datetime.utcnow())
+                    .values(last_activity=datetime.now(UTC))
                 )
                 await session.commit()
 

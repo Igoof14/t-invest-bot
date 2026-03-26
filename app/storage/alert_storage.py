@@ -1,7 +1,7 @@
 """Модуль для управления данными уведомлений о ценах."""
 
 import logging
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 
 from core.database import get_session
 from models.alerts import BondPriceHistory, SentAlert, UserAlertSettings
@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 # Константы
 ALERT_COOLDOWN_HOURS = 4
 MAX_DAILY_ALERTS = 10
+MOSCOW_TZ = timezone(timedelta(hours=3))
 
 
 class AlertStorage:
@@ -123,7 +124,7 @@ class AlertStorage:
                 subquery = (
                     select(
                         BondPriceHistory.figi,
-                        func.max(BondPriceHistory.recorded_at).label("max_recorded")
+                        func.max(BondPriceHistory.recorded_at).label("max_recorded"),
                     )
                     .where(BondPriceHistory.telegram_id == telegram_id)
                     .group_by(BondPriceHistory.figi)
@@ -135,12 +136,16 @@ class AlertStorage:
                     .join(
                         subquery,
                         (BondPriceHistory.figi == subquery.c.figi)
-                        & (BondPriceHistory.recorded_at == subquery.c.max_recorded)
+                        & (BondPriceHistory.recorded_at == subquery.c.max_recorded),
                     )
                     .where(BondPriceHistory.telegram_id == telegram_id)
                 )
 
-                return list(result.scalars().all())
+                prices = list(result.scalars().all())
+                # Отсоединяем объекты от сессии, чтобы избежать DetachedInstanceError
+                for price in prices:
+                    session.expunge(price)
+                return prices
 
             except Exception as e:
                 logger.error(f"Ошибка при получении цен пользователя {telegram_id}: {e}")
@@ -148,9 +153,7 @@ class AlertStorage:
         return []
 
     @classmethod
-    async def save_price_snapshot(
-        cls, telegram_id: int, prices: list[dict]
-    ) -> bool:
+    async def save_price_snapshot(cls, telegram_id: int, prices: list[dict]) -> bool:
         """Сохраняет текущие цены облигаций.
 
         Args:
@@ -189,7 +192,7 @@ class AlertStorage:
         """Удаляет старые записи цен."""
         async for session in get_session():
             try:
-                cutoff_date = datetime.utcnow() - timedelta(days=days_to_keep)
+                cutoff_date = datetime.now(UTC) - timedelta(days=days_to_keep)
                 result = await session.execute(
                     delete(BondPriceHistory).where(BondPriceHistory.recorded_at < cutoff_date)
                 )
@@ -229,7 +232,7 @@ class AlertStorage:
         """Проверяет, можно ли отправить алерт (cooldown 4 часа)."""
         async for session in get_session():
             try:
-                cooldown_time = datetime.utcnow() - timedelta(hours=ALERT_COOLDOWN_HOURS)
+                cooldown_time = datetime.now(UTC) - timedelta(hours=ALERT_COOLDOWN_HOURS)
                 result = await session.execute(
                     select(SentAlert)
                     .where(
@@ -251,7 +254,10 @@ class AlertStorage:
         """Возвращает количество алертов за сегодня."""
         async for session in get_session():
             try:
-                today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+                now_moscow = datetime.now(MOSCOW_TZ)
+                today_start = now_moscow.replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                ).astimezone(UTC)
                 result = await session.execute(
                     select(func.count(SentAlert.id)).where(
                         SentAlert.telegram_id == telegram_id,
@@ -295,7 +301,7 @@ class AlertStorage:
         """Удаляет старые записи алертов."""
         async for session in get_session():
             try:
-                cutoff_date = datetime.utcnow() - timedelta(days=days_to_keep)
+                cutoff_date = datetime.now(UTC) - timedelta(days=days_to_keep)
                 result = await session.execute(
                     delete(SentAlert).where(SentAlert.sent_at < cutoff_date)
                 )

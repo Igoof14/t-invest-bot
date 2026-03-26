@@ -3,7 +3,7 @@
 import asyncio
 import logging
 import ssl
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import aiohttp
@@ -108,8 +108,12 @@ class TBankClient:
                             )
                             await asyncio.sleep(delay)
                             continue
-                        logger.error(f"Server error {response.status} after {max_retries} retries: {body}")
-                        raise TBankAPIError(f"Server error: {response.status}", str(response.status))
+                        logger.error(
+                            f"Server error {response.status} after {max_retries} retries: {body}"
+                        )
+                        raise TBankAPIError(
+                            f"Server error: {response.status}", str(response.status)
+                        )
 
                     # Проверяем content-type перед парсингом JSON
                     content_type = response.headers.get("Content-Type", "")
@@ -176,7 +180,7 @@ class TBankClient:
         endpoint = "tinkoff.public.invest.api.contract.v1.OperationsService/GetOperations"
 
         if to is None:
-            to = datetime.utcnow()
+            to = datetime.now(UTC)
 
         data = {
             "accountId": account_id,

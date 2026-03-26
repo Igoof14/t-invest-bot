@@ -6,6 +6,7 @@ from aiogram import Bot
 from invest.price_monitor import (
     PriceAnomaly,
     detect_anomalies,
+    fetch_bonds_cache,
     get_portfolio_bond_prices,
     should_send_alert,
 )
@@ -39,9 +40,15 @@ class PriceAlertService:
 
         logger.info(f"Проверка цен для {len(users)} пользователей")
 
+        # Загружаем справочник облигаций один раз для всех пользователей
+        bonds_cache = await fetch_bonds_cache()
+        if not bonds_cache:
+            logger.error("Не удалось загрузить справочник облигаций, пропуск проверки")
+            return
+
         for telegram_id in users:
             try:
-                await PriceAlertService._check_user_portfolio(bot, telegram_id)
+                await PriceAlertService._check_user_portfolio(bot, telegram_id, bonds_cache)
             except Exception as e:
                 logger.error(f"Ошибка при проверке портфеля пользователя {telegram_id}: {e}")
 
@@ -52,12 +59,13 @@ class PriceAlertService:
         logger.info("Проверка аномалий цен завершена")
 
     @staticmethod
-    async def _check_user_portfolio(bot: Bot, telegram_id: int) -> None:
+    async def _check_user_portfolio(bot: Bot, telegram_id: int, bonds_cache: dict) -> None:
         """Проверяет портфель одного пользователя на аномалии.
 
         Args:
             bot: Экземпляр бота
             telegram_id: ID пользователя в Telegram
+            bonds_cache: Кэш облигаций (figi -> Bond)
 
         """
         # Получаем настройки пользователя
@@ -66,7 +74,7 @@ class PriceAlertService:
             return
 
         # Получаем текущие цены
-        current_prices = await get_portfolio_bond_prices(telegram_id)
+        current_prices = await get_portfolio_bond_prices(telegram_id, bonds_cache)
         if not current_prices:
             logger.debug(f"Нет облигаций в портфеле пользователя {telegram_id}")
             return
@@ -95,9 +103,7 @@ class PriceAlertService:
         await AlertStorage.save_price_snapshot(telegram_id, price_data)
 
     @staticmethod
-    async def _send_alerts(
-        bot: Bot, telegram_id: int, anomalies: list[PriceAnomaly]
-    ) -> None:
+    async def _send_alerts(bot: Bot, telegram_id: int, anomalies: list[PriceAnomaly]) -> None:
         """Отправляет уведомления об аномалиях.
 
         Args:
@@ -123,9 +129,7 @@ class PriceAlertService:
                 await PriceAlertService._send_single_alert(bot, telegram_id, anomaly)
 
     @staticmethod
-    async def _send_single_alert(
-        bot: Bot, telegram_id: int, anomaly: PriceAnomaly
-    ) -> None:
+    async def _send_single_alert(bot: Bot, telegram_id: int, anomaly: PriceAnomaly) -> None:
         """Отправляет одно уведомление об аномалии.
 
         Args:
@@ -168,27 +172,29 @@ class PriceAlertService:
         critical = [a for a in anomalies if "CRITICAL" in a.alert_type.name]
         warnings = [a for a in anomalies if "WARNING" in a.alert_type.name]
 
+        # Ограничиваем количество показываемых аномалий
+        shown_critical = critical[:5]
+        shown_warnings = warnings[:5]
+        shown_anomalies = shown_critical + shown_warnings
+
         # Формируем сводку
         lines = ["<b>Множественные изменения цен облигаций</b>\n"]
 
         if critical:
             lines.append(f"<b>Критических: {len(critical)}</b>")
-            for a in critical[:5]:  # Показываем максимум 5
+            for a in shown_critical:
                 direction = "[-]" if a.change_percent < 0 else "[+]"
-                lines.append(
-                    f"  {direction} <code>{a.ticker}</code>: {a.change_percent:+.1f}%"
-                )
+                lines.append(f"  {direction} <code>{a.ticker}</code>: {a.change_percent:+.1f}%")
 
         if warnings:
             lines.append(f"\n<b>Предупреждений: {len(warnings)}</b>")
-            for a in warnings[:5]:  # Показываем максимум 5
+            for a in shown_warnings:
                 direction = "[-]" if a.change_percent < 0 else "[+]"
-                lines.append(
-                    f"  {direction} <code>{a.ticker}</code>: {a.change_percent:+.1f}%"
-                )
+                lines.append(f"  {direction} <code>{a.ticker}</code>: {a.change_percent:+.1f}%")
 
-        if len(anomalies) > 10:
-            lines.append(f"\n... и ещё {len(anomalies) - 10} изменений")
+        not_shown = len(anomalies) - len(shown_anomalies)
+        if not_shown > 0:
+            lines.append(f"\n... и ещё {not_shown} изменений")
 
         lines.append("\n<i>Рекомендуем проверить портфель</i>")
 
@@ -197,15 +203,15 @@ class PriceAlertService:
         try:
             await bot.send_message(telegram_id, message, parse_mode="HTML")
 
-            # Записываем все алерты
-            for anomaly in anomalies:
+            # Записываем только показанные алерты
+            for anomaly in shown_anomalies:
                 await AlertStorage.record_sent_alert(
                     telegram_id, anomaly.figi, anomaly.alert_type.value
                 )
 
             logger.info(
                 f"Отправлен сводный алерт пользователю {telegram_id}: "
-                f"{len(anomalies)} аномалий"
+                f"показано {len(shown_anomalies)} из {len(anomalies)} аномалий"
             )
 
         except Exception as e:

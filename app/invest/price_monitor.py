@@ -6,6 +6,7 @@ from enum import Enum
 
 from storage import AlertStorage, BotUserStorage
 
+from .models import Bond
 from .tbank_client import TBankClient
 
 logger = logging.getLogger(__name__)
@@ -45,11 +46,35 @@ class PriceAnomaly:
     account_name: str
 
 
-async def get_portfolio_bond_prices(telegram_id: int) -> list[BondPrice]:
+async def fetch_bonds_cache() -> dict[str, Bond]:
+    """Загружает все облигации с биржи и возвращает словарь figi -> Bond.
+
+    Вызывается один раз за цикл проверки, результат передаётся в get_portfolio_bond_prices.
+    """
+    try:
+        # Используем любой валидный токен для получения справочника
+        users_with_alerts = await AlertStorage.get_all_users_with_alerts_enabled()
+        for telegram_id in users_with_alerts:
+            token = await BotUserStorage.get_token_by_telegram_id(telegram_id=telegram_id)
+            if token:
+                async with TBankClient(token) as client:
+                    all_bonds = await client.get_bonds()
+                    return {bond.figi: bond for bond in all_bonds}
+    except Exception as e:
+        logger.error(f"Ошибка при загрузке справочника облигаций: {e}")
+
+    return {}
+
+
+async def get_portfolio_bond_prices(
+    telegram_id: int,
+    bonds_cache: dict[str, Bond],
+) -> list[BondPrice]:
     """Получает текущие цены облигаций из портфеля пользователя.
 
     Args:
         telegram_id: ID пользователя в Telegram
+        bonds_cache: Кэш облигаций (figi -> Bond), общий для всех пользователей
 
     Returns:
         Список объектов BondPrice с текущими ценами
@@ -64,10 +89,6 @@ async def get_portfolio_bond_prices(telegram_id: int) -> list[BondPrice]:
 
     try:
         async with TBankClient(token) as client:
-            # Получаем все облигации для кэша
-            all_bonds = await client.get_bonds()
-            bonds_cache = {bond.figi: bond for bond in all_bonds}
-
             accounts = await client.get_accounts()
 
             for account in accounts:
@@ -126,7 +147,10 @@ def detect_anomalies(
     # Создаём словарь предыдущих цен по figi
     prev_prices_map = {p.figi: p for p in previous_prices}
 
-    for current in current_prices:
+    # Дедупликация текущих цен: одна и та же облигация на разных счетах имеет одну цену
+    current_by_figi = {p.figi: p for p in current_prices}
+
+    for current in current_by_figi.values():
         prev = prev_prices_map.get(current.figi)
         if not prev:
             # Новая облигация, нет предыдущей цены для сравнения
@@ -202,11 +226,11 @@ async def should_send_alert(telegram_id: int, anomaly: PriceAnomaly) -> bool:
         last_type = await AlertStorage.get_last_alert_type(telegram_id, anomaly.figi)
         if last_type:
             is_escalation = (
-                (last_type == AlertType.DROP_WARNING.value
-                 and anomaly.alert_type == AlertType.DROP_CRITICAL)
-                or
-                (last_type == AlertType.RISE_WARNING.value
-                 and anomaly.alert_type == AlertType.RISE_CRITICAL)
+                last_type == AlertType.DROP_WARNING.value
+                and anomaly.alert_type == AlertType.DROP_CRITICAL
+            ) or (
+                last_type == AlertType.RISE_WARNING.value
+                and anomaly.alert_type == AlertType.RISE_CRITICAL
             )
             if is_escalation:
                 logger.debug(f"Разрешаем эскалацию алерта для {anomaly.figi}")
