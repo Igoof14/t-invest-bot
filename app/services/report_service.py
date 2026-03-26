@@ -3,7 +3,7 @@
 import logging
 
 from aiogram import Bot
-from aiogram.types import ChatIdUnion
+from aiogram.exceptions import TelegramForbiddenError
 from core.enums import ReportType
 from invest.invest import get_coupon_payment
 from storage import BotUserStorage
@@ -38,26 +38,29 @@ class ReportService:
                 logger.error(f"Неизвестный тип отчета: {report_type.value}")
                 return
 
-            failed_users = []
+            blocked_users = []
             all_users = await BotUserStorage.get_all_active_users()
+            successful_sends = 0
 
             for uid in all_users:
                 try:
                     text = await get_coupon_payment(user_id=uid, start_datetime=start_datetime)
                     await bot.send_message(uid, text, parse_mode="HTML")
+                    successful_sends += 1
+                except TelegramForbiddenError:
+                    logger.warning(f"Бот заблокирован пользователем {uid}, деактивируем")
+                    blocked_users.append(uid)
                 except Exception as e:
                     logger.error(f"Ошибка при отправке пользователю {uid}: {e}")
-                    failed_users.append(uid)
 
-            # Деактивируем пользователей, которым не удалось отправить сообщение
-            for uid in failed_users:
+            # Деактивируем только пользователей, заблокировавших бота
+            for uid in blocked_users:
                 await BotUserStorage.deactivate_user(uid)
 
-            successful_sends = user_count - len(failed_users)
             logger.info(f"Отчет '{report_type.value}' отправлен {successful_sends} пользователям")
 
-            if failed_users:
-                logger.warning(f"Не удалось отправить {len(failed_users)} пользователям")
+            if blocked_users:
+                logger.warning(f"Деактивировано {len(blocked_users)} заблокировавших бота")
 
         except Exception as e:
             logger.error(f"Ошибка при рассылке отчета: {e}")

@@ -56,8 +56,10 @@ class TBankClient:
         ssl_context = ssl.create_default_context(cafile=certifi.where())
 
         connector = aiohttp.TCPConnector(ssl=ssl_context)
+        timeout = aiohttp.ClientTimeout(total=30)
         self._session = aiohttp.ClientSession(
             connector=connector,
+            timeout=timeout,
             headers={
                 "Authorization": f"Bearer {self.token}",
                 "Content-Type": "application/json",

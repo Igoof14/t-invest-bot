@@ -50,7 +50,10 @@ class SettingHandler:
     async def handle_token_message(message: Message, state: FSMContext) -> None:
         """Обработчик для токена."""
         telegram_id = message.chat.id
-        token = str(message.text).strip()
+        if not message.text:
+            await message.answer("Отправьте токен текстовым сообщением")
+            return
+        token = message.text.strip()
         logger.info(f"Получен токен от пользователя {telegram_id}")
         if await check_token(token):
             logger.info(f"Токен пользователя {telegram_id} валиден")
@@ -73,7 +76,11 @@ class SettingHandler:
     async def handle_delete_confirmation(message: Message, state: FSMContext) -> None:
         """Обработчик подтверждения удаления токена."""
         telegram_id = message.chat.id
-        text = str(message.text).strip().lower()
+        if not message.text:
+            await message.answer("Удаление отменено.")
+            await state.clear()
+            return
+        text = message.text.strip().lower()
         if text == "удалить":
             success = await BotUserStorage.remove_token(telegram_id=telegram_id)
             if success:
@@ -108,10 +115,7 @@ class AlertSettingsHandler:
 
             # Формируем текст с текущим состоянием
             status_text = "включены" if settings.alerts_enabled else "выключены"
-            message_text = (
-                f"{Messages.PRICE_ALERTS_MENU.value}\n\n"
-                f"Статус: <b>{status_text}</b>"
-            )
+            message_text = f"{Messages.PRICE_ALERTS_MENU.value}\n\nСтатус: <b>{status_text}</b>"
 
             if settings.alerts_enabled:
                 message_text += (
@@ -209,20 +213,16 @@ class AlertSettingsHandler:
 
             prompts = {
                 CallbackData.PRICE_ALERTS_DROP_WARNING.value: (
-                    "Введите порог умеренного падения (в %).\n"
-                    "Например: 2"
+                    "Введите порог умеренного падения (в %).\nНапример: 2"
                 ),
                 CallbackData.PRICE_ALERTS_DROP_CRITICAL.value: (
-                    "Введите порог сильного падения (в %).\n"
-                    "Например: 5"
+                    "Введите порог сильного падения (в %).\nНапример: 5"
                 ),
                 CallbackData.PRICE_ALERTS_RISE_WARNING.value: (
-                    "Введите порог умеренного роста (в %).\n"
-                    "Например: 3"
+                    "Введите порог умеренного роста (в %).\nНапример: 3"
                 ),
                 CallbackData.PRICE_ALERTS_RISE_CRITICAL.value: (
-                    "Введите порог сильного роста (в %).\n"
-                    "Например: 7"
+                    "Введите порог сильного роста (в %).\nНапример: 7"
                 ),
             }
 
@@ -253,7 +253,10 @@ class AlertSettingsHandler:
         """Обрабатывает ввод нового значения порога."""
         try:
             telegram_id = message.chat.id
-            text = str(message.text).strip().replace(",", ".").replace("%", "")
+            if not message.text:
+                await message.answer("Введите число. Например: 2.5")
+                return
+            text = message.text.strip().replace(",", ".").replace("%", "")
 
             try:
                 value = float(text)

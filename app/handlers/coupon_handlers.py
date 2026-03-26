@@ -93,6 +93,9 @@ class CouponHandler:
             date_func, title_func = cls.PERIOD_MAPPING[callback.data]
             start_datetime = date_func()
             title = title_func()
+            if not callback.from_user:
+                await callback.answer("Ошибка идентификации пользователя")
+                return
             user_id = callback.from_user.id
             coupon_data = await get_coupon_payment(user_id, start_datetime)
             message_text = title + coupon_data
@@ -109,7 +112,5 @@ class CouponHandler:
         except Exception as e:
             logger.error(f"Ошибка при получении купонов: {e}")
             if callback.message:
-                await callback.message.edit_text(
-                    "Произошла ошибка при получении данных о купонах"
-                )
+                await callback.message.edit_text("Произошла ошибка при получении данных о купонах")
             await callback.answer()

@@ -68,7 +68,7 @@ async def get_nearest_maturities(telegram_id: int, limit: int = 5) -> str | None
         return None
 
     now = datetime.now(UTC)
-    future_bonds = [b for b in bonds_with_maturity if b["maturity_date"] > now]
+    future_bonds = [b for b in bonds_with_maturity if b["maturity_date"].replace(tzinfo=UTC) > now]
     future_bonds.sort(key=lambda x: x["maturity_date"])
     nearest = future_bonds[:limit]
 
@@ -77,8 +77,9 @@ async def get_nearest_maturities(telegram_id: int, limit: int = 5) -> str | None
 
     message_lines = []
     for i, bond in enumerate(nearest, 1):
-        maturity_str = bond["maturity_date"].strftime("%d.%m.%Y")
-        days_left = (bond["maturity_date"] - now).days
+        maturity_date = bond["maturity_date"].replace(tzinfo=UTC)
+        maturity_str = maturity_date.strftime("%d.%m.%Y")
+        days_left = (maturity_date - now).days
         total_nominal = bond["nominal"] * bond["quantity"]
 
         line = (
@@ -135,10 +136,12 @@ async def get_nearest_offers(telegram_id: int, limit: int = 5) -> str | None:
                 if figi not in positions_by_figi:
                     positions_by_figi[figi] = []
 
-                positions_by_figi[figi].append({
-                    "account_name": account.name,
-                    "quantity": int(position.quantity.to_float()),
-                })
+                positions_by_figi[figi].append(
+                    {
+                        "account_name": account.name,
+                        "quantity": int(position.quantity.to_float()),
+                    }
+                )
 
         # 3. Запрашиваем события только для уникальных figi
         logger.info(f"Found {len(positions_by_figi)} unique bonds to check for offers")
@@ -179,7 +182,9 @@ async def get_nearest_offers(telegram_id: int, limit: int = 5) -> str | None:
                                 "account_name": pos["account_name"],
                             }
             except Exception as e:
-                logger.error(f"Error getting bond events for figi={figi}, ticker={bond.ticker}: {e}")
+                logger.error(
+                    f"Error getting bond events for figi={figi}, ticker={bond.ticker}: {e}"
+                )
                 continue
 
             # Небольшая задержка между запросами чтобы не перегружать API
@@ -194,8 +199,13 @@ async def get_nearest_offers(telegram_id: int, limit: int = 5) -> str | None:
 
     message_lines = []
     for i, offer in enumerate(nearest, 1):
-        offer_str = offer["offer_date"].strftime("%d.%m.%Y")
-        days_left = (offer["offer_date"] - now).days
+        offer_date = (
+            offer["offer_date"].replace(tzinfo=UTC)
+            if offer["offer_date"].tzinfo is None
+            else offer["offer_date"]
+        )
+        offer_str = offer_date.strftime("%d.%m.%Y")
+        days_left = (offer_date - now).days
         total_nominal = offer["nominal"] * offer["quantity"]
 
         line = (
