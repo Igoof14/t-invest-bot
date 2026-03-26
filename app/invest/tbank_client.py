@@ -182,10 +182,14 @@ class TBankClient:
         if to is None:
             to = datetime.now(UTC)
 
+        # Убираем tzinfo и добавляем Z для UTC формата, как требует API
+        from_str = from_.replace(tzinfo=None).isoformat() + "Z"
+        to_str = to.replace(tzinfo=None).isoformat() + "Z"
+
         data = {
             "accountId": account_id,
-            "from": from_.isoformat() + "Z",
-            "to": to.isoformat() + "Z",
+            "from": from_str,
+            "to": to_str,
         }
 
         result = await self._request(endpoint, data)
