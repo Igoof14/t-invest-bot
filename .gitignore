@@ -13,3 +13,4 @@ wheels/
 .python-version
 
 bot_data.db
+docker-compose.local.yml
