@@ -246,8 +246,10 @@ class PriceAlertService:
         lines = [
             header,
             "",
-            f"<code>{anomaly.ticker}</code> {anomaly.name}",
-            f"Цена {direction_text} на {anomaly.change_percent:+.1f}%",
+            f"ticker: <code>{anomaly.ticker}</code>"
+            f"name: {anomaly.name}",
+            f"Цена {direction_text} на {anomaly.change_percent:+.1f}%"
+            f"",
             f"   Было: {anomaly.old_price:.2f}  ->  Стало: {anomaly.new_price:.2f}",
             "",
             f"Счёт: {anomaly.account_name}",

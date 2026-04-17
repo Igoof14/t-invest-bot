@@ -19,7 +19,7 @@ dp = Dispatcher()
 
 
 async def main():
-    """Start the bot."""
+
     await db_manager.create_tables()
     register_handlers(dp, bot)
     await BotUtils.set_commands(bot)
