@@ -42,3 +42,20 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.BOT_SERVER_HOST }}
+          username: ${{ secrets.BOT_SERVER_USER }}
+          key: ${{ secrets.BOT_SERVER_SSH_KEY }}
+          script: |
+            echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ secrets.GHCR_USER }} --password-stdin
+            cd ${{ secrets.BOT_SERVER_DEPLOY_DIR }}
+            docker compose pull
+            docker compose up -d --remove-orphans

@@ -14,3 +14,5 @@ wheels/
 
 bot_data.db
 docker-compose.local.yml
+*.xml
+*.iml
