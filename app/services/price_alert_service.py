@@ -95,7 +95,7 @@ class PriceAlertService:
                 "figi": p.figi,
                 "ticker": p.ticker,
                 "name": p.name,
-                "price_percent": p.price_percent,
+                "price": p.price,
                 "account_name": p.account_name,
             }
             for p in current_prices
@@ -231,12 +231,11 @@ class PriceAlertService:
         is_critical = "CRITICAL" in anomaly.alert_type.name
         is_drop = anomaly.change_percent < 0
 
-        # Заголовок
         if is_critical:
             if is_drop:
-                header = "<b>КРИТИЧЕСКОЕ падение цены!</b>"
+                header = "<b>🚨КРИТИЧЕСКОЕ падение цены!</b>"
             else:
-                header = "<b>КРИТИЧЕСКИЙ рост цены!</b>"
+                header = "<b>🚨КРИТИЧЕСКИЙ рост цены!</b>"
         else:
             header = "<b>Внимание: изменение цены облигации</b>"
 
@@ -249,7 +248,7 @@ class PriceAlertService:
             "",
             f"<code>{anomaly.ticker}</code> {anomaly.name}",
             f"Цена {direction_text} на {anomaly.change_percent:+.1f}%",
-            f"   Было: {anomaly.old_price:.2f}%  ->  Стало: {anomaly.new_price:.2f}%",
+            f"   Было: {anomaly.old_price:.2f}  ->  Стало: {anomaly.new_price:.2f}",
             "",
             f"Счёт: {anomaly.account_name}",
         ]

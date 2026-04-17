@@ -158,7 +158,7 @@ class AlertStorage:
 
         Args:
             telegram_id: ID пользователя
-            prices: Список словарей с ключами: figi, ticker, name, price_percent, account_name
+            prices: Список словарей с ключами: figi, ticker, name, price, account_name
 
         Returns:
             True если успешно, False иначе
@@ -172,7 +172,7 @@ class AlertStorage:
                         figi=price_data["figi"],
                         ticker=price_data["ticker"],
                         name=price_data["name"],
-                        price_percent=price_data["price_percent"],
+                        price=price_data["price"],
                         account_name=price_data.get("account_name"),
                     )
                     session.add(record)

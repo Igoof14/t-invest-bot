@@ -28,7 +28,7 @@ class BondPrice:
     figi: str
     ticker: str
     name: str
-    price_percent: float
+    price: float
     account_name: str
 
 
@@ -111,7 +111,7 @@ async def get_portfolio_bond_prices(
                                 figi=position.figi,
                                 ticker=bond.ticker,
                                 name=bond.name,
-                                price_percent=current_price,
+                                price=current_price,
                                 account_name=account.name,
                             )
                         )
@@ -157,8 +157,8 @@ def detect_anomalies(
             continue
 
         # Вычисляем процент изменения
-        old_price = prev.price_percent
-        new_price = current.price_percent
+        old_price = prev.price
+        new_price = current.price
 
         if old_price == 0:
             continue

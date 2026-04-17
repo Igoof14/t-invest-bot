@@ -50,8 +50,7 @@ class BondPriceHistory(Base):
     ticker: Mapped[str] = mapped_column(String(32), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
 
-    # Цена в процентах от номинала
-    price_percent: Mapped[float] = mapped_column(Float, nullable=False)
+    price: Mapped[float] = mapped_column(Float, nullable=False)
 
     # Счёт
     account_name: Mapped[str] = mapped_column(String(255), nullable=True)
@@ -61,7 +60,7 @@ class BondPriceHistory(Base):
 
     def __repr__(self) -> str:
         """Представление модели."""
-        return f"<BondPriceHistory(figi={self.figi}, price={self.price_percent}%)>"
+        return f"<BondPriceHistory(figi={self.figi}, price={self.price})>"
 
 
 class SentAlert(Base):
