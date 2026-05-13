@@ -7,6 +7,7 @@ from core.database import get_session
 from models.user import User
 from sqlalchemy import func, select, update
 from sqlalchemy.engine import CursorResult
+from sqlalchemy.sql.operators import is_
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,9 @@ class BotUserStorage:
                         update(User)
                         .where(User.telegram_id == telegram_id)
                         .values(last_activity=datetime.now(UTC))
+                    )
+                    await session.execute(
+                        update(User).where(User.telegram_id == telegram_id).values(is_active=True)
                     )
                     await session.commit()
                     logger.info(f"Обновлена активность пользователя: {telegram_id}")
