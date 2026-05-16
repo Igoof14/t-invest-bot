@@ -95,15 +95,6 @@ async def handle_help_button(message: Message) -> None:
         await message.answer("Произошла ошибка при получении справки")
 
 
-async def handle_my_reports_button(message: Message) -> None:
-    """Обработка кнопки 'Мои отчёты'."""
-    try:
-        await message.answer("Функция 'Мои отчёты' будет доступна в следующих обновлениях")
-    except Exception as e:
-        logger.error(f"Ошибка при обработке кнопки 'Мои отчёты': {e}")
-        await message.answer("Произошла ошибка")
-
-
 async def handle_settings_button(message: Message) -> None:
     """Обработка кнопки 'Настройки'."""
     try:
