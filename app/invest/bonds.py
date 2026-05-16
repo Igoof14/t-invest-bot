@@ -5,9 +5,9 @@ import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from storage import BotUserStorage
+from storage import AlertStorage, BotUserStorage
 
-from .models import EventType
+from .models import Bond, EventType
 from .tbank_client import TBankClient
 
 logger = logging.getLogger(__name__)
@@ -37,6 +37,29 @@ class OfferInfo:
     nominal: float
     currency: str
     account_name: str
+
+
+async def fetch_bonds_cache() -> dict[str, Bond]:
+    """Загружает все облигации с биржи и возвращает словарь figi -> Bond.
+
+    Вызывается один раз за цикл проверки, результат передаётся в get_portfolio_bond_prices.
+
+
+    ТУТ НУЖНО БУДЕТ ПОМЕНЯТЬ ЛОГИКУ ПОЛУЧЕНИЯ ТОКЕНА
+    """
+    try:
+        # Используем любой валидный токен для получения справочника
+        users_with_alerts = await AlertStorage.get_all_users_with_alerts_enabled()
+        for telegram_id in users_with_alerts:
+            token = await BotUserStorage.get_token_by_telegram_id(telegram_id=telegram_id)
+            if token:
+                async with TBankClient(token) as client:
+                    all_bonds = await client.get_bonds()
+                    return {bond.figi: bond for bond in all_bonds}
+    except Exception as e:
+        logger.error(f"Ошибка при загрузке справочника облигаций: {e}")
+
+    return {}
 
 
 async def get_nearest_maturities(telegram_id: int, limit: int = 5) -> list[MaturityInfo] | None:
