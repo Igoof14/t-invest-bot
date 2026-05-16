@@ -3,10 +3,10 @@
 import logging
 
 from aiogram import Bot
+from invest.bonds import fetch_bonds_cache
 from invest.price_monitor import (
     PriceAnomaly,
     detect_anomalies,
-    fetch_bonds_cache,
     get_portfolio_bond_prices,
     should_send_alert,
 )
