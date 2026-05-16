@@ -137,7 +137,7 @@ async def handle_maturities_button(message: Message) -> None:
 async def handle_offers_button(message: Message) -> None:
     """Обработка кнопки 'Оферты'."""
     try:
-        await message.answer("Загружаю данные об офертах...\nЭто может занять некоторое время.")
+        await message.answer("Загружаю данные об офертах...\nЭто занимает около одной минуты")
         user_id = message.from_user.id if message.from_user else message.chat.id
         offers = await get_nearest_offers(user_id)
 
