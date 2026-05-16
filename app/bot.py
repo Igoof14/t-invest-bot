@@ -8,7 +8,7 @@ from core.config import config
 from core.database import db_manager
 from core.enums import ReportType
 from handlers.registration import register_handlers
-from services.price_alert_service import PriceAlertService
+from services.price_alert import PriceAlertService
 from services.report_service import ReportService
 from utils.bot_utils import BotUtils
 
