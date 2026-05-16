@@ -3,7 +3,7 @@ import logging
 
 from aiogram import Bot, Dispatcher
 from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore
-from apscheduler.triggers.cron import CronTrigger  # type: ignore
+from apscheduler.triggers.cron import CronTrigger
 from core.config import config
 from core.database import db_manager
 from core.enums import ReportType
@@ -19,6 +19,7 @@ dp = Dispatcher()
 
 
 async def main():
+    """Запуск бота."""
     await db_manager.create_tables()
     register_handlers(dp, bot)
     await BotUtils.set_commands(bot)

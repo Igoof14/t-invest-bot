@@ -1,15 +1,49 @@
 """Основные обработчики бота."""
 
 import logging
+from datetime import UTC, datetime
 
-from aiogram import F
 from aiogram.types import Message
 from core.enums import Messages
-from invest.bonds import get_nearest_maturities, get_nearest_offers
+from invest.bonds import MaturityInfo, OfferInfo, get_nearest_maturities, get_nearest_offers
 from keyboards import KeyboardHelper
 from storage import AlertStorage, BotUserStorage
 
 logger = logging.getLogger(__name__)
+
+
+def _format_maturities(maturities: list[MaturityInfo]) -> str:
+    now = datetime.now(UTC)
+    lines = []
+    for i, bond in enumerate(maturities, 1):
+        days_left = (bond.maturity_date - now).days
+        total_nominal = bond.nominal * bond.quantity
+        lines.append(
+            f"{i}. <code>{bond.ticker}</code>\n"
+            f"   {bond.name}\n"
+            f"   Погашение: {bond.maturity_date.strftime('%d.%m.%Y')} ({days_left} дн.)\n"
+            f"   Кол-во: {bond.quantity} шт. x {bond.nominal:.0f} = "
+            f"{total_nominal:,.0f} {bond.currency.upper()}\n"
+            f"   Счёт: {bond.account_name}\n"
+        )
+    return "\n".join(lines)
+
+
+def _format_offers(offers: list[OfferInfo]) -> str:
+    now = datetime.now(UTC)
+    lines = []
+    for i, offer in enumerate(offers, 1):
+        days_left = (offer.offer_date - now).days
+        total_nominal = offer.nominal * offer.quantity
+        lines.append(
+            f"{i}. <code>{offer.ticker}</code>\n"
+            f"   {offer.name}\n"
+            f"   Оферта: {offer.offer_date.strftime('%d.%m.%Y')} ({days_left} дн.)\n"
+            f"   Кол-во: {offer.quantity} шт. x {offer.nominal:.0f} = "
+            f"{total_nominal:,.0f} {offer.currency.upper()}\n"
+            f"   Счёт: {offer.account_name}\n"
+        )
+    return "\n".join(lines)
 
 
 async def start_handler(message: Message) -> None:
@@ -85,10 +119,12 @@ async def handle_maturities_button(message: Message) -> None:
     try:
         await message.answer("Загружаю данные о погашениях...")
         user_id = message.from_user.id if message.from_user else message.chat.id
-        maturities_data = await get_nearest_maturities(user_id)
+        maturities = await get_nearest_maturities(user_id)
 
-        if maturities_data:
-            response = Messages.MATURITIES_TITLE.value + maturities_data
+        if maturities is None:
+            response = Messages.NOT_TOKEN.value
+        elif maturities:
+            response = Messages.MATURITIES_TITLE.value + _format_maturities(maturities)
         else:
             response = Messages.NO_BONDS.value
 
@@ -103,10 +139,12 @@ async def handle_offers_button(message: Message) -> None:
     try:
         await message.answer("Загружаю данные об офертах...\nЭто может занять некоторое время.")
         user_id = message.from_user.id if message.from_user else message.chat.id
-        offers_data = await get_nearest_offers(user_id)
+        offers = await get_nearest_offers(user_id)
 
-        if offers_data:
-            response = Messages.OFFERS_TITLE.value + offers_data
+        if offers is None:
+            response = Messages.NOT_TOKEN.value
+        elif offers:
+            response = Messages.OFFERS_TITLE.value + _format_offers(offers)
         else:
             response = Messages.NO_OFFERS.value
 

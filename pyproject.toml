@@ -13,5 +13,6 @@ dependencies = [
     "greenlet>=3.0.0",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
+    "ruff>=0.15.13",
     "sqlalchemy>=2.0.0",
 ]

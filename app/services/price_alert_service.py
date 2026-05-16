@@ -113,10 +113,7 @@ class PriceAlertService:
 
         """
         # Фильтруем аномалии по anti-spam правилам
-        alerts_to_send: list[PriceAnomaly] = []
-        for anomaly in anomalies:
-            if await should_send_alert(telegram_id, anomaly):
-                alerts_to_send.append(anomaly)
+        alerts_to_send = [a for a in anomalies if await should_send_alert(telegram_id, a)]
 
         if not alerts_to_send:
             return
@@ -246,10 +243,8 @@ class PriceAlertService:
         lines = [
             header,
             "",
-            f"ticker: <code>{anomaly.ticker}</code>"
-            f"name: {anomaly.name}",
-            f"Цена {direction_text} на {anomaly.change_percent:+.1f}%"
-            f"",
+            f"ticker: <code>{anomaly.ticker}</code>name: {anomaly.name}",
+            f"Цена {direction_text} на {anomaly.change_percent:+.1f}%",
             f"   Было: {anomaly.old_price:.2f}  ->  Стало: {anomaly.new_price:.2f}",
             "",
             f"Счёт: {anomaly.account_name}",
