@@ -162,7 +162,6 @@ class BotUserStorage:
     @classmethod
     async def get_all_active_users(cls) -> list[int]:
         """Возвращает список telegram_id всех активных пользователей."""
-        result = []
         async for session in get_session():
             try:
                 result = await session.execute(select(User.telegram_id).where(User.is_active))
