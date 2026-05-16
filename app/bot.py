@@ -39,7 +39,7 @@ async def main():
 
     scheduler.add_job(
         PriceAlertService.check_price_anomalies,
-        CronTrigger(day_of_week="mon-fri", hour="10-18", minute=0, timezone="Europe/Moscow"),
+        CronTrigger(hour="10-20", minute=0, timezone="Europe/Moscow"),
         kwargs={"bot": bot},
     )
 
