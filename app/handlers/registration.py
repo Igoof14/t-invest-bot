@@ -11,7 +11,6 @@ from .base_handlers import (
     handle_help_button,
     handle_maturities_button,
     handle_monitoring_button,
-    handle_my_reports_button,
     handle_offers_button,
     handle_settings_button,
     start_handler,
@@ -38,7 +37,6 @@ def register_handlers(dp: Dispatcher, bot: Bot) -> None:
     dp.message.register(handle_maturities_button, F.text == ButtonTexts.MATURITIES.value)
     dp.message.register(handle_offers_button, F.text == ButtonTexts.OFFERS.value)
     dp.message.register(handle_help_button, F.text == ButtonTexts.HELP.value)
-    dp.message.register(handle_my_reports_button, F.text == ButtonTexts.MY_REPORTS.value)
     dp.message.register(handle_monitoring_button, F.text == ButtonTexts.MONITORING.value)
     dp.message.register(handle_settings_button, F.text == ButtonTexts.SETTINGS.value)
 
