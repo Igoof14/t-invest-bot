@@ -68,7 +68,7 @@ class BondPriceHistory(Base):
 class PriceAlertSent(Base):
     """Отправленные алерты (для anti-spam)."""
 
-    __tablename__ = "sent_alerts"
+    __tablename__ = "price_alert_sent"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
@@ -85,4 +85,4 @@ class PriceAlertSent(Base):
 
     def __repr__(self) -> str:
         """Представление модели."""
-        return f"<SentAlert(figi={self.figi}, type={self.alert_type})>"
+        return f"<PriceAlertSent(figi={self.figi}, type={self.alert_type})>"
