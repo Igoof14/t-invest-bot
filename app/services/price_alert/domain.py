@@ -61,17 +61,6 @@ class AlertType(Enum):
 
 
 @dataclass(frozen=True, slots=True)
-class BondPrice:
-    """Снимок цены облигации в портфеле пользователя."""
-
-    figi: str
-    ticker: str
-    name: str
-    price: float
-    account_name: str
-
-
-@dataclass(frozen=True, slots=True)
 class PriceAnomaly:
     """Аномальное изменение цены облигации, требующее уведомления."""
 

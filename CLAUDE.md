@@ -39,7 +39,7 @@ No test suite exists yet.
 ### Core Modules
 
 - **app/core/** - Configuration (Pydantic settings), database engine/session management, enums for UI text
-- **app/models/** - SQLAlchemy models: BotUser, TinvestUser, UserAlertSettings, BondPriceHistory, SentAlert
+- **app/models/** - SQLAlchemy models: BotUser, TinvestUser, UserAlertSettings, BondPriceHistory, PriceAlertSent
 - **app/handlers/** - Aiogram message/callback handlers organized by feature (base, coupon, settings)
 - **app/services/** - Scheduled tasks: daily/weekly coupon reports, hourly price anomaly checks
 - **app/invest/** - T-Invest API client and bond portfolio operations

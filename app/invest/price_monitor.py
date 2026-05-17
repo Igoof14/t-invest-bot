@@ -1,18 +1,16 @@
 """Модуль мониторинга цен облигаций.
 
-TODO: на следующих этапах рефакторинга:
- - get_portfolio_bond_prices переедет в invest/portfolio_prices.py (без зависимости на storage),
- - detect_anomalies и should_send_alert переедут в services/price_alert/.
-Этот файл — временный шим, чтобы не ломать импорты.
+TODO: на следующих этапах рефакторинга detect_anomalies и should_send_alert
+переедут в services/price_alert/ (детектор и antispam-политика).
+Этот файл — временный шим.
 """
 
 import logging
 
-from services.price_alert.domain import AlertType, BondPrice, PriceAnomaly
-from storage import BotUserStorage, PriceAlertStorage
+from services.price_alert.domain import AlertType, PriceAnomaly
+from storage import PriceAlertStorage
 
-from .models import Bond
-from .tbank_client import TBankClient
+from .portfolio_prices import BondPrice
 
 logger = logging.getLogger(__name__)
 
@@ -21,69 +19,8 @@ __all__ = [
     "BondPrice",
     "PriceAnomaly",
     "detect_anomalies",
-    "get_portfolio_bond_prices",
     "should_send_alert",
 ]
-
-
-async def get_portfolio_bond_prices(
-    telegram_id: int,
-    bonds_cache: dict[str, Bond],
-) -> list[BondPrice]:
-    """Получает текущие цены облигаций из портфеля пользователя.
-
-    Args:
-        telegram_id: ID пользователя в Telegram
-        bonds_cache: Кэш облигаций (figi -> Bond), общий для всех пользователей
-
-    Returns:
-        Список объектов BondPrice с текущими ценами
-
-    """
-    token = await BotUserStorage.get_token_by_telegram_id(telegram_id=telegram_id)
-    if not token:
-        logger.warning(f"Токен не найден для пользователя {telegram_id}")
-        return []
-
-    bond_prices: list[BondPrice] = []
-
-    try:
-        async with TBankClient(token) as client:
-            accounts = await client.get_accounts()
-
-            for account in accounts:
-                try:
-                    portfolio = await client.get_portfolio(account_id=account.id)
-
-                    for position in portfolio.positions:
-                        if position.instrument_type != "bond":
-                            continue
-
-                        bond = bonds_cache.get(position.figi)
-                        if not bond:
-                            continue
-
-                        # Цена в процентах от номинала
-                        current_price = position.current_price.to_float()
-
-                        bond_prices.append(
-                            BondPrice(
-                                figi=position.figi,
-                                ticker=bond.ticker,
-                                name=bond.name,
-                                price=current_price,
-                                account_name=account.name,
-                            )
-                        )
-
-                except Exception as e:
-                    logger.error(f"Ошибка при получении портфеля счёта {account.id}: {e}")
-                    continue
-
-    except Exception as e:
-        logger.error(f"Ошибка при получении цен облигаций для пользователя {telegram_id}: {e}")
-
-    return bond_prices
 
 
 def detect_anomalies(

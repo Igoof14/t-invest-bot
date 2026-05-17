@@ -4,12 +4,9 @@ import logging
 
 from aiogram import Bot
 from invest.bonds import fetch_bonds_cache
-from invest.price_monitor import (
-    detect_anomalies,
-    get_portfolio_bond_prices,
-    should_send_alert,
-)
-from storage import PriceAlertStorage
+from invest.portfolio_prices import fetch_portfolio_bond_prices
+from invest.price_monitor import detect_anomalies, should_send_alert
+from storage import BotUserStorage, PriceAlertStorage
 
 from .domain import PriceAnomaly
 
@@ -74,8 +71,15 @@ class PriceAlertService:
         if not settings or not settings.alerts_enabled:
             return
 
-        # Получаем текущие цены
-        current_prices = await get_portfolio_bond_prices(telegram_id, bonds_cache)
+        # Получаем токен пользователя и текущие цены
+        token = await BotUserStorage.get_token_by_telegram_id(telegram_id=telegram_id)
+        if not token:
+            logger.warning(f"Токен не найден для пользователя {telegram_id}")
+            return
+
+        current_prices = await fetch_portfolio_bond_prices(
+            token, bonds_cache, telegram_id=telegram_id
+        )
         if not current_prices:
             logger.debug(f"Нет облигаций в портфеле пользователя {telegram_id}")
             return
@@ -91,17 +95,7 @@ class PriceAlertService:
                 await PriceAlertService._send_alerts(bot, telegram_id, anomalies)
 
         # Сохраняем текущие цены
-        price_data = [
-            {
-                "figi": p.figi,
-                "ticker": p.ticker,
-                "name": p.name,
-                "price": p.price,
-                "account_name": p.account_name,
-            }
-            for p in current_prices
-        ]
-        await PriceAlertStorage.save_price_snapshot(telegram_id, price_data)
+        await PriceAlertStorage.save_price_snapshot(telegram_id, current_prices)
 
     @staticmethod
     async def _send_alerts(bot: Bot, telegram_id: int, anomalies: list[PriceAnomaly]) -> None:
