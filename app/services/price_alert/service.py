@@ -5,12 +5,13 @@ import logging
 from aiogram import Bot
 from invest.bonds import fetch_bonds_cache
 from invest.price_monitor import (
-    PriceAnomaly,
     detect_anomalies,
     get_portfolio_bond_prices,
     should_send_alert,
 )
 from storage import PriceAlertStorage
+
+from .domain import PriceAnomaly
 
 logger = logging.getLogger(__name__)
 
@@ -166,8 +167,8 @@ class PriceAlertService:
 
         """
         # Сортируем по критичности
-        critical = [a for a in anomalies if "CRITICAL" in a.alert_type.name]
-        warnings = [a for a in anomalies if "WARNING" in a.alert_type.name]
+        critical = [a for a in anomalies if a.is_critical]
+        warnings = [a for a in anomalies if not a.is_critical]
 
         # Ограничиваем количество показываемых аномалий
         shown_critical = critical[:5]
@@ -225,8 +226,8 @@ class PriceAlertService:
             Отформатированное сообщение
 
         """
-        is_critical = "CRITICAL" in anomaly.alert_type.name
-        is_drop = anomaly.change_percent < 0
+        is_critical = anomaly.is_critical
+        is_drop = anomaly.is_drop
 
         if is_critical:
             if is_drop:

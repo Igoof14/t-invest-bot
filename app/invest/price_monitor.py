@@ -1,9 +1,14 @@
-"""Модуль мониторинга цен облигаций."""
+"""Модуль мониторинга цен облигаций.
+
+TODO: на следующих этапах рефакторинга:
+ - get_portfolio_bond_prices переедет в invest/portfolio_prices.py (без зависимости на storage),
+ - detect_anomalies и should_send_alert переедут в services/price_alert/.
+Этот файл — временный шим, чтобы не ломать импорты.
+"""
 
 import logging
-from dataclasses import dataclass
-from enum import Enum
 
+from services.price_alert.domain import AlertType, BondPrice, PriceAnomaly
 from storage import BotUserStorage, PriceAlertStorage
 
 from .models import Bond
@@ -11,39 +16,14 @@ from .tbank_client import TBankClient
 
 logger = logging.getLogger(__name__)
 
-
-class AlertType(Enum):
-    """Типы алертов."""
-
-    DROP_WARNING = "drop_warning"
-    DROP_CRITICAL = "drop_critical"
-    RISE_WARNING = "rise_warning"
-    RISE_CRITICAL = "rise_critical"
-
-
-@dataclass
-class BondPrice:
-    """Информация о цене облигации."""
-
-    figi: str
-    ticker: str
-    name: str
-    price: float
-    account_name: str
-
-
-@dataclass
-class PriceAnomaly:
-    """Информация об аномалии цены."""
-
-    figi: str
-    ticker: str
-    name: str
-    old_price: float
-    new_price: float
-    change_percent: float
-    alert_type: AlertType
-    account_name: str
+__all__ = [
+    "AlertType",
+    "BondPrice",
+    "PriceAnomaly",
+    "detect_anomalies",
+    "get_portfolio_bond_prices",
+    "should_send_alert",
+]
 
 
 async def get_portfolio_bond_prices(
@@ -196,14 +176,14 @@ async def should_send_alert(telegram_id: int, anomaly: PriceAnomaly) -> bool:
 
     """
     # Проверяем дневной лимит
-    if not await AlertStorage.can_send_more_alerts_today(telegram_id):
+    if not await PriceAlertStorage.can_send_more_alerts_today(telegram_id):
         logger.debug(f"Превышен дневной лимит алертов для пользователя {telegram_id}")
         return False
 
     # Проверяем cooldown
-    if not await AlertStorage.can_send_alert(telegram_id, anomaly.figi):
+    if not await PriceAlertStorage.can_send_alert(telegram_id, anomaly.figi):
         # Проверяем эскалацию: если последний был warning, а текущий critical - разрешаем
-        last_type = await AlertStorage.get_last_alert_type(telegram_id, anomaly.figi)
+        last_type = await PriceAlertStorage.get_last_alert_type(telegram_id, anomaly.figi)
         if last_type:
             is_escalation = (
                 last_type == AlertType.DROP_WARNING.value
