@@ -5,7 +5,7 @@ import logging
 from aiogram import Bot
 from aiogram.exceptions import TelegramForbiddenError
 from core.enums import ReportType
-from invest.invest import get_coupon_payment
+from invest.bonds import get_coupon_payment
 from storage import BotUserStorage
 from utils.datetime_utils import DateTimeHelper
 

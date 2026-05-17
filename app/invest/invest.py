@@ -1,8 +1,5 @@
 """Функции для работы с T-Invest API."""
 
-from storage import BotUserStorage
-
-from .models import OperationType
 from .tbank_client import TBankClient
 
 

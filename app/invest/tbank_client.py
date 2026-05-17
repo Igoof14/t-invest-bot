@@ -51,7 +51,7 @@ class TBankClient:
         self._session: aiohttp.ClientSession | None = None
 
     async def __aenter__(self) -> "TBankClient":
-        """Вход в контекстный менеджер."""
+        """Вход в менеджер контекста."""
         # Создаём SSL контекст с актуальными сертификатами
         ssl_context = ssl.create_default_context(cafile=certifi.where())
 

@@ -5,7 +5,7 @@ import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from storage import AlertStorage, BotUserStorage
+from storage import BotUserStorage, PriceAlertStorage
 
 from .models import Bond, EventType, OperationType
 from .tbank_client import TBankClient

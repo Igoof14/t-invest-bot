@@ -4,7 +4,7 @@ import logging
 from datetime import UTC, datetime, timedelta, timezone
 
 from core.database import get_session
-from models.alerts import BondPriceHistory, SentAlert, UserAlertSettings
+from models.alerts import BondPriceHistory, PriceAlertSent, PriceAlertSettings
 from sqlalchemy import delete, func, select, update
 
 logger = logging.getLogger(__name__)
@@ -15,18 +15,18 @@ MAX_DAILY_ALERTS = 10
 MOSCOW_TZ = timezone(timedelta(hours=3))
 
 
-class AlertStorage:
+class PriceAlertStorage:
     """Класс для управления данными уведомлений."""
 
     # === Настройки пользователя ===
 
     @classmethod
-    async def get_user_settings(cls, telegram_id: int) -> UserAlertSettings | None:
+    async def get_user_settings(cls, telegram_id: int) -> PriceAlertSettings | None:
         """Получает настройки уведомлений пользователя."""
         async for session in get_session():
             try:
                 result = await session.execute(
-                    select(UserAlertSettings).where(UserAlertSettings.telegram_id == telegram_id)
+                    select(PriceAlertSettings).where(PriceAlertSettings.telegram_id == telegram_id)
                 )
                 return result.scalar_one_or_none()
             except Exception as e:
@@ -35,12 +35,12 @@ class AlertStorage:
         return None
 
     @classmethod
-    async def get_or_create_user_settings(cls, telegram_id: int) -> UserAlertSettings:
+    async def get_or_create_user_settings(cls, telegram_id: int) -> PriceAlertSettings:
         """Получает или создаёт настройки уведомлений пользователя."""
         async for session in get_session():
             try:
                 result = await session.execute(
-                    select(UserAlertSettings).where(UserAlertSettings.telegram_id == telegram_id)
+                    select(PriceAlertSettings).where(PriceAlertSettings.telegram_id == telegram_id)
                 )
                 settings = result.scalar_one_or_none()
 
@@ -48,7 +48,7 @@ class AlertStorage:
                     return settings
 
                 # Создаём новые настройки с дефолтными значениями
-                settings = UserAlertSettings(telegram_id=telegram_id)
+                settings = PriceAlertSettings(telegram_id=telegram_id)
                 session.add(settings)
                 await session.commit()
                 await session.refresh(settings)
@@ -71,8 +71,8 @@ class AlertStorage:
                 await cls.get_or_create_user_settings(telegram_id)
 
                 result = await session.execute(
-                    update(UserAlertSettings)
-                    .where(UserAlertSettings.telegram_id == telegram_id)
+                    update(PriceAlertSettings)
+                    .where(PriceAlertSettings.telegram_id == telegram_id)
                     .values(**kwargs)
                 )
                 await session.commit()
@@ -103,8 +103,8 @@ class AlertStorage:
         async for session in get_session():
             try:
                 result = await session.execute(
-                    select(UserAlertSettings.telegram_id).where(
-                        UserAlertSettings.alerts_enabled == True  # noqa: E712
+                    select(PriceAlertSettings.telegram_id).where(
+                        PriceAlertSettings.alerts_enabled == True  # noqa: E712
                     )
                 )
                 return list(result.scalars().all())
@@ -213,7 +213,7 @@ class AlertStorage:
         """Записывает отправленный алерт."""
         async for session in get_session():
             try:
-                record = SentAlert(
+                record = PriceAlertSent(
                     telegram_id=telegram_id,
                     figi=figi,
                     alert_type=alert_type,
@@ -234,11 +234,11 @@ class AlertStorage:
             try:
                 cooldown_time = datetime.now(UTC) - timedelta(hours=ALERT_COOLDOWN_HOURS)
                 result = await session.execute(
-                    select(SentAlert)
+                    select(PriceAlertSent)
                     .where(
-                        SentAlert.telegram_id == telegram_id,
-                        SentAlert.figi == figi,
-                        SentAlert.sent_at > cooldown_time,
+                        PriceAlertSent.telegram_id == telegram_id,
+                        PriceAlertSent.figi == figi,
+                        PriceAlertSent.sent_at > cooldown_time,
                     )
                     .limit(1)
                 )
@@ -259,9 +259,9 @@ class AlertStorage:
                     hour=0, minute=0, second=0, microsecond=0
                 ).astimezone(UTC)
                 result = await session.execute(
-                    select(func.count(SentAlert.id)).where(
-                        SentAlert.telegram_id == telegram_id,
-                        SentAlert.sent_at >= today_start,
+                    select(func.count(PriceAlertSent.id)).where(
+                        PriceAlertSent.telegram_id == telegram_id,
+                        PriceAlertSent.sent_at >= today_start,
                     )
                 )
                 return result.scalar() or 0
@@ -282,12 +282,12 @@ class AlertStorage:
         async for session in get_session():
             try:
                 result = await session.execute(
-                    select(SentAlert.alert_type)
+                    select(PriceAlertSent.alert_type)
                     .where(
-                        SentAlert.telegram_id == telegram_id,
-                        SentAlert.figi == figi,
+                        PriceAlertSent.telegram_id == telegram_id,
+                        PriceAlertSent.figi == figi,
                     )
-                    .order_by(SentAlert.sent_at.desc())
+                    .order_by(PriceAlertSent.sent_at.desc())
                     .limit(1)
                 )
                 return result.scalar_one_or_none()
@@ -303,7 +303,7 @@ class AlertStorage:
             try:
                 cutoff_date = datetime.now(UTC) - timedelta(days=days_to_keep)
                 result = await session.execute(
-                    delete(SentAlert).where(SentAlert.sent_at < cutoff_date)
+                    delete(PriceAlertSent).where(PriceAlertSent.sent_at < cutoff_date)
                 )
                 await session.commit()
                 deleted = getattr(result, "rowcount", 0)

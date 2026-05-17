@@ -10,7 +10,7 @@ from invest.price_monitor import (
     get_portfolio_bond_prices,
     should_send_alert,
 )
-from storage import AlertStorage
+from storage import PriceAlertStorage
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class PriceAlertService:
         logger.info("Запуск проверки аномалий цен облигаций")
 
         # Получаем всех пользователей с включенными уведомлениями
-        users = await AlertStorage.get_all_users_with_alerts_enabled()
+        users = await PriceAlertStorage.get_all_users_with_alerts_enabled()
 
         if not users:
             logger.info("Нет пользователей с включенными уведомлениями")
@@ -53,8 +53,8 @@ class PriceAlertService:
                 logger.error(f"Ошибка при проверке портфеля пользователя {telegram_id}: {e}")
 
         # Периодическая очистка старых данных
-        await AlertStorage.cleanup_old_prices(days_to_keep=7)
-        await AlertStorage.cleanup_old_alerts(days_to_keep=7)
+        await PriceAlertStorage.cleanup_old_prices(days_to_keep=7)
+        await PriceAlertStorage.cleanup_old_alerts(days_to_keep=7)
 
         logger.info("Проверка аномалий цен завершена")
 
@@ -69,7 +69,7 @@ class PriceAlertService:
 
         """
         # Получаем настройки пользователя
-        settings = await AlertStorage.get_user_settings(telegram_id)
+        settings = await PriceAlertStorage.get_user_settings(telegram_id)
         if not settings or not settings.alerts_enabled:
             return
 
@@ -80,7 +80,7 @@ class PriceAlertService:
             return
 
         # Получаем предыдущие цены
-        previous_prices = await AlertStorage.get_latest_prices(telegram_id)
+        previous_prices = await PriceAlertStorage.get_latest_prices(telegram_id)
 
         # Если есть предыдущие цены - ищем аномалии
         if previous_prices:
@@ -100,7 +100,7 @@ class PriceAlertService:
             }
             for p in current_prices
         ]
-        await AlertStorage.save_price_snapshot(telegram_id, price_data)
+        await PriceAlertStorage.save_price_snapshot(telegram_id, price_data)
 
     @staticmethod
     async def _send_alerts(bot: Bot, telegram_id: int, anomalies: list[PriceAnomaly]) -> None:
@@ -141,7 +141,7 @@ class PriceAlertService:
             await bot.send_message(telegram_id, message, parse_mode="HTML")
 
             # Записываем отправленный алерт
-            await AlertStorage.record_sent_alert(
+            await PriceAlertStorage.record_sent_alert(
                 telegram_id, anomaly.figi, anomaly.alert_type.value
             )
 
@@ -202,7 +202,7 @@ class PriceAlertService:
 
             # Записываем только показанные алерты
             for anomaly in shown_anomalies:
-                await AlertStorage.record_sent_alert(
+                await PriceAlertStorage.record_sent_alert(
                     telegram_id, anomaly.figi, anomaly.alert_type.value
                 )
 

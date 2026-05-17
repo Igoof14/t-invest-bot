@@ -7,10 +7,10 @@ from sqlalchemy import BigInteger, Boolean, DateTime, Float, Integer, String, fu
 from sqlalchemy.orm import Mapped, mapped_column
 
 
-class UserAlertSettings(Base):
+class PriceAlertSettings(Base):
     """Настройки уведомлений пользователя."""
 
-    __tablename__ = "user_alert_settings"
+    __tablename__ = "price_alert_settings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False, index=True)
@@ -56,14 +56,16 @@ class BondPriceHistory(Base):
     account_name: Mapped[str] = mapped_column(String(255), nullable=True)
 
     # Время записи
-    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     def __repr__(self) -> str:
         """Представление модели."""
         return f"<BondPriceHistory(figi={self.figi}, price={self.price})>"
 
 
-class SentAlert(Base):
+class PriceAlertSent(Base):
     """Отправленные алерты (для anti-spam)."""
 
     __tablename__ = "sent_alerts"

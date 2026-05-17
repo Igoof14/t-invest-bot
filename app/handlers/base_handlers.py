@@ -7,7 +7,7 @@ from aiogram.types import Message
 from core.enums import Messages
 from invest.bonds import MaturityInfo, OfferInfo, get_nearest_maturities, get_nearest_offers
 from keyboards import KeyboardHelper
-from storage import AlertStorage, BotUserStorage
+from storage import BotUserStorage, PriceAlertStorage
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +149,7 @@ async def handle_monitoring_button(message: Message) -> None:
     """Обработка кнопки 'Мониторинг'."""
     try:
         telegram_id = message.from_user.id if message.from_user else message.chat.id
-        settings = await AlertStorage.get_or_create_user_settings(telegram_id)
+        settings = await PriceAlertStorage.get_or_create_user_settings(telegram_id)
 
         status_text = "включен" if settings.alerts_enabled else "выключен"
         message_text = (

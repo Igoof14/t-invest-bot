@@ -4,9 +4,10 @@ import logging
 from dataclasses import dataclass
 from enum import Enum
 
-from models import Bond
-from storage import AlertStorage, BotUserStorage
-from tbank_client import TBankClient
+from storage import BotUserStorage, PriceAlertStorage
+
+from .models import Bond
+from .tbank_client import TBankClient
 
 logger = logging.getLogger(__name__)
 

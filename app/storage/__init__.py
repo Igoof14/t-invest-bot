@@ -1,6 +1,6 @@
 """Модуль для работы с хранилищем данных."""
 
-from .alert_storage import AlertStorage
 from .bot_user_storage import BotUserStorage
+from .price_alert_storage import PriceAlertStorage
 
-__all__ = ["AlertStorage", "BotUserStorage"]
+__all__ = ["PriceAlertStorage", "BotUserStorage"]

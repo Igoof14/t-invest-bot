@@ -8,7 +8,7 @@ from aiogram.types import CallbackQuery, Message
 from core.enums import CallbackData, Messages
 from invest.invest import check_token
 from keyboards import KeyboardHelper
-from storage import AlertStorage, BotUserStorage
+from storage import BotUserStorage, PriceAlertStorage
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,7 @@ class AlertSettingsHandler:
         """Показывает меню настроек уведомлений о ценах."""
         try:
             telegram_id = callback.from_user.id
-            settings = await AlertStorage.get_or_create_user_settings(telegram_id)
+            settings = await PriceAlertStorage.get_or_create_user_settings(telegram_id)
 
             # Формируем текст с текущим состоянием
             status_text = "включены" if settings.alerts_enabled else "выключены"
@@ -147,7 +147,7 @@ class AlertSettingsHandler:
         """Переключает состояние уведомлений."""
         try:
             telegram_id = callback.from_user.id
-            new_state = await AlertStorage.toggle_alerts(telegram_id)
+            new_state = await PriceAlertStorage.toggle_alerts(telegram_id)
 
             if new_state:
                 message_text = Messages.PRICE_ALERTS_ENABLED.value
@@ -174,7 +174,7 @@ class AlertSettingsHandler:
         """Показывает меню настройки порогов."""
         try:
             telegram_id = callback.from_user.id
-            settings = await AlertStorage.get_user_settings(telegram_id)
+            settings = await PriceAlertStorage.get_user_settings(telegram_id)
 
             if not settings:
                 await callback.answer("Сначала включите уведомления")
@@ -280,7 +280,7 @@ class AlertSettingsHandler:
 
             field = field_map.get(current_state)
             if field:
-                await AlertStorage.update_user_settings(telegram_id, **{field: value})
+                await PriceAlertStorage.update_user_settings(telegram_id, **{field: value})
                 await message.answer(f"Порог успешно изменён на {value}%")
                 await state.clear()
             else:
