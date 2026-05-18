@@ -3,13 +3,17 @@
 import logging
 from datetime import UTC, datetime
 
-from aiogram.types import Message
-from core.enums import Messages
+from aiogram import F, Router
+from aiogram.filters import Command
+from aiogram.types import KeyboardButton, Message, ReplyKeyboardMarkup
+from core.enums import MainKeyboardButtonTexts, Messages, NotificationKeybordButtonTexts
 from invest.bonds import MaturityInfo, OfferInfo, get_nearest_maturities, get_nearest_offers
 from keyboards import KeyboardHelper
-from storage import BotUserStorage, PriceAlertStorage
+from storage import BotUserStorage
 
 logger = logging.getLogger(__name__)
+
+router: Router = Router()
 
 
 def _format_maturities(maturities: list[MaturityInfo]) -> str:
@@ -46,6 +50,7 @@ def _format_offers(offers: list[OfferInfo]) -> str:
     return "\n".join(lines)
 
 
+@router.message(Command("start"))
 async def start_handler(message: Message) -> None:
     """Обработчик команды /start."""
     try:
@@ -76,6 +81,23 @@ async def start_handler(message: Message) -> None:
         await message.answer("Произошла ошибка при запуске")
 
 
+@router.message(F.text == MainKeyboardButtonTexts.NOTIFICATIONS.value)
+async def handle_notifications_button(message: Message):
+    """Обработка кнопки 'Уведомления'."""
+    new_keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=NotificationKeybordButtonTexts.PRICE_ALERT.value)],
+            [KeyboardButton(text=NotificationKeybordButtonTexts.OFFER_ALERT.value)],
+            [KeyboardButton(text=NotificationKeybordButtonTexts.BACK_TO_MAIN_KEYBORD.value)],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=False,
+    )
+    await message.answer("Уведомления:", reply_markup=new_keyboard)
+    await message.delete()
+
+
+@router.message(F.text == MainKeyboardButtonTexts.COUPONS.value)
 async def handle_coupons_button(message: Message) -> None:
     """Обработка кнопки 'Купоны'."""
     try:
@@ -86,25 +108,30 @@ async def handle_coupons_button(message: Message) -> None:
         await message.answer("Произошла ошибка")
 
 
+@router.message(F.text == MainKeyboardButtonTexts.HELP.value)
 async def handle_help_button(message: Message) -> None:
     """Обработка кнопки 'Помощь'."""
     try:
+        await message.delete()
         await message.answer(Messages.HELP_TEXT.value)
     except Exception as e:
         logger.error(f"Ошибка при обработке кнопки помощи: {e}")
         await message.answer("Произошла ошибка при получении справки")
 
 
+@router.message(F.text == MainKeyboardButtonTexts.SETTINGS.value)
 async def handle_settings_button(message: Message) -> None:
     """Обработка кнопки 'Настройки'."""
     try:
         build = KeyboardHelper.create_settings_keyboard()
+        await message.delete()
         await message.answer("Настройки", reply_markup=build.as_markup())
     except Exception as e:
         logger.error(f"Ошибка при обработке кнопки 'Настройки': {e}")
         await message.answer("Произошла ошибка")
 
 
+@router.message(F.text == MainKeyboardButtonTexts.MATURITIES.value)
 async def handle_maturities_button(message: Message) -> None:
     """Обработка кнопки 'Погашения'."""
     try:
@@ -125,6 +152,7 @@ async def handle_maturities_button(message: Message) -> None:
         await message.answer("Произошла ошибка при получении данных о погашениях")
 
 
+@router.message(F.text == MainKeyboardButtonTexts.OFFERS.value)
 async def handle_offers_button(message: Message) -> None:
     """Обработка кнопки 'Оферты'."""
     try:
@@ -145,34 +173,15 @@ async def handle_offers_button(message: Message) -> None:
         await message.answer("Произошла ошибка при получении данных об офертах")
 
 
-async def handle_monitoring_button(message: Message) -> None:
-    """Обработка кнопки 'Мониторинг'."""
-    try:
-        telegram_id = message.from_user.id if message.from_user else message.chat.id
-        settings = await PriceAlertStorage.get_or_create_user_settings(telegram_id)
-
-        status_text = "включен" if settings.alerts_enabled else "выключен"
-        message_text = (
-            f"<b>Мониторинг цен облигаций</b>\n\n"
-            f"Получайте уведомления при значительных изменениях цен "
-            f"облигаций в вашем портфеле.\n\n"
-            f"Статус: <b>{status_text}</b>"
-        )
-
-        if settings.alerts_enabled:
-            message_text += (
-                f"\n\n<b>Текущие пороги:</b>\n\n"
-                f"Падение:\n"
-                f"  • Умеренное: {settings.drop_warning_threshold}%\n"
-                f"  • Сильное: {settings.drop_critical_threshold}%\n\n"
-                f"Рост:\n"
-                f"  • Умеренное: {settings.rise_warning_threshold}%\n"
-                f"  • Сильное: {settings.rise_critical_threshold}%"
-            )
-
-        builder = KeyboardHelper.create_price_alerts_keyboard(settings.alerts_enabled)
-        await message.answer(message_text, reply_markup=builder.as_markup(), parse_mode="HTML")
-
-    except Exception as e:
-        logger.error(f"Ошибка при обработке кнопки 'Мониторинг': {e}")
-        await message.answer("Произошла ошибка")
+@router.message(F.text == MainKeyboardButtonTexts.PRICE.value)
+async def handle_price_button(message: Message) -> None:
+    """Обработка кнопки 'Цена'."""
+    await message.delete()
+    await message.answer(
+        text="*Цена*\n\n"
+        "Сейчас бот полностью бесплатный.\n\n"
+        "Я его развиваю — и начну думать о монетизации только тогда, "
+        "когда сам буду уверен, что он этого стоит.\n\n"
+        "Когда этот момент настанет — сообщу заранее.",
+        parse_mode="Markdown",
+    )
