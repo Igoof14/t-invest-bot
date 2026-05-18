@@ -3,8 +3,8 @@
 import logging
 from datetime import datetime, timedelta
 
-from aiogram.types import CallbackQuery
-from core.enums import CallbackData
+from aiogram.types import CallbackQuery, Message
+from core.enums import CouponCallbackData
 from invest.bonds import get_coupon_payment
 from keyboards import KeyboardHelper
 from utils.datetime_utils import DateTimeHelper
@@ -68,15 +68,15 @@ class CouponHandler:
     """Обработчик купонов."""
 
     PERIOD_MAPPING = {
-        CallbackData.COUPONS_TODAY.value: (
+        CouponCallbackData.COUPONS_TODAY.value: (
             DateTimeHelper.get_today_start,
             _get_today_title,
         ),
-        CallbackData.COUPONS_WEEK.value: (
+        CouponCallbackData.COUPONS_WEEK.value: (
             DateTimeHelper.get_week_start,
             _get_week_title,
         ),
-        CallbackData.COUPONS_MONTH.value: (
+        CouponCallbackData.COUPONS_MONTH.value: (
             DateTimeHelper.get_month_start,
             _get_month_title,
         ),
@@ -100,8 +100,9 @@ class CouponHandler:
             coupon_data = await get_coupon_payment(user_id, start_datetime)
             message_text = title + coupon_data
 
-            if callback.message:
+            if callback.message and isinstance(callback.message, Message):
                 keyboard = KeyboardHelper.create_coupons_inline_keyboard()
+
                 await callback.message.edit_text(
                     message_text,
                     parse_mode="HTML",
@@ -111,6 +112,6 @@ class CouponHandler:
 
         except Exception as e:
             logger.error(f"Ошибка при получении купонов: {e}")
-            if callback.message:
+            if callback.message and isinstance(callback.message, Message):
                 await callback.message.edit_text("Произошла ошибка при получении данных о купонах")
             await callback.answer()

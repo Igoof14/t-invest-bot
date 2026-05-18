@@ -2,10 +2,11 @@
 
 import logging
 
+from aiogram import Bot
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
-from core.enums import CallbackData, Messages
+from core.enums import Messages, PriceAlertCallbackData, SettingsCallbackData
 from invest.invest import check_token
 from keyboards import KeyboardHelper
 from storage import BotUserStorage, PriceAlertStorage
@@ -29,13 +30,13 @@ class SettingHandler:
     async def handle_settings(cls, callback: CallbackQuery, state: FSMContext) -> None:
         """Обработчик для настроект."""
         try:
-            if callback.data == CallbackData.ADD_TOKEN.value:
+            if callback.data == SettingsCallbackData.ADD_TOKEN.value:
                 if callback.message:
                     await callback.message.answer("Жду токен", parse_mode="HTML")
                     await state.set_state(TokenStates.waiting_for_token)
                 await callback.answer()
 
-            elif callback.data == CallbackData.RM_TOKEN.value:
+            elif callback.data == SettingsCallbackData.RM_TOKEN.value:
                 if callback.message:
                     await callback.message.answer(
                         "Для удаления напиши 'удалить' без кавычек.", parse_mode="HTML"
@@ -214,25 +215,25 @@ class AlertSettingsHandler:
             threshold_type = callback.data
 
             prompts = {
-                CallbackData.PRICE_ALERTS_DROP_WARNING.value: (
+                PriceAlertCallbackData.PRICE_ALERTS_DROP_WARNING.value: (
                     "Введите порог умеренного падения (в %).\nНапример: 2"
                 ),
-                CallbackData.PRICE_ALERTS_DROP_CRITICAL.value: (
+                PriceAlertCallbackData.PRICE_ALERTS_DROP_CRITICAL.value: (
                     "Введите порог сильного падения (в %).\nНапример: 5"
                 ),
-                CallbackData.PRICE_ALERTS_RISE_WARNING.value: (
+                PriceAlertCallbackData.PRICE_ALERTS_RISE_WARNING.value: (
                     "Введите порог умеренного роста (в %).\nНапример: 3"
                 ),
-                CallbackData.PRICE_ALERTS_RISE_CRITICAL.value: (
+                PriceAlertCallbackData.PRICE_ALERTS_RISE_CRITICAL.value: (
                     "Введите порог сильного роста (в %).\nНапример: 7"
                 ),
             }
 
             states = {
-                CallbackData.PRICE_ALERTS_DROP_WARNING.value: ThresholdStates.waiting_for_drop_warning,
-                CallbackData.PRICE_ALERTS_DROP_CRITICAL.value: ThresholdStates.waiting_for_drop_critical,
-                CallbackData.PRICE_ALERTS_RISE_WARNING.value: ThresholdStates.waiting_for_rise_warning,
-                CallbackData.PRICE_ALERTS_RISE_CRITICAL.value: ThresholdStates.waiting_for_rise_critical,
+                PriceAlertCallbackData.PRICE_ALERTS_DROP_WARNING.value: ThresholdStates.waiting_for_drop_warning,
+                PriceAlertCallbackData.PRICE_ALERTS_DROP_CRITICAL.value: ThresholdStates.waiting_for_drop_critical,
+                PriceAlertCallbackData.PRICE_ALERTS_RISE_WARNING.value: ThresholdStates.waiting_for_rise_warning,
+                PriceAlertCallbackData.PRICE_ALERTS_RISE_CRITICAL.value: ThresholdStates.waiting_for_rise_critical,
             }
 
             if threshold_type is not None:
@@ -241,7 +242,9 @@ class AlertSettingsHandler:
 
             if prompt and new_state:
                 if callback.message:
-                    await callback.message.answer(prompt)
+                    sent_message: Message = await callback.message.answer(prompt)
+                    await state.update_data(prompt_message_id=sent_message.message_id)
+
                 await state.set_state(new_state)
                 await callback.answer()
             else:
@@ -265,7 +268,7 @@ class AlertSettingsHandler:
                 value = float(text)
                 if value <= 0 or value > 100:
                     await message.answer(
-                        "Значение должно быть больше 0 и не больше 100. Попробуйте ещё раз."
+                        "Значение должно быть больше 0 и меньше 100. Попробуйте ещё раз."
                     )
                     return
             except ValueError:
@@ -284,6 +287,25 @@ class AlertSettingsHandler:
             field = field_map.get(current_state)
             if field:
                 await PriceAlertStorage.update_user_settings(telegram_id, **{field: value})
+
+                state_data = await state.get_data()
+                prompt_message_id = state_data.get("prompt_message_id")
+
+                if prompt_message_id:
+                    from aiogram.exceptions import TelegramBadRequest
+
+                    try:
+                        if isinstance(message.bot, Bot):
+                            await message.bot.delete_message(
+                                chat_id=message.chat.id, message_id=prompt_message_id
+                            )
+                        else:
+                            logger.warning("bot is not an instance of Bot, skipping delete_message")
+                    except TelegramBadRequest as e:
+                        logger.error(f"Неожиданная ошибка при удалении: {e}")
+
+                await message.delete()
+
                 await message.answer(f"Порог успешно изменён на {value}%")
                 await state.clear()
             else:
