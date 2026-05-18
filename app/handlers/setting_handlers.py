@@ -16,6 +16,8 @@ waiting_for_token: set[int] = set()
 
 
 class TokenStates(StatesGroup):
+    """Режим ожидания токена для добавления или удаления."""
+
     waiting_for_token = State()
     waiting_for_delete_confirmation = State()
 
