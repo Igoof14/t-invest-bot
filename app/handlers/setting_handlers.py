@@ -235,8 +235,9 @@ class AlertSettingsHandler:
                 CallbackData.PRICE_ALERTS_RISE_CRITICAL.value: ThresholdStates.waiting_for_rise_critical,
             }
 
-            prompt = prompts.get(threshold_type)
-            new_state = states.get(threshold_type)
+            if threshold_type is not None:
+                prompt = prompts.get(threshold_type)
+                new_state = states.get(threshold_type)
 
             if prompt and new_state:
                 if callback.message:
