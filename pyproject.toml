@@ -15,4 +15,5 @@ dependencies = [
     "pydantic-settings>=2.0.0",
     "ruff>=0.15.13",
     "sqlalchemy>=2.0.0",
+    "watchfiles>=1.2.0",
 ]
