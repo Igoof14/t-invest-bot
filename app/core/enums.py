@@ -1,4 +1,5 @@
 from enum import Enum
+from termios import OFDEL
 
 
 class ReportType(Enum):
@@ -8,15 +9,22 @@ class ReportType(Enum):
     WEEKLY = "weekly"
 
 
-class CallbackData(Enum):
-    """Enum for callback data in InlineKeyboardButton."""
-
-    COUPONS_TODAY = "coupons_today"
-    COUPONS_WEEK = "coupons_week"
-    COUPONS_MONTH = "coupons_month"
+class SettingsCallbackData(Enum):
+    """Кол-беки для инлайн-кнопок в настройках."""
 
     ADD_TOKEN = "add_token"
     RM_TOKEN = "rm_token"
+
+
+class SettingsButtonTexts(Enum):
+    """Тексты для инлайн-кнопок в настройках."""
+
+    ADD_TOKEN = "Добавить токен"
+    RM_TOKEN = "Удалить токен"
+
+
+class PriceAlertCallbackData(Enum):
+    """Кол-беки для инлайн-кнопок при настройке уведомлений о ценах."""
 
     # Настройки уведомлений о ценах
     PRICE_ALERTS_TOGGLE = "price_alerts_toggle"
@@ -27,21 +35,8 @@ class CallbackData(Enum):
     PRICE_ALERTS_RISE_CRITICAL = "price_alerts_rise_critical"
 
 
-class ButtonTexts(Enum):
-    """Enum texts for button."""
-
-    TODAY = "Сегодня"
-    WEEK = "Неделю"
-    MONTH = "Месяц"
-    COUPONS = "Купоны"
-    MATURITIES = "Погашения"
-    OFFERS = "Оферты"
-    MY_REPORTS = "Мои отчеты"
-    MONITORING = "Мониторинг"
-    HELP = "Помощь"
-    SETTINGS = "Настройки"
-    ADD_TOKEN = "Добавить токен"
-    RM_TOKEN = "Удалить токен"
+class PriceAlertButtonTexts(Enum):
+    """Тексты для инлайн-кнопок при настройке уведомлений о ценах."""
 
     # Уведомления о ценах
     PRICE_ALERTS = "Уведомления о ценах"
@@ -49,6 +44,48 @@ class ButtonTexts(Enum):
     ALERTS_OFF = "Выкл. уведомления"
     ALERTS_SETTINGS = "Настроить пороги"
     BACK_TO_SETTINGS = "Назад"
+
+
+class OfferCallbackData(Enum):
+    """Кол-беки для инлайн-кнопок уведомлений об офертах."""
+
+    OFFER_TOGGLE = "offer_toggle"
+
+
+class CouponCallbackData(Enum):
+    """Кол-беки для инлайн-кнопок купонов."""
+
+    COUPONS_TODAY = "coupons_today"
+    COUPONS_WEEK = "coupons_week"
+    COUPONS_MONTH = "coupons_month"
+
+
+class CouponButtonTexts(Enum):
+    """Тексты для инлайн-кнопок купонов."""
+
+    TODAY = "Сегодня"
+    WEEK = "Неделю"
+    MONTH = "Месяц"
+
+
+class MainKeyboardButtonTexts(Enum):
+    """Тексты кнопок для основной клавиатуры."""
+
+    COUPONS = "Купоны"
+    MATURITIES = "Погашения"
+    OFFERS = "Оферты"
+    PRICE = "Цена"
+    NOTIFICATIONS = "Уведомления"
+    HELP = "Помощь"
+    SETTINGS = "Настройки"
+
+
+class NotificationKeybordButtonTexts(Enum):
+    """Кнопки для уведомлений."""
+
+    PRICE_ALERT = "Мониторинг цен"
+    OFFER_ALERT = "Напоминание об оферте"
+    BACK_TO_MAIN_KEYBORD = "Назад"
 
 
 class Messages(Enum):
