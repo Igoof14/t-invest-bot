@@ -7,6 +7,7 @@ from apscheduler.triggers.cron import CronTrigger  # type: ignore
 from core.config import config
 from core.database import db_manager
 from core.enums import ReportType
+from handlers import base_handlers, notifications
 from handlers.registration import register_handlers
 from services.price_alert import PriceAlertService
 from services.report_service import ReportService
@@ -21,6 +22,8 @@ dp = Dispatcher()
 async def main():
     """Запуск бота."""
     await db_manager.create_tables()
+    dp.include_router(base_handlers.router)
+    dp.include_router(notifications.router)
     register_handlers(dp, bot)
     await BotUtils.set_commands(bot)
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
