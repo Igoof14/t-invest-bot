@@ -132,7 +132,7 @@ class AlertSettingsHandler:
 
             builder = KeyboardHelper.create_price_alerts_keyboard(settings.alerts_enabled)
 
-            if callback.message:
+            if callback.message and isinstance(callback.message, Message):
                 await callback.message.edit_text(
                     message_text,
                     reply_markup=builder.as_markup(),
@@ -158,7 +158,7 @@ class AlertSettingsHandler:
 
             builder = KeyboardHelper.create_price_alerts_keyboard(new_state)
 
-            if callback.message:
+            if callback.message and isinstance(callback.message, Message):
                 await callback.message.edit_text(
                     message_text,
                     reply_markup=builder.as_markup(),
@@ -195,7 +195,7 @@ class AlertSettingsHandler:
 
             builder = KeyboardHelper.create_thresholds_keyboard()
 
-            if callback.message:
+            if callback.message and isinstance(callback.message, Message):
                 await callback.message.edit_text(
                     message_text,
                     reply_markup=builder.as_markup(),
