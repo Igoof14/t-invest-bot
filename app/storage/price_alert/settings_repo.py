@@ -2,7 +2,7 @@
 
 import logging
 
-from models.alerts import PriceAlertSettings
+from models.price_alerts import PriceAlertSettings
 from sqlalchemy import select, update
 
 from ._session import session_scope

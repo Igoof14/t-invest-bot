@@ -3,7 +3,7 @@
 import logging
 from datetime import UTC, datetime, timedelta, timezone
 
-from models.alerts import PriceAlertSent
+from models.price_alerts import PriceAlertSent
 from sqlalchemy import delete, func, select
 
 from ._session import session_scope

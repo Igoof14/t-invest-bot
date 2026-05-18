@@ -64,12 +64,32 @@ All handlers are registered centrally in `app/handlers/registration.py`. It wire
 
 ### Price Alert System
 
-The price monitoring pipeline (`app/invest/price_monitor.py` + `app/services/price_alert_service.py`):
-1. Hourly: fetches bond prices for all users with alerts enabled
-2. Compares against previous snapshot stored in `bond_price_history` table
-3. Detects anomalies using per-user thresholds (drop/rise warning/critical)
-4. Anti-spam: 4-hour cooldown per bond per alert type, max 10 alerts/day per user
-5. If >3 anomalies, aggregates into a single summary message
+The price monitoring feature is split into three layers:
+
+- **`app/invest/portfolio_prices.py`** — `fetch_portfolio_bond_prices(token, bonds_cache)` returns current `BondPrice` snapshots from T-Invest API. Pure API layer, no DB.
+- **`app/storage/price_alert/`** — three focused repositories:
+  - `AlertSettingsRepository` (user alert preferences)
+  - `PriceHistoryRepository` (price snapshots, returns domain `BondPrice` not ORM)
+  - `SentAlertRepository` (anti-spam ledger)
+  Plus `session_scope()` helper and a legacy `PriceAlertStorage` facade kept for backward compatibility with handlers.
+- **`app/services/price_alert/`** — the feature package itself:
+  - `domain.py` — `AlertType`, `AlertSeverity`, `AlertDirection`, `PriceAnomaly` (frozen dataclasses with `is_critical` / `is_drop` properties)
+  - `config.py` — `AlertPolicyConfig` (cooldown, daily limit, aggregation thresholds) and `AlertThresholds` (per-user drop/rise warning/critical, built from `PriceAlertSettings`)
+  - `detector.py` — pure `detect_anomalies(current, previous, thresholds)` function
+  - `anti_spam.py` — `AntiSpamPolicy` with cooldown, daily limit and WARNING→CRITICAL escalation in the same direction (drop/rise)
+  - `formatter.py` — pure `format_single_alert` and `format_aggregated_alert`
+  - `notifier.py` — `PriceAlertNotifier` sends messages and records them via `SentAlertRepository`
+  - `service.py` — `PriceAlertService` orchestrator that wires everything via constructor DI; static `check_price_anomalies(bot)` and `run_daily_cleanup(bot)` are scheduler entry points
+
+Runtime flow per check:
+1. Hourly job: fetch users with alerts enabled, load bonds cache once, iterate users.
+2. For each user: fetch token → fetch current prices → load previous snapshot → `detect_anomalies` against `AlertThresholds.from_settings(settings)`.
+3. Anomalies pass through `AntiSpamPolicy.filter` (4h cooldown per bond, max 10/day, WARNING→CRITICAL escalation allowed).
+4. If filtered count > `aggregate_threshold` (default 3) → aggregated summary message; otherwise individual messages.
+5. Notifier sends and records sent alerts in DB.
+6. Save current prices as new snapshot.
+
+A separate daily cleanup job (4:00 MSK) deletes price history and sent-alert rows older than 7 days via `PriceAlertService.run_daily_cleanup`.
 
 ### FSM States
 
@@ -81,7 +101,8 @@ Aiogram FSM is used in `app/handlers/setting_handlers.py` for multi-step flows:
 
 - Daily coupon report: 18:10 every day
 - Weekly coupon report: 18:10 every Friday
-- Price anomaly check: hourly 10:00-18:00 Mon-Fri
+- Price anomaly check: hourly 10:00-20:00 every day
+- Old data cleanup (price history + sent alerts): 04:00 every day
 
 ### UI Text
 

@@ -43,6 +43,13 @@ async def main():
         kwargs={"bot": bot},
     )
 
+    # Дневная очистка старых записей цен и алертов (в ночь на 4:00 МСК).
+    scheduler.add_job(
+        PriceAlertService.run_daily_cleanup,
+        CronTrigger(hour=4, minute=0, timezone="Europe/Moscow"),
+        kwargs={"bot": bot},
+    )
+
     scheduler.start()
 
     await bot.delete_webhook(drop_pending_updates=True)

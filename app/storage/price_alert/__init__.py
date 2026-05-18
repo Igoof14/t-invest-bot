@@ -18,7 +18,7 @@ from .settings_repo import AlertSettingsRepository
 
 if TYPE_CHECKING:
     from invest.portfolio_prices import BondPrice
-    from models.alerts import PriceAlertSettings
+    from models.price_alerts import PriceAlertSettings
 
 
 # Константы политики антиспама. На Этапе 4 переедут в services/price_alert/config.py.

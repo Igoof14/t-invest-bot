@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 
 from invest.portfolio_prices import BondPrice
-from models.alerts import BondPriceHistory
+from models.price_alerts import BondPriceHistory
 from sqlalchemy import delete, func, select
 
 from ._session import session_scope
