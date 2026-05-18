@@ -48,7 +48,7 @@ async def fetch_bonds_cache() -> dict[str, Bond]:
     ТУТ НУЖНО БУДЕТ ПОМЕНЯТЬ ЛОГИКУ ПОЛУЧЕНИЯ ТОКЕНА
     """
     try:
-        # Используем любой валидный токен для получения справочника
+        # Используем любой валидный токен
         users_with_alerts = await PriceAlertStorage.get_all_users_with_alerts_enabled()
         for telegram_id in users_with_alerts:
             token = await BotUserStorage.get_token_by_telegram_id(telegram_id=telegram_id)
