@@ -32,6 +32,7 @@ class TBankAPIError(Exception):
     """Ошибка API T-Invest."""
 
     def __init__(self, message: str, code: str = ""):
+        """Инициализация ошибки API T-Invest."""
         self.message = message
         self.code = code
         super().__init__(f"{code}: {message}" if code else message)
@@ -144,7 +145,7 @@ class TBankClient:
                     await asyncio.sleep(delay)
                     continue
                 logger.error(f"HTTP error after {max_retries} retries: {e}")
-                raise TBankAPIError(f"HTTP error: {e}")
+                raise TBankAPIError(f"HTTP error: {e}") from None
 
         raise TBankAPIError("Max retries exceeded")
 
