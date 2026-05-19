@@ -74,6 +74,24 @@ class TBankClient:
             await self._session.close()
             self._session = None
 
+    @staticmethod
+    async def check_token(token: str) -> bool:
+        """Проверяет, что токен действителен.
+
+        Args:
+            token: API токен
+
+        Returns:
+            True если токен валиден
+
+        """
+        try:
+            async with TBankClient(token) as client:
+                await client.get_info()
+            return True
+        except Exception:
+            return False
+
     async def _request(
         self, endpoint: str, data: dict | None = None, max_retries: int = 3
     ) -> dict[str, Any]:
