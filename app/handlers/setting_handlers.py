@@ -32,7 +32,16 @@ class SettingHandler:
         try:
             if callback.data == SettingsCallbackData.ADD_TOKEN.value:
                 if callback.message:
-                    await callback.message.answer("Жду токен", parse_mode="HTML")
+                    await callback.message.answer(
+                        "*Токен доступа*\n\n"
+                        "Отправьте ваш *Read-only* токен сообщением.\n\n"
+                        "*Read-only* — токен с правом только на чтение данных. "
+                        "Он не даёт возможности совершать сделки или переводить средства, "
+                        "поэтому безопасен для использования в боте.\n\n"
+                        "[Как получить токен](https://developer.tbank.ru/invest/intro/intro/token)",
+                        parse_mode="Markdown",
+                        disable_web_page_preview=True,
+                    )
                     await state.set_state(TokenStates.waiting_for_token)
                 await callback.answer()
 
