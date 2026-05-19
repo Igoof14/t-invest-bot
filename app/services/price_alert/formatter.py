@@ -23,7 +23,7 @@ def format_single_alert(anomaly: PriceAnomaly) -> str:
     lines = [
         header,
         "",
-        f"<code>{anomaly.ticker}</code>\n (← Нажал=Скопировал)",
+        f"<code>{anomaly.ticker}</code>",
         f"{anomaly.name}",
         "",
         f"Цена {direction_text} на {anomaly.change_percent:.1f}%",
