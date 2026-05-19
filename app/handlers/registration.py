@@ -10,7 +10,11 @@ from core.enums import (
 )
 
 from .coupon_handlers import CouponHandler
-from .setting_handlers import AlertSettingsHandler, SettingHandler, ThresholdStates, TokenStates
+from .price_alert_handlers import PriceAlertSettingsHandler, ThresholdStates
+from .setting_handlers import (
+    SettingHandler,
+    TokenStates,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -46,15 +50,15 @@ def register_handlers(dp: Dispatcher, bot: Bot) -> None:
 
     # Обработчики уведомлений о ценах
     dp.callback_query.register(
-        AlertSettingsHandler.handle_price_alerts_menu,
+        PriceAlertSettingsHandler.handle_price_alerts_menu,
         F.data == PriceAlertCallbackData.PRICE_ALERTS_SETTINGS.value,
     )
     dp.callback_query.register(
-        AlertSettingsHandler.handle_toggle_alerts,
+        PriceAlertSettingsHandler.handle_toggle_alerts,
         F.data == PriceAlertCallbackData.PRICE_ALERTS_TOGGLE.value,
     )
     dp.callback_query.register(
-        AlertSettingsHandler.handle_thresholds_menu,
+        PriceAlertSettingsHandler.handle_thresholds_menu,
         F.data == PriceAlertCallbackData.PRICE_ALERTS_SETTINGS.value + "_thresholds",
     )
 
@@ -66,21 +70,21 @@ def register_handlers(dp: Dispatcher, bot: Bot) -> None:
         PriceAlertCallbackData.PRICE_ALERTS_RISE_CRITICAL.value,
     }
     dp.callback_query.register(
-        AlertSettingsHandler.handle_threshold_select, F.data.in_(threshold_callbacks)
+        PriceAlertSettingsHandler.handle_threshold_select, F.data.in_(threshold_callbacks)
     )
 
     # Обработчики ввода порогов
     dp.message.register(
-        AlertSettingsHandler.handle_threshold_input, ThresholdStates.waiting_for_drop_warning
+        PriceAlertSettingsHandler.handle_threshold_input, ThresholdStates.waiting_for_drop_warning
     )
     dp.message.register(
-        AlertSettingsHandler.handle_threshold_input, ThresholdStates.waiting_for_drop_critical
+        PriceAlertSettingsHandler.handle_threshold_input, ThresholdStates.waiting_for_drop_critical
     )
     dp.message.register(
-        AlertSettingsHandler.handle_threshold_input, ThresholdStates.waiting_for_rise_warning
+        PriceAlertSettingsHandler.handle_threshold_input, ThresholdStates.waiting_for_rise_warning
     )
     dp.message.register(
-        AlertSettingsHandler.handle_threshold_input, ThresholdStates.waiting_for_rise_critical
+        PriceAlertSettingsHandler.handle_threshold_input, ThresholdStates.waiting_for_rise_critical
     )
 
     logger.info("Все обработчики успешно зарегистрированы")
