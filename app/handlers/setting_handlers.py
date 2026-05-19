@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from core.enums import Messages, PriceAlertCallbackData, SettingsCallbackData
-from invest.invest import check_token
+from invest.tbank_client import TBankClient
 from keyboards import KeyboardHelper
 from storage import BotUserStorage, PriceAlertStorage
 
@@ -58,7 +58,7 @@ class SettingHandler:
             return
         token = message.text.strip()
         logger.info(f"Получен токен от пользователя {telegram_id}")
-        if await check_token(token):
+        if await TBankClient.check_token(token):
             logger.info(f"Токен пользователя {telegram_id} валиден")
             success = await BotUserStorage.add_token(telegram_id=telegram_id, token=token)
             if success:
