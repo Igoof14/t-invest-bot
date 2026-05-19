@@ -51,7 +51,7 @@ class UserInfo(BaseModel):
     tariff: str = ""
 
 
-class OperationType(str, Enum):
+class OperationType(Enum):
     """Типы операций."""
 
     OPERATION_TYPE_UNSPECIFIED = "OPERATION_TYPE_UNSPECIFIED"
@@ -109,6 +109,7 @@ class Bond(BaseModel):
     currency: str = ""
     maturity_date: datetime | None = Field(default=None, alias="maturityDate")
     coupon_quantity_per_year: int = Field(default=0, alias="couponQuantityPerYear")
+    call_date: datetime | None = Field(default=None, alias="callDate")
 
 
 class BondsResponse(BaseModel):
@@ -117,7 +118,7 @@ class BondsResponse(BaseModel):
     instruments: list[Bond] = []
 
 
-class EventType(str, Enum):
+class EventType(Enum):
     """Типы событий по облигациям."""
 
     EVENT_TYPE_UNSPECIFIED = "EVENT_TYPE_UNSPECIFIED"
