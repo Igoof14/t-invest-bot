@@ -73,18 +73,4 @@ def register_handlers(dp: Dispatcher, bot: Bot) -> None:
         PriceAlertSettingsHandler.handle_threshold_select, F.data.in_(threshold_callbacks)
     )
 
-    # Обработчики ввода порогов
-    dp.message.register(
-        PriceAlertSettingsHandler.handle_threshold_input, ThresholdStates.waiting_for_drop_warning
-    )
-    dp.message.register(
-        PriceAlertSettingsHandler.handle_threshold_input, ThresholdStates.waiting_for_drop_critical
-    )
-    dp.message.register(
-        PriceAlertSettingsHandler.handle_threshold_input, ThresholdStates.waiting_for_rise_warning
-    )
-    dp.message.register(
-        PriceAlertSettingsHandler.handle_threshold_input, ThresholdStates.waiting_for_rise_critical
-    )
-
     logger.info("Все обработчики успешно зарегистрированы")
