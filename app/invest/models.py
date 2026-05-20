@@ -89,7 +89,9 @@ class PortfolioPosition(BaseModel):
     instrument_type: str = Field(default="", alias="instrumentType")
     quantity: Quotation = Field(default_factory=Quotation)
     current_price: Quotation = Field(default_factory=Quotation, alias="currentPrice")
-    average_position_price: Quotation | None = Field(default=None, alias="averagePositionPrice")
+    average_position_price: MoneyValue = Field(
+        default_factory=MoneyValue, alias="averagePositionPrice"
+    )
 
 
 class GetPortfolioResponse(BaseModel):

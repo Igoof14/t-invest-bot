@@ -45,7 +45,7 @@ def _format_offers(offers: list[OfferInfo]) -> str:
             f"   Оферта: {offer.offer_date.strftime('%d.%m.%Y')} ({days_left} дн.)\n"
             f"   Кол-во: {offer.quantity} шт. x {offer.nominal:.0f} = "
             f"{total_nominal:,.0f} {offer.currency.upper()}\n"
-            f"   Счёт: {offer.account_name}\n"
+            f"   Средняя цена покупки: {offer.average_position_price:,.0f} {offer.currency.upper()}\n"
         )
     return "\n".join(lines)
 
@@ -156,7 +156,7 @@ async def handle_maturities_button(message: Message) -> None:
 async def handle_offers_button(message: Message) -> None:
     """Обработка кнопки 'Оферты'."""
     try:
-        await message.answer("Загружаю данные об офертах...\nЭто занимает около минуты")
+        sent = await message.answer("Загружаю данные об офертах...")
         user_id = message.from_user.id if message.from_user else message.chat.id
         offers = await get_nearest_offers(user_id)
 
@@ -166,7 +166,7 @@ async def handle_offers_button(message: Message) -> None:
             response = Messages.OFFERS_TITLE.value + _format_offers(offers)
         else:
             response = Messages.NO_OFFERS.value
-
+        await sent.delete()
         await message.answer(response, parse_mode="HTML")
     except Exception as e:
         logger.error(f"Ошибка при получении оферт: {e}")
