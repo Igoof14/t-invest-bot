@@ -8,12 +8,11 @@ from common.utils.bot_utils import BotUtils
 from core.config import config
 from core.database import db_manager
 from core.enums import ReportType
-from features.base import base_handlers
+from features.base import base_handlers, notify_handlers
 from features.coupons import coupon_handlers
 from features.price_monitoring import PriceAlertService, price_alert_handlers
 from features.reports import ReportService
 from features.users import users_handlers
-from handlers import notifications
 
 # from handlers.registration import register_handlers
 
@@ -29,7 +28,7 @@ async def main():
     dp.include_routers(
         base_handlers.router,
         price_alert_handlers.router,
-        notifications.router,
+        notify_handlers.router,
         coupon_handlers.router,
         users_handlers.router,
     )
