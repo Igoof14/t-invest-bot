@@ -4,11 +4,11 @@ import logging
 from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 
-from core.clients.t_invest.portfolio_prices import BondPrice
 from core.database import session_scope
 from sqlalchemy import delete, func, select
 
 from ..models import BondPriceHistory
+from ..schemas import BondPrice
 
 logger = logging.getLogger(__name__)
 

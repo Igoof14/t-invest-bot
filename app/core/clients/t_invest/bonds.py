@@ -59,29 +59,6 @@ class CouponPaymentsByAccount:
     accounts: dict[str, float] = field(default_factory=dict)
 
 
-async def fetch_bonds_cache() -> dict[str, Bond]:
-    """Загружает все облигации с биржи и возвращает словарь figi -> Bond.
-
-    Вызывается один раз за цикл проверки, результат передаётся в get_portfolio_bond_prices.
-
-
-    ТУТ НУЖНО БУДЕТ ПОМЕНЯТЬ ЛОГИКУ ПОЛУЧЕНИЯ ТОКЕНА
-    """
-    try:
-        # Используем любой валидный токен
-        users_with_alerts = await PriceAlertStorage.get_all_users_with_alerts_enabled()
-        for telegram_id in users_with_alerts:
-            token = await BotUserRepository.get_token_by_telegram_id(telegram_id=telegram_id)
-            if token:
-                async with AsyncClient(token) as client:
-                    all_bonds = await client.instruments.bonds()
-                    return {bond.figi: bond for bond in all_bonds.instruments}
-    except Exception as e:
-        logger.error(f"Ошибка при загрузке справочника облигаций: {e}")
-
-    return {}
-
-
 async def get_nearest_maturities(telegram_id: int, limit: int = 5) -> list[MaturityInfo] | None:
     """Получает ближайшие погашения облигаций из портфеля пользователя.
 

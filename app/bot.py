@@ -8,10 +8,14 @@ from common.utils.bot_utils import BotUtils
 from core.config import config
 from core.database import db_manager
 from core.enums import ReportType
-from features.price_monitoring import PriceAlertService
+from features.base import base_handlers
+from features.coupons import coupon_handlers
+from features.price_monitoring import PriceAlertService, price_alert_handlers
 from features.reports import ReportService
-from handlers import base_handlers, notifications, price_alert_handlers
-from handlers.registration import register_handlers
+from features.users import users_handlers
+from handlers import notifications
+
+# from handlers.registration import register_handlers
 
 logging.basicConfig(level=logging.INFO)
 
@@ -22,10 +26,15 @@ dp = Dispatcher()
 async def main():
     """Запуск бота."""
     await db_manager.create_tables()
-    dp.include_router(base_handlers.router)
-    dp.include_router(price_alert_handlers.router)
-    dp.include_router(notifications.router)
-    register_handlers(dp, bot)
+    dp.include_routers(
+        base_handlers.router,
+        price_alert_handlers.router,
+        notifications.router,
+        coupon_handlers.router,
+        users_handlers.router,
+    )
+
+    # register_handlers(dp, bot)
     await BotUtils.set_commands(bot)
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
 

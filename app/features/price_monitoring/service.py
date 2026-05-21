@@ -3,8 +3,7 @@
 import logging
 
 from aiogram import Bot
-from core.clients.t_invest.bonds import fetch_bonds_cache
-from core.clients.t_invest.portfolio_prices import Bond, fetch_portfolio_bond_prices
+from t_tech.invest.schemas import Bond
 
 from ..users.repository import BotUserRepository
 from .anti_spam import AntiSpamPolicy
@@ -17,6 +16,7 @@ from .repository import (
     PriceHistoryRepository,
     SentAlertRepository,
 )
+from .t_invest import fetch_bonds_cache, fetch_portfolio_bond_prices
 
 logger = logging.getLogger(__name__)
 

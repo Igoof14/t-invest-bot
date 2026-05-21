@@ -17,8 +17,9 @@ from .sent_alert_repo import SentAlertRepository
 from .settings_repo import AlertSettingsRepository
 
 if TYPE_CHECKING:
-    from core.clients.t_invest.portfolio_prices import BondPrice
     from models import PriceAlertSettings
+
+    from ..schemas import BondPrice
 
 
 # Константы политики антиспама. На Этапе 4 переедут в services/price_alert/config.py.

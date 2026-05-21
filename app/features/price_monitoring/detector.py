@@ -2,10 +2,9 @@
 
 from collections.abc import Iterable
 
-from core.clients.t_invest.portfolio_prices import BondPrice
-
 from .config import AlertThresholds
 from .domain import AlertDirection, AlertSeverity, AlertType, PriceAnomaly
+from .schemas import BondPrice
 
 
 def _classify(change_percent: float, thresholds: AlertThresholds) -> AlertType | None:
