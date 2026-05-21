@@ -4,14 +4,14 @@ import logging
 from aiogram import Bot, Dispatcher
 from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore
 from apscheduler.triggers.cron import CronTrigger  # type: ignore
+from common.utils.bot_utils import BotUtils
 from core.config import config
 from core.database import db_manager
 from core.enums import ReportType
+from features.price_monitoring import PriceAlertService
+from features.reports import ReportService
 from handlers import base_handlers, notifications, price_alert_handlers
 from handlers.registration import register_handlers
-from services.price_alert import PriceAlertService
-from services.report_service import ReportService
-from utils.bot_utils import BotUtils
 
 logging.basicConfig(level=logging.INFO)
 

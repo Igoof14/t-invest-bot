@@ -1,13 +1,30 @@
 """Настройка подключения к базе данных."""
 
 import logging
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, AsyncIterator
+from contextlib import asynccontextmanager
+
+from sqlalchemy import MetaData
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase
 
 from core.config import config
-from models.base import Base
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 logger = logging.getLogger(__name__)
+
+
+class Base(DeclarativeBase):
+    """Базовый класс для всех моделей."""
+
+    metadata = MetaData(
+        naming_convention={
+            "ix": "ix_%(column_0_label)s",
+            "uq": "uq_%(table_name)s_%(column_0_name)s",
+            "ck": "ck_%(table_name)s_%(constraint_name)s",
+            "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+            "pk": "pk_%(table_name)s",
+        }
+    )
 
 
 class DatabaseManager:
@@ -28,6 +45,20 @@ class DatabaseManager:
 
     async def create_tables(self) -> None:
         """Создает все таблицы в базе данных."""
+        try:
+            # Укажите здесь актуальные пути в зависимости от вашей структуры.
+            # Если перешли на Feature-driven, пути будут такими:
+            from features.offer_warning.models import OfferAlertSettings
+            from features.price_monitoring.models import (
+                BondPriceHistory,
+                PriceAlertSent,
+                PriceAlertSettings,
+            )
+            from features.users.models import TinvestUser, User
+
+        except ImportError as e:
+            logger.critical(f"Критическая ошибка импорта моделей при инициализации БД: {e}")
+            raise e
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Таблицы базы данных созданы")
@@ -51,3 +82,19 @@ async def get_session() -> AsyncGenerator[AsyncSession]:
             raise
         finally:
             await session.close()
+
+
+@asynccontextmanager
+async def session_scope() -> AsyncIterator[AsyncSession]:
+    """Контекст-менеджер для одной сессии БД.
+
+    Обёртка над ``get_session()`` для удобства: позволяет писать
+    ``async with session_scope() as session:`` вместо
+    ``async for session in get_session():``.
+
+    Откат транзакции при исключении и закрытие сессии выполняются
+    внутри ``get_session()``.
+    """
+    async for session in get_session():
+        yield session
+        return

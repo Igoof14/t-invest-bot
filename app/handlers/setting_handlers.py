@@ -5,10 +5,10 @@ import logging
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
+from core.clients.t_invest.common_func import check_token
 from core.enums import SettingsCallbackData
-from invest.tbank_client import TBankClient
+from features.users.repository import BotUserRepository
 from keyboards import KeyboardHelper
-from storage import BotUserStorage
 
 logger = logging.getLogger(__name__)
 
@@ -66,9 +66,9 @@ class SettingHandler:
             return
         token = message.text.strip()
         logger.info(f"Получен токен от пользователя {telegram_id}")
-        if await TBankClient.check_token(token):
+        if await check_token(token):
             logger.info(f"Токен пользователя {telegram_id} валиден")
-            success = await BotUserStorage.add_token(telegram_id=telegram_id, token=token)
+            success = await BotUserRepository.add_token(telegram_id=telegram_id, token=token)
             if success:
                 main_keyboard = KeyboardHelper.create_main_keyboard()
                 await message.answer("Токен успешно сохранён!", reply_markup=main_keyboard)
@@ -93,7 +93,7 @@ class SettingHandler:
             return
         text = message.text.strip().lower()
         if text == "удалить":
-            success = await BotUserStorage.remove_token(telegram_id=telegram_id)
+            success = await BotUserRepository.remove_token(telegram_id=telegram_id)
             if success:
                 new_user_keyboard = KeyboardHelper.create_new_user_keyboard()
                 await message.answer("Токен успешно удалён!", reply_markup=new_user_keyboard)

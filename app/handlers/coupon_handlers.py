@@ -4,10 +4,10 @@ import logging
 from datetime import datetime, timedelta
 
 from aiogram.types import CallbackQuery, Message
+from common.utils.datetime_utils import DateTimeHelper
+from core.clients.t_invest.bonds import get_coupon_payment
 from core.enums import CouponCallbackData
-from invest.bonds import get_coupon_payment
 from keyboards import KeyboardHelper
-from utils.datetime_utils import DateTimeHelper
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +98,15 @@ class CouponHandler:
                 return
             user_id = callback.from_user.id
             coupon_data = await get_coupon_payment(user_id, start_datetime)
-            message_text = title + coupon_data
+            if not coupon_data:
+                await callback.answer("Нет данных о купонах")
+                return
+
+            message_text = (
+                title
+                + "".join(f"{key}: {value:,.0f} ₽\n" for key, value in coupon_data.accounts.items())
+                + f"\nИтого: {coupon_data.total_amount:,.0f} ₽"
+            )
 
             if callback.message and isinstance(callback.message, Message):
                 keyboard = KeyboardHelper.create_coupons_inline_keyboard()

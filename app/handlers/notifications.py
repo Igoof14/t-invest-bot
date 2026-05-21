@@ -6,9 +6,9 @@ from datetime import UTC, datetime
 from aiogram import F, Router
 from aiogram.types import LinkPreviewOptions, Message
 from core.enums import NotificationKeybordButtonTexts
+from features.offer_warning.repository import OfferSettingsRepository
+from features.price_monitoring.repository import PriceAlertStorage
 from keyboards import KeyboardHelper
-from storage.offer_alert.settings_repo import OfferSettingsRepository
-from storage.price_alert import PriceAlertStorage
 
 logger = logging.getLogger(__name__)
 

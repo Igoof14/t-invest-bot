@@ -6,10 +6,15 @@ from datetime import UTC, datetime
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import KeyboardButton, Message, ReplyKeyboardMarkup
+from core.clients.t_invest.bonds import (
+    MaturityInfo,
+    OfferInfo,
+    get_nearest_maturities,
+    get_nearest_offers,
+)
 from core.enums import MainKeyboardButtonTexts, Messages, NotificationKeybordButtonTexts
-from invest.bonds import MaturityInfo, OfferInfo, get_nearest_maturities, get_nearest_offers
+from features.users.repository import BotUserRepository
 from keyboards import KeyboardHelper
-from storage import BotUserStorage
 
 logger = logging.getLogger(__name__)
 
@@ -58,13 +63,13 @@ async def start_handler(message: Message) -> None:
         main_keyboard = KeyboardHelper.create_main_keyboard()
         new_user_keyboard = KeyboardHelper.create_new_user_keyboard()
 
-        is_new_user = await BotUserStorage.add_user(
+        is_new_user = await BotUserRepository.add_user(
             telegram_id=message.chat.id,
             username=message.from_user.username if message.from_user else None,
             first_name=message.from_user.first_name if message.from_user else None,
             last_name=message.from_user.last_name if message.from_user else None,
         )
-        user_has_token = await BotUserStorage.has_token(telegram_id=message.chat.id)
+        user_has_token = await BotUserRepository.has_token(telegram_id=message.chat.id)
         logger.info(
             f"Пользователь {message.chat.id}: новый={is_new_user}, есть_токен={user_has_token}"
         )
@@ -75,7 +80,7 @@ async def start_handler(message: Message) -> None:
         else:
             await message.answer(Messages.NOT_TOKEN.value, reply_markup=new_user_keyboard)
 
-        logger.info(f"Всего пользователей: {await BotUserStorage.get_user_count()}")
+        logger.info(f"Всего пользователей: {await BotUserRepository.get_user_count()}")
 
     except Exception as e:
         logger.error(f"Ошибка в start handler: {e}")

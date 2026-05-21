@@ -6,8 +6,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from core.enums import Messages, PriceAlertCallbackData
+from features.price_monitoring.repository import PriceAlertStorage
 from keyboards import KeyboardHelper
-from storage import PriceAlertStorage
 
 logger = logging.getLogger(__name__)
 router: Router = Router()
