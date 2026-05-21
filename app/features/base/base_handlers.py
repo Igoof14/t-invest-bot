@@ -14,7 +14,8 @@ from core.clients.t_invest.bonds import (
 )
 from core.enums import MainKeyboardButtonTexts, Messages, NotificationKeybordButtonTexts
 from features.users.repository import BotUserRepository
-from keyboards import KeyboardHelper
+
+from .main_keyboards import KeyboardHelper
 
 logger = logging.getLogger(__name__)
 

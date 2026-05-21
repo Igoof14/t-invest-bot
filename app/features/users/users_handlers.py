@@ -9,7 +9,8 @@ from aiogram.types import CallbackQuery, Message
 from core.clients.t_invest.common_func import check_token
 from core.enums import SettingsCallbackData
 from features.users.repository import BotUserRepository
-from keyboards import KeyboardHelper
+
+from ..base.main_keyboards import KeyboardHelper
 
 logger = logging.getLogger(__name__)
 router = Router()
