@@ -1,67 +1,4 @@
-# """Модуль для работы облигациями через API Московской биржи."""
-
-# import asyncio
-# from datetime import date
-
-# import aiohttp
-
-
-# class MoexClient:
-#     """Клиент для работы с API Московской биржи."""
-
-#     BASE_URL = "https://iss.moex.com/iss"
-
-#     def __init__(self):
-#         """Инициализация клиента."""
-#         self._session: aiohttp.ClientSession | None = None
-
-#     async def __aenter__(self):
-#         """Асинхронный вход в контекст."""
-#         self._session = aiohttp.ClientSession()
-#         return self
-
-#     async def __aexit__(self, *args):
-#         """Асинхронный выход из контекста."""
-#         if self._session:
-#             await self._session.close()
-
-#     async def get_next_bond_offer(self, isin: str) -> dict | None:
-#         """Получение информации о следующей оферте(пут) пол облигации."""
-#         if self._session is None:
-#             raise RuntimeError("Клиент не инициализирован. Используйте 'async with MoexClient()'")
-
-#         url = f"{self.BASE_URL}/securities/{isin}/bondization.json"
-
-#         async with self._session.get(url) as response:
-#             data = await response.json()
-
-#         offers = data.get("offers", {})
-#         columns = offers.get("columns", [])
-#         rows = offers.get("data", [])
-
-#         all_offers = [dict(zip(columns, row, strict=False)) for row in rows]
-
-#         today = date.today()
-#         future_offers = [
-#             o
-#             for o in all_offers
-#             if o.get("offerdate") and date.fromisoformat(o["offerdate"]) >= today
-#         ]
-
-#         if not future_offers:
-#             return None
-
-#         return min(future_offers, key=lambda o: date.fromisoformat(o["offerdate"]))
-
-
-# async def main():
-#     """Пример использования клиента для получения следующей оферты облигации."""
-#     async with MoexClient() as client:
-#         offer = await client.get_next_bond_offer("RU000A106EM8")
-#         print(offer)
-
-
-# asyncio.run(main())
+"""Модуль для работы облигациями через API Московской биржи."""
 
 import asyncio
 from datetime import date
@@ -72,6 +9,8 @@ from pydantic import BaseModel
 
 
 class MoexBondOffer(BaseModel):
+    """Данные о следующей оферте облигации по данным MOEX."""
+
     isin: str
     name: str
 
@@ -81,8 +20,8 @@ class MoexBondOffer(BaseModel):
     offerdatestart: date | None = None
     offerdateend: date | None = None
 
-    facevalue: float | None = None
-    faceunit: str | None = None
+    facevalue: float
+    faceunit: str
 
     price: float | None = None
     value: float | None = None

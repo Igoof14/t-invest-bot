@@ -46,6 +46,7 @@ def _format_offers(offers: list[OfferInfo]) -> str:
             f"   Кол-во: {offer.quantity} шт. x {offer.nominal:.0f} = "
             f"{total_nominal:,.0f} {offer.currency.upper()}\n"
             f"   Средняя цена покупки: {offer.average_position_price:,.0f} {offer.currency.upper()}\n"
+            f"   MOEX: <a href='{offer.moex_link}'>{offer.ticker}</a>\n"
         )
     return "\n".join(lines)
 

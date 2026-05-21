@@ -1,6 +1,7 @@
 """Функции для работы с облигациями через T-Invest API."""
 
 import asyncio
+import heapq
 import logging
 import time
 from dataclasses import dataclass
@@ -8,8 +9,10 @@ from datetime import UTC, date, datetime, timedelta
 
 from moex.moex_bonds import MoexClient
 from storage import BotUserStorage, PriceAlertStorage
+from t_tech.invest import AsyncClient
+from t_tech.invest.schemas import GetAccountsResponse
 
-from .models import Bond, EventType, MoneyValue, OperationType
+from .models import Bond, MoneyValue, OperationType
 from .tbank_client import TBankClient
 
 logger = logging.getLogger(__name__)
@@ -39,7 +42,7 @@ class OfferInfo:
     nominal: float
     currency: str
     average_position_price: float
-    # account_name: str
+    moex_link: str
 
 
 async def fetch_bonds_cache() -> dict[str, Bond]:
@@ -63,6 +66,11 @@ async def fetch_bonds_cache() -> dict[str, Bond]:
         logger.error(f"Ошибка при загрузке справочника облигаций: {e}")
 
     return {}
+
+
+def to_float(value) -> float:
+    """Конвертирует в float."""
+    return value.units + value.nano / 1e9
 
 
 async def get_nearest_maturities(telegram_id: int, limit: int = 5) -> list[MaturityInfo] | None:
@@ -128,120 +136,85 @@ async def get_nearest_offers(telegram_id: int, limit: int = 5) -> list[OfferInfo
         Список OfferInfo, отсортированный по дате оферты, или None если токен не найден
 
     """
-    now = datetime.now(UTC)
-    logger.info(f"Getting nearest offers for telegram_id={telegram_id}, start_time={now}")
+    start_time: datetime = datetime.now(UTC)
+    logger.info(f"Getting nearest offers for telegram_id={telegram_id}, start_time={start_time}")
     token = await BotUserStorage.get_token_by_telegram_id(telegram_id=telegram_id)
     if not token:
         logger.warning(f"Token not found for telegram_id={telegram_id}")
         return None
 
-    future_date = now + timedelta(days=365)
-    logger.info(f"Searching offers from {now.isoformat()} to {future_date.isoformat()}")
-
-    async with TBankClient(token) as tbank_client:
-        all_bonds = await tbank_client.get_bonds()
-        bonds_cache = {bond.figi: bond for bond in all_bonds}
-
-        positions_by_figi: dict[str, list[dict]] = {}
-
-        accounts = await tbank_client.get_accounts()
-
-        for account in accounts:
-            portfolio = await tbank_client.get_portfolio(account_id=account.id)
-
+    async with AsyncClient(token) as tbank_client:
+        accounts: GetAccountsResponse = await tbank_client.users.get_accounts()
+        portfolios = await asyncio.gather(
+            *[tbank_client.operations.get_portfolio(account_id=acc.id) for acc in accounts.accounts]
+        )
+        positions_by_ticker: dict[str, dict] = {}
+        for portfolio in portfolios:
             for position in portfolio.positions:
                 if position.instrument_type != "bond":
                     continue
+                ticker = position.ticker
+                qty = to_float(position.quantity)
+                price = to_float(position.average_position_price)
 
-                figi = position.figi
-
-                positions_by_figi.setdefault(
-                    figi,
-                    [],
-                ).append(
-                    {
-                        "account_name": account.name,
-                        "quantity": int(position.quantity.to_float()),
-                        "average_position_price": MoneyValue.to_float(
-                            position.average_position_price
-                        ),
+                if ticker not in positions_by_ticker:
+                    positions_by_ticker[ticker] = {
+                        "quantity": 0.0,
+                        "weighted_price_sum": 0.0,
                     }
-                )
 
-        logger.info(f"Found {len(positions_by_figi)} unique bonds to check for offers")
+                positions_by_ticker[ticker]["quantity"] += qty
+                positions_by_ticker[ticker]["weighted_price_sum"] += qty * price
 
-        figi_to_bond: dict[str, Any] = {}
-        isins: list[str] = []
+        logger.info(f"Found {len(positions_by_ticker)} unique bonds to check for offers")
 
-        for figi in positions_by_figi:
-            bond = bonds_cache.get(figi)
-
-            if not bond:
-                continue
-
-            figi_to_bond[figi] = bond
-            isins.append(bond.ticker)
-
-        async with MoexClient(
-            concurrency_limit=10,
-        ) as moex_client:
-            offers_by_isin = await moex_client.get_many_next_bond_offers(
-                isins=isins,
+        async with MoexClient(concurrency_limit=10) as moex_client:
+            offers_by_ticker = await moex_client.get_many_next_bond_offers(
+                isins=list(positions_by_ticker.keys()),
             )
+        offers_dict: dict[str, OfferInfo] = {}
 
-        offers_dict: dict[tuple, OfferInfo] = {}
-
-        for figi, positions in positions_by_figi.items():
-            bond = figi_to_bond.get(figi)
-
-            if not bond:
+        for ticker, position in positions_by_ticker.items():
+            offer = offers_by_ticker.get(ticker)
+            if offer is None:
                 continue
-
             try:
-                offer = offers_by_isin.get(bond.ticker)
-
-                if offer is None:
-                    continue
-
                 offer_date = datetime.combine(
                     offer.offerdate,
                     datetime.min.time(),
                     tzinfo=UTC,
                 )
 
-                for pos in positions:
-                    key = (
-                        bond.ticker,
-                        offer_date,
-                        pos["account_name"],
-                    )
+                average_position_price = (
+                    position["weighted_price_sum"] / position["quantity"]
+                    if position["quantity"]
+                    else 0.0
+                )
 
-                    if key in offers_dict:
-                        continue
-
-                    offers_dict[key] = OfferInfo(
-                        name=bond.name,
-                        ticker=bond.ticker,
-                        offer_date=offer_date,
-                        quantity=pos["quantity"],
-                        nominal=bond.nominal.to_float(),
-                        currency=bond.currency,
-                        average_position_price=pos["average_position_price"],
-                        # account_name=pos["account_name"],
-                    )
+                offers_dict[ticker] = OfferInfo(
+                    name=offer.name,
+                    ticker=ticker,
+                    offer_date=offer_date,
+                    quantity=position["quantity"],
+                    nominal=offer.facevalue,
+                    currency=offer.faceunit,
+                    average_position_price=average_position_price,
+                    moex_link=f"https://www.moex.com/ru/issue.aspx?board={offer.primary_boardid}&code={ticker}",
+                )
 
             except Exception as e:
-                logger.error(f"Error processing figi={figi}, ticker={bond.ticker}: {e}")
+                logger.error(f"Error processing name={offer.name}, ticker={ticker}: {e}")
 
         end_time = datetime.now(UTC)
 
         logger.info(f"End time: {end_time}")
-        logger.info(f"Time taken: {end_time - now}")
+        logger.info(f"Time taken: {end_time - start_time}")
 
-        return sorted(
+        return heapq.nsmallest(
+            limit,
             offers_dict.values(),
             key=lambda x: x.offer_date,
-        )[:limit]
+        )
 
 
 async def get_coupon_payment(user_id: int, start_datetime: datetime) -> str:
