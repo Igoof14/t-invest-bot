@@ -5,9 +5,10 @@ from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
-from core.enums import Messages, PriceAlertCallbackData
+from core.enums import Messages
+from .enums import PriceAlertCallbackData
 
-from ..base.main_keyboards import KeyboardHelper
+from .keyboards import create_price_alerts_keyboard, create_thresholds_keyboard
 from .repository import AlertSettingsRepository
 
 logger = logging.getLogger(__name__)
@@ -45,7 +46,7 @@ async def handle_price_alerts_menu(callback: CallbackQuery) -> None:
                 f"  • Сильное: {settings.rise_critical_threshold}%"
             )
 
-        builder = KeyboardHelper.create_price_alerts_keyboard(settings.alerts_enabled)
+        builder = create_price_alerts_keyboard(settings.alerts_enabled)
 
         if callback.message and isinstance(callback.message, Message):
             await callback.message.edit_text(
@@ -86,7 +87,7 @@ async def handle_toggle_alerts(callback: CallbackQuery) -> None:
                 f"  • Сильное: {settings.rise_critical_threshold}%"
             )
 
-        builder = KeyboardHelper.create_price_alerts_keyboard(new_state)
+        builder = create_price_alerts_keyboard(new_state)
 
         if callback.message and isinstance(callback.message, Message):
             await callback.message.edit_text(
@@ -125,7 +126,7 @@ async def handle_thresholds_menu(callback: CallbackQuery) -> None:
             f"Нажмите на кнопку, чтобы изменить порог."
         )
 
-        builder = KeyboardHelper.create_thresholds_keyboard()
+        builder = create_thresholds_keyboard()
 
         if callback.message and isinstance(callback.message, Message):
             await callback.message.edit_text(

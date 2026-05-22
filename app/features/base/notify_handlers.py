@@ -9,7 +9,9 @@ from core.enums import NotificationKeybordButtonTexts
 from features.offer_warning.repository import OfferSettingsRepository
 from features.price_monitoring.repository import AlertSettingsRepository
 
-from .main_keyboards import KeyboardHelper
+from .keyboards import create_main_keyboard
+from features.offer_warning.keyboards import create_offer_alerts_keyboard
+from features.price_monitoring.keyboards import create_price_alerts_keyboard
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +23,7 @@ async def handle_back_to_main_button(message: Message) -> None:
     """Обработка кнопки 'Назад'."""
     try:
         sent = await message.answer(
-            "Главное меню:", reply_markup=KeyboardHelper.create_main_keyboard()
+            "Главное меню:", reply_markup=create_main_keyboard()
         )
         await message.delete()
     except Exception as e:
@@ -48,7 +50,7 @@ async def handle_notification_offer_alert_button(message: Message):
             f"[Что такое оферта](https://www.google.com/search?q=что+такое+оферта+в+облигациях)"
         )
 
-        builder = KeyboardHelper.create_offer_alerts_keyboard(settings.alerts_enabled)
+        builder = create_offer_alerts_keyboard(settings.alerts_enabled)
         await message.answer(
             text=text,
             parse_mode="Markdown",
@@ -87,7 +89,7 @@ async def handle_monitoring_button(message: Message) -> None:
                 f"  • Сильное: {settings.rise_critical_threshold}%"
             )
 
-        builder = KeyboardHelper.create_price_alerts_keyboard(settings.alerts_enabled)
+        builder = create_price_alerts_keyboard(settings.alerts_enabled)
         await message.answer(message_text, reply_markup=builder.as_markup(), parse_mode="HTML")
 
     except Exception as e:

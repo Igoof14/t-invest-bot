@@ -7,9 +7,9 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 from common.utils.datetime_utils import DateTimeHelper
 from core.clients.t_invest.bonds import get_coupon_payment
-from core.enums import CouponCallbackData
+from .enums import CouponCallbackData
 
-from ..base.main_keyboards import KeyboardHelper
+from .keyboards import create_coupons_keyboard
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -116,7 +116,7 @@ async def handle_coupon_request(callback: CallbackQuery) -> None:
         )
 
         if callback.message and isinstance(callback.message, Message):
-            keyboard = KeyboardHelper.create_coupons_inline_keyboard()
+            keyboard = create_coupons_keyboard()
 
             await callback.message.edit_text(
                 message_text,

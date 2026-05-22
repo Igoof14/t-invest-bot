@@ -7,10 +7,10 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from core.clients.t_invest.common_func import check_token
-from core.enums import SettingsCallbackData
+from .enums import SettingsCallbackData
 from features.users.repository import BotUserRepository
 
-from ..base.main_keyboards import KeyboardHelper
+from features.base.keyboards import create_main_keyboard, create_new_user_keyboard
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -76,7 +76,7 @@ async def handle_token_message(message: Message, state: FSMContext) -> None:
         logger.info(f"Токен пользователя {telegram_id} валиден")
         success = await BotUserRepository.add_token(telegram_id=telegram_id, token=token)
         if success:
-            main_keyboard = KeyboardHelper.create_main_keyboard()
+            main_keyboard = create_main_keyboard()
             await message.answer("Токен успешно сохранён!", reply_markup=main_keyboard)
             await state.clear()
         else:
@@ -100,7 +100,7 @@ async def handle_delete_confirmation(message: Message, state: FSMContext) -> Non
     if text == "удалить":
         success = await BotUserRepository.remove_token(telegram_id=telegram_id)
         if success:
-            new_user_keyboard = KeyboardHelper.create_new_user_keyboard()
+            new_user_keyboard = create_new_user_keyboard()
             await message.answer("Токен успешно удалён!", reply_markup=new_user_keyboard)
         else:
             await message.answer("Ошибка при удалении токена.")

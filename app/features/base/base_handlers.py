@@ -5,17 +5,19 @@ from datetime import UTC, datetime
 
 from aiogram import F, Router
 from aiogram.filters import Command
-from aiogram.types import KeyboardButton, Message, ReplyKeyboardMarkup
+from aiogram.types import Message
 from core.clients.t_invest.bonds import (
     MaturityInfo,
     OfferInfo,
     get_nearest_maturities,
     get_nearest_offers,
 )
-from core.enums import MainKeyboardButtonTexts, Messages, NotificationKeybordButtonTexts
+from core.enums import MainKeyboardButtonTexts, Messages
 from features.users.repository import BotUserRepository
 
-from .main_keyboards import KeyboardHelper
+from .keyboards import create_main_keyboard, create_new_user_keyboard, create_notifications_keyboard
+from features.coupons.keyboards import create_coupons_keyboard
+from features.users.keyboards import create_settings_keyboard
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +63,8 @@ def _format_offers(offers: list[OfferInfo]) -> str:
 async def start_handler(message: Message) -> None:
     """Обработчик команды /start."""
     try:
-        main_keyboard = KeyboardHelper.create_main_keyboard()
-        new_user_keyboard = KeyboardHelper.create_new_user_keyboard()
+        main_keyboard = create_main_keyboard()
+        new_user_keyboard = create_new_user_keyboard()
 
         is_new_user = await BotUserRepository.add_user(
             telegram_id=message.chat.id,
@@ -91,16 +93,7 @@ async def start_handler(message: Message) -> None:
 @router.message(F.text == MainKeyboardButtonTexts.NOTIFICATIONS.value)
 async def handle_notifications_button(message: Message):
     """Обработка кнопки 'Уведомления'."""
-    new_keyboard = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text=NotificationKeybordButtonTexts.PRICE_ALERT.value)],
-            [KeyboardButton(text=NotificationKeybordButtonTexts.OFFER_ALERT.value)],
-            [KeyboardButton(text=NotificationKeybordButtonTexts.BACK_TO_MAIN_KEYBORD.value)],
-        ],
-        resize_keyboard=True,
-        one_time_keyboard=False,
-    )
-    await message.answer("Уведомления:", reply_markup=new_keyboard)
+    await message.answer("Уведомления:", reply_markup=create_notifications_keyboard())
     await message.delete()
 
 
@@ -108,7 +101,7 @@ async def handle_notifications_button(message: Message):
 async def handle_coupons_button(message: Message) -> None:
     """Обработка кнопки 'Купоны'."""
     try:
-        builder = KeyboardHelper.create_coupons_inline_keyboard()
+        builder = create_coupons_keyboard()
         await message.answer(Messages.COUPONS_PROMPT.value, reply_markup=builder.as_markup())
     except Exception as e:
         logger.error(f"Ошибка при обработке кнопки купонов: {e}")
@@ -130,7 +123,7 @@ async def handle_help_button(message: Message) -> None:
 async def handle_settings_button(message: Message) -> None:
     """Обработка кнопки 'Настройки'."""
     try:
-        build = KeyboardHelper.create_settings_keyboard()
+        build = create_settings_keyboard()
         await message.delete()
         await message.answer("Настройки", reply_markup=build.as_markup())
     except Exception as e:
