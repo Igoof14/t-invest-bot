@@ -6,9 +6,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from core.enums import Messages, PriceAlertCallbackData
-from features.price_monitoring.repository import PriceAlertStorage
 
 from ..base.main_keyboards import KeyboardHelper
+from .repository import AlertSettingsRepository
 
 logger = logging.getLogger(__name__)
 router: Router = Router()
@@ -28,7 +28,7 @@ async def handle_price_alerts_menu(callback: CallbackQuery) -> None:
     """Обработчик для кнопки 'Настроить пороги'."""
     try:
         telegram_id = callback.from_user.id
-        settings = await PriceAlertStorage.get_or_create_user_settings(telegram_id)
+        settings = await AlertSettingsRepository.get_or_create(telegram_id)
 
         # Формируем текст с текущим состоянием
         status_text = "включены" if settings.alerts_enabled else "выключены"
@@ -65,8 +65,8 @@ async def handle_toggle_alerts(callback: CallbackQuery) -> None:
     """Обработчик включения/выключения мониторинга цен."""
     try:
         telegram_id = callback.from_user.id
-        new_state = await PriceAlertStorage.toggle_alerts(telegram_id)
-        settings = await PriceAlertStorage.get_or_create_user_settings(telegram_id)
+        new_state = await AlertSettingsRepository.toggle_alerts(telegram_id)
+        settings = await AlertSettingsRepository.get_or_create(telegram_id)
 
         status_text = "включен" if new_state else "выключен"
         message_text = (
@@ -107,7 +107,7 @@ async def handle_thresholds_menu(callback: CallbackQuery) -> None:
     """Показывает меню настройки порогов."""
     try:
         telegram_id = callback.from_user.id
-        settings = await PriceAlertStorage.get_user_settings(telegram_id)
+        settings = await AlertSettingsRepository.get(telegram_id)
 
         if not settings:
             await callback.answer("Сначала включите уведомления")
@@ -234,7 +234,7 @@ async def handle_threshold_input(message: Message, state: FSMContext) -> None:
 
         field = field_map.get(current_state)
         if field:
-            await PriceAlertStorage.update_user_settings(telegram_id, **{field: value})
+            await AlertSettingsRepository.update(telegram_id, **{field: value})
 
             state_data = await state.get_data()
             prompt_message_id = state_data.get("prompt_message_id")

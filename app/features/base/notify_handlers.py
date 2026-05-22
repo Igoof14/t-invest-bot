@@ -7,7 +7,7 @@ from aiogram import F, Router
 from aiogram.types import LinkPreviewOptions, Message
 from core.enums import NotificationKeybordButtonTexts
 from features.offer_warning.repository import OfferSettingsRepository
-from features.price_monitoring.repository import PriceAlertStorage
+from features.price_monitoring.repository import AlertSettingsRepository
 
 from .main_keyboards import KeyboardHelper
 
@@ -65,7 +65,7 @@ async def handle_monitoring_button(message: Message) -> None:
     """Обработка кнопки 'Мониторинг'."""
     try:
         telegram_id = message.from_user.id if message.from_user else message.chat.id
-        settings = await PriceAlertStorage.get_or_create_user_settings(telegram_id)
+        settings = await AlertSettingsRepository.get_or_create(telegram_id)
 
         status_text = "включен" if settings.alerts_enabled else "выключен"
         await message.delete()

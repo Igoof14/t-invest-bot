@@ -12,7 +12,7 @@ from collections.abc import Iterable
 
 from .config import AlertPolicyConfig
 from .domain import AlertSeverity, AlertType, PriceAnomaly
-from .repository.sent_alert_repo import SentAlertRepository
+from .repository import SentAlertRepository
 
 logger = logging.getLogger(__name__)
 

@@ -10,6 +10,7 @@ from .anti_spam import AntiSpamPolicy
 from .config import DEFAULT_POLICY, AlertPolicyConfig, AlertThresholds
 from .detector import detect_anomalies
 from .domain import PriceAnomaly
+from .models import PriceAlertSettings
 from .notifier import PriceAlertNotifier
 from .repository import (
     AlertSettingsRepository,
@@ -74,32 +75,32 @@ class PriceAlertService:
         """Проверяет цены для всех пользователей с включенными уведомлениями."""
         logger.info("Запуск проверки аномалий цен облигаций")
 
-        users = await self._settings_repo.list_users_with_alerts_enabled()
-        if not users:
+        users_settings = await self._settings_repo.list_users_with_alerts_enabled()
+        if not users_settings:
             logger.info("Нет пользователей с включенными уведомлениями")
             return
 
-        logger.info(f"Проверка цен для {len(users)} пользователей")
+        logger.info(f"Проверка цен для {len(users_settings)} пользователей")
 
         bonds_cache = await fetch_bonds_cache()
         if not bonds_cache:
             logger.error("Не удалось загрузить справочник облигаций, пропуск проверки")
             return
 
-        for telegram_id in users:
+        for settings in users_settings:
             try:
-                await self._check_user_portfolio(telegram_id, bonds_cache)
+                await self._check_user_portfolio(settings.telegram_id, settings, bonds_cache)
             except Exception as e:
-                logger.error(f"Ошибка при проверке портфеля пользователя {telegram_id}: {e}")
+                logger.error(
+                    f"Ошибка при проверке портфеля пользователя {settings.telegram_id}: {e}"
+                )
 
         logger.info("Проверка аномалий цен завершена")
 
-    async def _check_user_portfolio(self, telegram_id: int, bonds_cache: dict[str, Bond]) -> None:
+    async def _check_user_portfolio(
+        self, telegram_id: int, settings: PriceAlertSettings, bonds_cache: dict[str, Bond]
+    ) -> None:
         """Проверяет портфель одного пользователя на аномалии."""
-        settings = await self._settings_repo.get(telegram_id)
-        if not settings or not settings.alerts_enabled:
-            return
-
         token = await BotUserRepository.get_token_by_telegram_id(telegram_id=telegram_id)
         if not token:
             logger.warning(f"Токен не найден для пользователя {telegram_id}")

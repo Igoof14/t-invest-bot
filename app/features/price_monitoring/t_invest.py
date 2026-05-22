@@ -7,7 +7,7 @@ from t_tech.invest import AsyncClient
 from t_tech.invest.schemas import Bond
 
 from ..users.repository import BotUserRepository
-from .repository import PriceAlertStorage
+from .repository import AlertSettingsRepository
 from .schemas import BondPrice
 
 logger = logging.getLogger(__name__)
@@ -17,21 +17,20 @@ async def fetch_bonds_cache() -> dict[str, Bond]:
     """Загружает все облигации с биржи и возвращает словарь figi -> Bond.
 
     Вызывается один раз за цикл проверки, результат передаётся в get_portfolio_bond_prices.
-
-
-    ТУТ НУЖНО БУДЕТ ПОМЕНЯТЬ ЛОГИКУ ПОЛУЧЕНИЯ ТОКЕНА
     """
-    try:
-        # Используем любой валидный токен
-        users_with_alerts = await PriceAlertStorage.get_all_users_with_alerts_enabled()
-        for telegram_id in users_with_alerts:
-            token = await BotUserRepository.get_token_by_telegram_id(telegram_id=telegram_id)
-            if token:
-                async with AsyncClient(token) as client:
-                    all_bonds = await client.instruments.bonds()
-                    return {bond.figi: bond for bond in all_bonds.instruments}
-    except Exception as e:
-        logger.error(f"Ошибка при загрузке справочника облигаций: {e}")
+    users_settings = await AlertSettingsRepository.list_users_with_alerts_enabled()
+    for settings in users_settings:
+        token = await BotUserRepository.get_token_by_telegram_id(telegram_id=settings.telegram_id)
+        if not token:
+            continue
+        try:
+            async with AsyncClient(token) as client:
+                all_bonds = await client.instruments.bonds()
+                return {bond.figi: bond for bond in all_bonds.instruments}
+        except Exception as e:
+            logger.warning(
+                f"Не удалось загрузить облигации через пользователя {settings.telegram_id}: {e}"
+            )
 
     return {}
 

@@ -26,7 +26,7 @@ def format_single_alert(anomaly: PriceAnomaly) -> str:
         f"<code>{anomaly.ticker}</code>",
         f"{anomaly.name}",
         "",
-        f"Цена {direction_text} на {anomaly.change_percent:.1f}%",
+        f"Цена {direction_text} на {abs(anomaly.change_percent):.1f}%",
         f"   Было: {anomaly.old_price:.2f}  →  Стало: {anomaly.new_price:.2f}",
         "",
         f"Счёт: {anomaly.account_name}",

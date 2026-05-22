@@ -6,7 +6,6 @@ import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from features.price_monitoring.repository import PriceAlertStorage
 from features.users.repository import BotUserRepository
 from t_tech.invest import AsyncClient
 from t_tech.invest.schemas import (
