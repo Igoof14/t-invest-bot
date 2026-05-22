@@ -3,8 +3,7 @@
 from collections.abc import Iterable
 
 from .config import AlertThresholds
-from .domain import AlertDirection, AlertSeverity, AlertType, PriceAnomaly
-from .schemas import BondPrice
+from .schemas import AlertDirection, AlertSeverity, AlertType, BondPrice, PriceAnomaly
 
 
 def _classify(change_percent: float, thresholds: AlertThresholds) -> AlertType | None:

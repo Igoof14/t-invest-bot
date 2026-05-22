@@ -9,7 +9,6 @@ from ..users.repository import BotUserRepository
 from .anti_spam import AntiSpamPolicy
 from .config import DEFAULT_POLICY, AlertPolicyConfig, AlertThresholds
 from .detector import detect_anomalies
-from .domain import PriceAnomaly
 from .models import PriceAlertSettings
 from .notifier import PriceAlertNotifier
 from .repository import (
@@ -17,6 +16,7 @@ from .repository import (
     PriceHistoryRepository,
     SentAlertRepository,
 )
+from .schemas import PriceAnomaly
 from .t_invest import fetch_bonds_cache, fetch_portfolio_bond_prices
 
 logger = logging.getLogger(__name__)

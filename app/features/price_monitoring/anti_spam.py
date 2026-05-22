@@ -11,8 +11,8 @@ import logging
 from collections.abc import Iterable
 
 from .config import AlertPolicyConfig
-from .domain import AlertSeverity, AlertType, PriceAnomaly
 from .repository import SentAlertRepository
+from .schemas import AlertSeverity, AlertType, PriceAnomaly
 
 logger = logging.getLogger(__name__)
 

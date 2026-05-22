@@ -5,9 +5,9 @@ from collections.abc import Sequence
 
 from aiogram import Bot
 
-from .domain import PriceAnomaly
 from .formatter import format_aggregated_alert, format_single_alert
 from .repository import SentAlertRepository
+from .schemas import PriceAnomaly
 
 logger = logging.getLogger(__name__)
 

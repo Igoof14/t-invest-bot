@@ -5,7 +5,7 @@
 
 from collections.abc import Sequence
 
-from .domain import PriceAnomaly
+from .schemas import PriceAnomaly
 
 
 def format_single_alert(anomaly: PriceAnomaly) -> str:
