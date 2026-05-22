@@ -1,7 +1,6 @@
 """Модуль для взаимодействия с API T-Invest в рамкам фичи мониторига цен."""
 
 import logging
-from dataclasses import dataclass
 
 from core.clients.t_invest.common_func import to_float
 from t_tech.invest import AsyncClient
@@ -10,9 +9,6 @@ from t_tech.invest.schemas import Bond
 from ..users.repository import BotUserRepository
 from .repository import PriceAlertStorage
 from .schemas import BondPrice
-
-logger = logging.getLogger(__name__)
-
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +53,10 @@ async def fetch_portfolio_bond_prices(
         Список BondPrice. Пустой при ошибках или отсутствии облигаций.
 
     """
-    bond_prices: list[BondPrice] = []
+    # figi → BondPrice; одна облигация может быть в нескольких счетах, но рыночная цена
+    # одинакова — берём первое вхождение, чтобы сравнение с предыдущим снимком было
+    # детерминированным (иначе non-deterministic dict dedup может сравнить цены разных счетов).
+    seen_figi: dict[str, BondPrice] = {}
 
     try:
         async with AsyncClient(token) as client:
@@ -71,21 +70,21 @@ async def fetch_portfolio_bond_prices(
                         if position.instrument_type != "bond":
                             continue
 
+                        if position.figi in seen_figi:
+                            continue
+
                         bond = bonds_cache.get(position.figi)
                         if not bond:
                             continue
 
-                        # Цена в процентах от номинала
                         current_price = to_float(position.current_price)
 
-                        bond_prices.append(
-                            BondPrice(
-                                figi=position.figi,
-                                ticker=bond.ticker,
-                                name=bond.name,
-                                price=current_price,
-                                account_name=account.name,
-                            )
+                        seen_figi[position.figi] = BondPrice(
+                            figi=position.figi,
+                            ticker=bond.ticker,
+                            name=bond.name,
+                            price=current_price,
+                            account_name=account.name,
                         )
 
                 except Exception as e:
@@ -96,4 +95,4 @@ async def fetch_portfolio_bond_prices(
         user_part = f" для пользователя {telegram_id}" if telegram_id is not None else ""
         logger.error(f"Ошибка при получении цен облигаций{user_part}: {e}")
 
-    return bond_prices
+    return list(seen_figi.values())

@@ -40,6 +40,10 @@ class PriceHistoryRepository:
                         & (BondPriceHistory.recorded_at == latest_per_figi.c.max_recorded),
                     )
                     .where(BondPriceHistory.telegram_id == telegram_id)
+                    # Стабильный порядок: при наличии старых дублей (один FIGI из нескольких
+                    # счетов с одинаковым recorded_at) Python-дедупликация возьмёт строку
+                    # с наименьшим id, а не случайную.
+                    .order_by(BondPriceHistory.figi, BondPriceHistory.id)
                 )
 
                 rows = result.scalars().all()
