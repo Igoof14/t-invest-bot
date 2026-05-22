@@ -8,65 +8,6 @@ class ReportType(Enum):
     WEEKLY = "weekly"
 
 
-class SettingsCallbackData(Enum):
-    """Кол-беки для инлайн-кнопок в настройках."""
-
-    ADD_TOKEN = "add_token"
-    RM_TOKEN = "rm_token"
-
-
-class SettingsButtonTexts(Enum):
-    """Тексты для инлайн-кнопок в настройках."""
-
-    ADD_TOKEN = "Добавить токен"
-    RM_TOKEN = "Удалить токен"
-
-
-class PriceAlertCallbackData(Enum):
-    """Кол-беки для инлайн-кнопок при настройке уведомлений о ценах."""
-
-    # Настройки уведомлений о ценах
-    PRICE_ALERTS_TOGGLE = "price_alerts_toggle"
-    PRICE_ALERTS_SETTINGS = "price_alerts_settings"
-    PRICE_ALERTS_DROP_WARNING = "price_alerts_drop_warning"
-    PRICE_ALERTS_DROP_CRITICAL = "price_alerts_drop_critical"
-    PRICE_ALERTS_RISE_WARNING = "price_alerts_rise_warning"
-    PRICE_ALERTS_RISE_CRITICAL = "price_alerts_rise_critical"
-
-
-class PriceAlertButtonTexts(Enum):
-    """Тексты для инлайн-кнопок при настройке уведомлений о ценах."""
-
-    # Уведомления о ценах
-    PRICE_ALERTS = "Уведомления о ценах"
-    ALERTS_ON = "Вкл. уведомления"
-    ALERTS_OFF = "Выкл. уведомления"
-    ALERTS_SETTINGS = "Настроить пороги"
-    BACK_TO_SETTINGS = "Назад"
-
-
-class OfferCallbackData(Enum):
-    """Кол-беки для инлайн-кнопок уведомлений об офертах."""
-
-    OFFER_TOGGLE = "offer_toggle"
-
-
-class CouponCallbackData(Enum):
-    """Кол-беки для инлайн-кнопок купонов."""
-
-    COUPONS_TODAY = "coupons_today"
-    COUPONS_WEEK = "coupons_week"
-    COUPONS_MONTH = "coupons_month"
-
-
-class CouponButtonTexts(Enum):
-    """Тексты для инлайн-кнопок купонов."""
-
-    TODAY = "Сегодня"
-    WEEK = "Неделю"
-    MONTH = "Месяц"
-
-
 class MainKeyboardButtonTexts(Enum):
     """Тексты кнопок для основной клавиатуры."""
 
