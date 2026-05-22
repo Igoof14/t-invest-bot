@@ -14,8 +14,6 @@ from features.price_monitoring import PriceAlertService, price_alert_handlers
 from features.reports import ReportService
 from features.users import users_handlers
 
-# from handlers.registration import register_handlers
-
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=config.bot_token.get_secret_value())
