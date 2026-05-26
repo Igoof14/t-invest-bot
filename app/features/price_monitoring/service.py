@@ -17,7 +17,7 @@ from .repository import (
     SentAlertRepository,
 )
 from .schemas import PriceAnomaly
-from .t_invest import fetch_bonds_cache, fetch_portfolio_bond_prices
+from .t_invest import fetch_portfolio_bond_prices, get_bonds
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class PriceAlertService:
 
         logger.info(f"Проверка цен для {len(users_settings)} пользователей")
 
-        bonds_cache = await fetch_bonds_cache()
+        bonds_cache = await get_bonds()
         if not bonds_cache:
             logger.error("Не удалось загрузить справочник облигаций, пропуск проверки")
             return

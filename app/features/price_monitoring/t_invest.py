@@ -13,7 +13,7 @@ from .schemas import BondPrice
 logger = logging.getLogger(__name__)
 
 
-async def fetch_bonds_cache() -> dict[str, Bond]:
+async def get_bonds() -> dict[str, Bond] | None:
     """Загружает все облигации с биржи и возвращает словарь figi -> Bond.
 
     Вызывается один раз за цикл проверки, результат передаётся в get_portfolio_bond_prices.
@@ -32,7 +32,7 @@ async def fetch_bonds_cache() -> dict[str, Bond]:
                 f"Не удалось загрузить облигации через пользователя {settings.telegram_id}: {e}"
             )
 
-    return {}
+    return None
 
 
 async def fetch_portfolio_bond_prices(
@@ -52,9 +52,6 @@ async def fetch_portfolio_bond_prices(
         Список BondPrice. Пустой при ошибках или отсутствии облигаций.
 
     """
-    # figi → BondPrice; одна облигация может быть в нескольких счетах, но рыночная цена
-    # одинакова — берём первое вхождение, чтобы сравнение с предыдущим снимком было
-    # детерминированным (иначе non-deterministic dict dedup может сравнить цены разных счетов).
     seen_figi: dict[str, BondPrice] = {}
 
     try:
