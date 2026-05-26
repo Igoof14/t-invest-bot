@@ -1,7 +1,6 @@
 """Base keyboards for the bot."""
 
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
-
 from core.enums import MainKeyboardButtonTexts, NotificationKeybordButtonTexts
 
 

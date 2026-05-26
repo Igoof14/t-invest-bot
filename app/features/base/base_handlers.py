@@ -13,11 +13,11 @@ from core.clients.t_invest.bonds import (
     get_nearest_offers,
 )
 from core.enums import MainKeyboardButtonTexts, Messages
+from features.coupons.keyboards import create_coupons_keyboard
+from features.users.keyboards import create_settings_keyboard
 from features.users.repository import BotUserRepository
 
 from .keyboards import create_main_keyboard, create_new_user_keyboard, create_notifications_keyboard
-from features.coupons.keyboards import create_coupons_keyboard
-from features.users.keyboards import create_settings_keyboard
 
 logger = logging.getLogger(__name__)
 

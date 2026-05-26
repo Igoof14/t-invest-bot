@@ -7,8 +7,8 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 from common.utils.datetime_utils import DateTimeHelper
 from core.clients.t_invest.bonds import get_coupon_payment
-from .enums import CouponCallbackData
 
+from .enums import CouponCallbackData
 from .keyboards import create_coupons_keyboard
 
 logger = logging.getLogger(__name__)

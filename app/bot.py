@@ -10,6 +10,7 @@ from core.database import db_manager
 from core.enums import ReportType
 from features.base import base_handlers, notify_handlers
 from features.coupons import coupon_handlers
+from features.offer_warning import handlers as offer_warning_handlers
 from features.price_monitoring import PriceAlertService, price_alert_handlers
 from features.reports import ReportService
 from features.users import users_handlers
@@ -26,6 +27,7 @@ async def main():
     dp.include_routers(
         base_handlers.router,
         price_alert_handlers.router,
+        offer_warning_handlers.router,
         notify_handlers.router,
         coupon_handlers.router,
         users_handlers.router,

@@ -50,12 +50,22 @@ class DatabaseManager:
             # Если перешли на Feature-driven, пути будут такими:
             from features.offer_warning.models import OfferAlertSettings
             from features.price_monitoring.models import (
+                BondLastPrice,
                 BondPriceHistory,
                 PriceAlertSent,
                 PriceAlertSettings,
             )
             from features.users.models import TinvestUser, User
 
+            __all__ = [
+                OfferAlertSettings,
+                BondLastPrice,
+                BondPriceHistory,
+                PriceAlertSent,
+                PriceAlertSettings,
+                TinvestUser,
+                User,
+            ]
         except ImportError as e:
             logger.critical(f"Критическая ошибка импорта моделей при инициализации БД: {e}")
             raise e

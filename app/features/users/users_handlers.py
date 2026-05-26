@@ -7,10 +7,10 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from core.clients.t_invest.common_func import check_token
-from .enums import SettingsCallbackData
+from features.base.keyboards import create_main_keyboard, create_new_user_keyboard
 from features.users.repository import BotUserRepository
 
-from features.base.keyboards import create_main_keyboard, create_new_user_keyboard
+from .enums import SettingsCallbackData
 
 logger = logging.getLogger(__name__)
 router = Router()

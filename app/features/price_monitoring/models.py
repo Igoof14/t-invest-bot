@@ -65,6 +65,31 @@ class BondPriceHistory(Base):
         return f"<BondPriceHistory(figi={self.figi}, price={self.price})>"
 
 
+class BondLastPrice(Base):
+    """Последняя биржевая цена облигации (снимок от T-Invest getLastPrices)."""
+
+    __tablename__ = "bond_last_price"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    figi: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    instrument_uid: Mapped[str] = mapped_column(String(36), nullable=False)
+
+    price: Mapped[float] = mapped_column(Float, nullable=False)
+
+    last_price_type: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    exchange_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    def __repr__(self) -> str:
+        """Представление модели."""
+        return f"<BondLastPrice(figi={self.figi}, price={self.price})>"
+
+
 class PriceAlertSent(Base):
     """Отправленные алерты (для anti-spam)."""
 

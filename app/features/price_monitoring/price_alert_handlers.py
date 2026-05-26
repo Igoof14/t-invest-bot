@@ -6,8 +6,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from core.enums import Messages
-from .enums import PriceAlertCallbackData
 
+from .enums import PriceAlertCallbackData
 from .keyboards import create_price_alerts_keyboard, create_thresholds_keyboard
 from .repository import AlertSettingsRepository
 

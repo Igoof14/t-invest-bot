@@ -1,13 +1,9 @@
-from enum import Enum
+from typing import Literal
+
+from aiogram.filters.callback_data import CallbackData
 
 
-class OfferWarningCallbackData(Enum):
-    """Кол-беки для инлайн-кнопок при настройке уведомлений об офертах."""
+class OfferAlertCallback(CallbackData, prefix="offer"):
+    """Callback data для инлайн-кнопок уведомлений об офертах."""
 
-    OFFER_WARNING_TOGGLE = "offer_warning_toggle"
-
-
-class OfferWarningMessageData(Enum):
-    """Данные для сообщений об офертах."""
-
-    pass
+    action: Literal["toggle", "setting", "set_first", "set_second", "set_time"]

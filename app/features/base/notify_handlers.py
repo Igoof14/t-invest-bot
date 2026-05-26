@@ -6,12 +6,12 @@ from datetime import UTC, datetime
 from aiogram import F, Router
 from aiogram.types import LinkPreviewOptions, Message
 from core.enums import NotificationKeybordButtonTexts
+from features.offer_warning.keyboards import create_offer_alerts_keyboard
 from features.offer_warning.repository import OfferSettingsRepository
+from features.price_monitoring.keyboards import create_price_alerts_keyboard
 from features.price_monitoring.repository import AlertSettingsRepository
 
 from .keyboards import create_main_keyboard
-from features.offer_warning.keyboards import create_offer_alerts_keyboard
-from features.price_monitoring.keyboards import create_price_alerts_keyboard
 
 logger = logging.getLogger(__name__)
 
