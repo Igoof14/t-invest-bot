@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 
 from aiogram import F, Router
 from aiogram.types import LinkPreviewOptions, Message
+from common.utils.bot_utils import pluralize_days
 from core.enums import NotificationKeybordButtonTexts
 from features.offer_warning.keyboards import create_offer_alerts_keyboard
 from features.offer_warning.repository import OfferSettingsRepository
@@ -22,9 +23,7 @@ router: Router = Router()
 async def handle_back_to_main_button(message: Message) -> None:
     """Обработка кнопки 'Назад'."""
     try:
-        sent = await message.answer(
-            "Главное меню:", reply_markup=create_main_keyboard()
-        )
+        sent = await message.answer("Главное меню:", reply_markup=create_main_keyboard())
         await message.delete()
     except Exception as e:
         logger.error(f"Ошибка при обработке кнопки 'Назад': {e}")
@@ -49,7 +48,13 @@ async def handle_notification_offer_alert_button(message: Message):
             f"Статус: *{status_text}*\n\n"
             f"[Что такое оферта](https://www.google.com/search?q=что+такое+оферта+в+облигациях)"
         )
-
+        if status_text == "включен":
+            text += (
+                f"\n\n*Текущие настройки:*\n\n"
+                f"Первое напоминаие за: {settings.first_alert} {pluralize_days(settings.first_alert)}\n"
+                f"Второе напоминаие за: {settings.second_alert} {pluralize_days(settings.second_alert)}\n"
+                f"Время уведомления: {str(settings.notification_time)[:-3]} МСК"  # Удаляем секунды
+            )
         builder = create_offer_alerts_keyboard(settings.alerts_enabled)
         await message.answer(
             text=text,

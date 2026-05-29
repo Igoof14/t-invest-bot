@@ -10,6 +10,7 @@ from core.database import db_manager
 from core.enums import ReportType
 from features.base import base_handlers, notify_handlers
 from features.coupons import coupon_handlers
+from features.offer_warning import OfferAlertService
 from features.offer_warning import handlers as offer_warning_handlers
 from features.price_monitoring import PriceAlertService, price_alert_handlers
 from features.reports import ReportService
@@ -62,7 +63,17 @@ async def main():
         kwargs={"bot": bot},
     )
 
+    # Ежедневный пересчёт уведомлений об офертах в 06:00 МСК
+    scheduler.add_job(
+        OfferAlertService.schedule_daily_jobs,
+        CronTrigger(hour=6, minute=0, timezone="Europe/Moscow"),
+        kwargs={"bot": bot, "scheduler": scheduler},
+    )
+
     scheduler.start()
+
+    # Восстанавливаем DateTrigger-джобы после возможного рестарта
+    await OfferAlertService.schedule_daily_jobs(bot, scheduler)
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)

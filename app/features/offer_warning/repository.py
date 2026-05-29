@@ -80,7 +80,7 @@ class OfferSettingsRepository:
             logger.error(
                 f"Ошибка при обновлении настроек о офертах пользователя {telegram_id}: {e}"
             )
-            return False
+            raise
 
     @classmethod
     async def toggle_alerts(cls, telegram_id: int) -> bool:

@@ -28,7 +28,7 @@ def _format_maturities(maturities: list[MaturityInfo]) -> str:
     now = datetime.now(UTC)
     lines = []
     for i, bond in enumerate(maturities, 1):
-        days_left = (bond.maturity_date - now).days
+        days_left = (bond.maturity_date.date() - now.date()).days
         total_nominal = bond.nominal * bond.quantity
         lines.append(
             f"{i}. <code>{bond.ticker}</code>\n"
@@ -45,7 +45,7 @@ def _format_offers(offers: list[OfferInfo]) -> str:
     now = datetime.now(UTC)
     lines = []
     for i, offer in enumerate(offers, 1):
-        days_left = (offer.offer_date - now).days
+        days_left = (offer.offer_date.date() - now.date()).days
         total_nominal = offer.nominal * offer.quantity
         lines.append(
             f"{i}. <code>{offer.ticker}</code>\n"

@@ -1,10 +1,13 @@
 import logging
+import re
+from datetime import datetime
 from typing import Literal
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
+from common.utils.bot_utils import pluralize_days
 
 from .keyboards import create_offer_alert_setting_keyboard, create_offer_alerts_keyboard
 from .repository import OfferSettingsRepository
@@ -36,8 +39,8 @@ async def handle_toggle_alerts(callback: CallbackQuery, callback_data: OfferAler
         if new_state:
             text += (
                 f"\n\n*Текущие настройки:*\n\n"
-                f"Первое напоминаие за: {settings.first_alert}\n"
-                f"Второе напоминаие за: {settings.second_alert}\n"
+                f"Первое напоминаие за: {settings.first_alert} {pluralize_days(settings.first_alert)}\n"
+                f"Второе напоминаие за: {settings.second_alert} {pluralize_days(settings.second_alert)}\n"
                 f"Время уведомления: {str(settings.notification_time)[:-3]} МСК"  # Удаляем секунды
             )
         builder = create_offer_alerts_keyboard(new_state)
@@ -70,9 +73,9 @@ async def handle_offer_alert_setting(callback: CallbackQuery) -> None:
         if settings.alerts_enabled:
             message_text += (
                 f"<b>Текущие настройки:</b>\n\n"
-                f"Первое напоминаие за: {settings.first_alert}\n"
-                f"Второе напоминаие за: {settings.second_alert}\n"
-                f"Время уведомления: {str(settings.notification_time)[:-3]} МСК\n\n"  # Удаляем секунды
+                f"Первое напоминаие за: {settings.first_alert} {pluralize_days(settings.first_alert)}\n"
+                f"Второе напоминаие за: {settings.second_alert} {pluralize_days(settings.second_alert)}\n"
+                f"Время уведомления: {str(settings.notification_time)[:-3]} МСК\n\n"
                 f"Выбери что настроить: "
             )
 
@@ -92,6 +95,8 @@ async def handle_offer_alert_setting(callback: CallbackQuery) -> None:
 
 
 class OfferAlertStates(StatesGroup):
+    """Состояния для управления уведомлениями об офертах."""
+
     waiting_for_first = State()
     waiting_for_second = State()
     waiting_for_time = State()
@@ -103,14 +108,14 @@ class OfferAlertStates(StatesGroup):
 async def handle_set_settings(
     callback: CallbackQuery, callback_data: OfferAlertCallback, state
 ) -> None:
-    """Обработчик установки первого напоминания об оферте."""
+    """Обработчик настроек."""
     try:
         if callback.message is None:
             raise ValueError("callback.message is None")
 
         if callback_data.action == "set_first":
             await callback.message.answer(
-                "Введите значение для первого напоминания (число не больше 50):"
+                "Введите количество дней за которое нужно напомнить об оферте (число не больше 50):"
             )
             await state.set_state(OfferAlertStates.waiting_for_first)
 
@@ -134,27 +139,31 @@ async def handle_set_settings(
 
 @router.message(OfferAlertStates.waiting_for_first)
 async def process_first_alert(message: Message, state: FSMContext):
+    """Обработчик для установки первого напоминания."""
     text = message.text.strip() if message.text else ""
-
-    # Проверяем, что введено целое число
     if not text.isdigit():
         await message.answer("Пожалуйста, введите целое число.")
         return
 
     val = int(text)
     if val > 50 or val <= 0:
-        await message.answer("Число должно быть больше 0 и не больше 50. Попробуйте еще раз:")
+        await message.answer("Число должно быть > 0 и <= 50. Попробуйте еще раз:")
         return
 
-    # Сохраняем в БД (замени на свой вызов репозитория/сервиса)
-    # await AlertSettingsRepository.update_first(message.from_user.id, val)
-
-    await message.answer(f"Первое напоминание успешно установлено: {val}")
-    await state.clear()  # Сбрасываем состояние FSM
+    try:
+        telegram_id = message.chat.id
+        await message.delete()
+        await OfferSettingsRepository.update(telegram_id, first_alert=val)
+        await message.answer(f"Первое напоминание успешно установлено: {val}")
+        await state.clear()
+    except Exception as e:
+        logger.error(f"Ошибка при сохранении: {e}")
+        await message.answer("Произошла ошибка при сохранении")
 
 
 @router.message(OfferAlertStates.waiting_for_second)
 async def process_second_alert(message: Message, state: FSMContext):
+    """Обработчик для установки второго напоминания."""
     text = message.text.strip() if message.text else ""
     telegram_id = message.chat.id
     if not text.isdigit():
@@ -163,46 +172,41 @@ async def process_second_alert(message: Message, state: FSMContext):
 
     val = int(text)
 
-    # Получаем текущие настройки из БД, чтобы узнать значение первого напоминания
-    settings = await OfferSettingsRepository.get(telegram_id)
-    if not settings:
-        await message.answer("Произошла ошибка, настройки не найдены. Начните сначала.")
+    if val > 50 or val <= 0:
+        await message.answer("Число должно быть > 0 и <= 50. Попробуйте еще раз:")
+        return
+
+    try:
+        telegram_id = message.chat.id
+        await message.delete()
+        await OfferSettingsRepository.update(telegram_id, second_alert=val)
+        await message.answer(f"Второе напоминание успешно установлено: {val}")
         await state.clear()
-        return
-
-    # Сравниваем второе число с первым
-    if val > settings.first_alert:
-        await message.answer(
-            f"Второе число не может быть больше первого (текущее первое: {settings.first_alert}).\n"
-            f"Попробуйте еще раз:"
-        )
-        return
-
-    # Сохраняем в БД
-    # await AlertSettingsRepository.update_second(message.from_user.id, val)
-
-    await message.answer(f"Второе напоминание успешно установлено: {val}")
-    await state.clear()
-
-
-import re
+    except Exception as e:
+        logger.error(f"Ошибка при сохранении: {e}")
+        await message.answer("Произошла ошибка при сохранении")
 
 
 @router.message(OfferAlertStates.waiting_for_time)
 async def process_time_alert(message: Message, state: FSMContext):
+    """Обработчик для установки времени напоминания."""
     text = message.text.strip() if message.text else ""
 
-    # Регулярка: две цифры от 00 до 59, двоеточие, и еще раз две цифры от 00 до 59
-    time_pattern = r"^[0-5][0-9]:[0-5][0-9]$"
+    time_pattern = r"^([01][0-9]|2[0-3]):[0-5][0-9]$"
 
     if not re.match(time_pattern, text):
         await message.answer(
-            "Неверный формат времени! Введите в формате ММ:СС (например, 05:00 или 45:12):"
+            "Неверный формат времени! Введите в формате ЧЧ:ММ (например, 09:00 или 18:30):"
         )
         return
 
-    # Сохраняем в БД
-    # await AlertSettingsRepository.update_time(message.from_user.id, text)
-
-    await message.answer(f"Время напоминания успешно установлено: {text}")
-    await state.clear()
+    try:
+        telegram_id = message.chat.id
+        notification_time = datetime.strptime(text, "%H:%M").time()
+        await message.delete()
+        await OfferSettingsRepository.update(telegram_id, notification_time=notification_time)
+        await message.answer(f"Время напоминания успешно установлено: {text} мск")
+        await state.clear()
+    except Exception as e:
+        logger.error(f"Ошибка при сохранении: {e}")
+        await message.answer("Произошла ошибка при сохранении")
