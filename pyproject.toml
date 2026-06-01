@@ -18,3 +18,15 @@ dependencies = [
     "t-tech-investments>=0.3.5",
     "watchfiles>=1.2.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "aiosqlite>=0.20.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["app"]
+asyncio_mode = "auto"
+testpaths = ["tests"]
