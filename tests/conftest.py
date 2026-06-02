@@ -57,9 +57,12 @@ async def patch_session_scope(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[
         async with sessionmaker() as session:
             yield session
 
-    monkeypatch.setattr(
-        "features.offer_warning.repository.session_scope", _test_session_scope
-    )
+    # Патчим session_scope во всех репозиториях, использующих in-memory БД.
+    for target in (
+        "features.offer_warning.repository.session_scope",
+        "features.issuers.repository.session_scope",
+    ):
+        monkeypatch.setattr(target, _test_session_scope)
 
     yield
 
