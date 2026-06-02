@@ -10,6 +10,7 @@ from core.database import db_manager
 from core.enums import ReportType
 from features.base import base_handlers, notify_handlers
 from features.coupons import coupon_handlers
+from features.issuers import IssuerSyncService
 from features.offer_warning import OfferAlertService
 from features.offer_warning import handlers as offer_warning_handlers
 from features.price_monitoring import PriceAlertService, price_alert_handlers
@@ -70,10 +71,19 @@ async def main():
         kwargs={"bot": bot, "scheduler": scheduler},
     )
 
+    # Еженедельная синхронизация реестра эмитентов (каталог меняется медленно).
+    scheduler.add_job(
+        IssuerSyncService.sync_all_issuers,
+        CronTrigger(day_of_week="sun", hour=5, minute=0, timezone="Europe/Moscow"),
+    )
+
     scheduler.start()
 
     # Восстанавливаем DateTrigger-джобы после возможного рестарта
     await OfferAlertService.schedule_daily_jobs(bot, scheduler)
+
+    # Разовый синк реестра эмитентов на старте (в фоне, не блокирует polling).
+    scheduler.add_job(IssuerSyncService.sync_all_issuers)
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
