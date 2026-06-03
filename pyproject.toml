@@ -26,6 +26,13 @@ dev = [
     "aiosqlite>=0.20.0",
 ]
 
+[[tool.uv.index]]
+url = "https://opensource.tbank.ru/api/v4/projects/238/packages/pypi/simple"
+name = "tbank"
+
+[tool.uv.sources]
+t-tech-investments = { index = "tbank" }
+
 [tool.pytest.ini_options]
 pythonpath = ["app"]
 asyncio_mode = "auto"
