@@ -25,6 +25,7 @@ class NotificationKeybordButtonTexts(Enum):
 
     PRICE_ALERT = "Мониторинг цен"
     OFFER_ALERT = "Напоминание об оферте"
+    RATING_ALERT = "Кредитные рейтинги"
     BACK_TO_MAIN_KEYBORD = "Назад"
 
 

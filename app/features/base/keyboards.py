@@ -41,8 +41,11 @@ def create_notifications_keyboard() -> ReplyKeyboardMarkup:
     """Создает клавиатуру раздела уведомлений."""
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text=NotificationKeybordButtonTexts.PRICE_ALERT.value)],
-            [KeyboardButton(text=NotificationKeybordButtonTexts.OFFER_ALERT.value)],
+            [
+                KeyboardButton(text=NotificationKeybordButtonTexts.PRICE_ALERT.value),
+                KeyboardButton(text=NotificationKeybordButtonTexts.OFFER_ALERT.value),
+            ],
+            [KeyboardButton(text=NotificationKeybordButtonTexts.RATING_ALERT.value)],
             [KeyboardButton(text=NotificationKeybordButtonTexts.BACK_TO_MAIN_KEYBORD.value)],
         ],
         resize_keyboard=True,

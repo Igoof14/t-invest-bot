@@ -1,0 +1,57 @@
+"""Доменные модели фичи рейтингов НРА."""
+
+from __future__ import annotations
+
+from datetime import date, datetime
+from enum import Enum
+
+from pydantic import BaseModel
+
+
+class ChangeType(Enum):
+    """Тип изменения релиза рейтинга относительно сохранённого состояния."""
+
+    NEW = "new"
+    CHANGED = "changed"
+
+
+class ReleaseStub(BaseModel):
+    """Лёгкая листинговая запись релиза из REST API НРА.
+
+    Достаточно, чтобы решить, нужно ли (пере)качивать страницу деталей.
+    """
+
+    post_id: int
+    url: str
+    title: str = ""
+    modified: datetime | None = None
+
+
+class RatingEvent(BaseModel):
+    """Распарсенное рейтинговое событие (релиз НРА)."""
+
+    post_id: int
+    url: str
+    release_id: str | None = None
+
+    entity_name: str | None = None
+    entity_type: str | None = None
+
+    inn: str | None = None
+    # Релиз может покрывать несколько облигационных выпусков (серий).
+    isins: list[str] = []
+
+    rating_action: str | None = None
+    rating_value: str | None = None
+    outlook: str | None = None
+
+    publication_date: date | None = None
+    modified: datetime | None = None
+
+
+class RatingChange(BaseModel):
+    """Изменение рейтинга, затрагивающее портфель пользователя."""
+
+    event: RatingEvent
+    change_type: ChangeType
+    matched_bond_names: list[str] = []

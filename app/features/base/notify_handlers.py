@@ -11,6 +11,9 @@ from features.offer_warning.keyboards import create_offer_alerts_keyboard
 from features.offer_warning.repository import OfferSettingsRepository
 from features.price_monitoring.keyboards import create_price_alerts_keyboard
 from features.price_monitoring.repository import AlertSettingsRepository
+from features.ratings.enums import RATING_ALERTS_DESCRIPTION
+from features.ratings.keyboards import create_rating_alerts_keyboard
+from features.ratings.repository import RatingAlertSettingsRepository
 
 from .keyboards import create_main_keyboard
 
@@ -99,4 +102,22 @@ async def handle_monitoring_button(message: Message) -> None:
 
     except Exception as e:
         logger.error(f"Ошибка при обработке кнопки 'Мониторинг': {e}")
+        await message.answer("Произошла ошибка")
+
+
+@router.message(F.text == NotificationKeybordButtonTexts.RATING_ALERT.value)
+async def handle_rating_alert_button(message: Message) -> None:
+    """Обработка кнопки 'Кредитные рейтинги'."""
+    try:
+        telegram_id = message.from_user.id if message.from_user else message.chat.id
+        enabled = await RatingAlertSettingsRepository.get_enabled_agencies(telegram_id)
+        await message.delete()
+        builder = create_rating_alerts_keyboard(enabled)
+        await message.answer(
+            RATING_ALERTS_DESCRIPTION,
+            reply_markup=builder.as_markup(),
+            parse_mode="HTML",
+        )
+    except Exception as e:
+        logger.error(f"Ошибка при обработке кнопки 'Кредитные рейтинги': {e}")
         await message.answer("Произошла ошибка")

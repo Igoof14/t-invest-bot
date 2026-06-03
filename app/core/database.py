@@ -56,6 +56,8 @@ class DatabaseManager:
                 PriceAlertSent,
                 PriceAlertSettings,
             )
+            from features.rating_nra.models import NraRelease
+            from features.ratings.models import RatingAlertSettings
             from features.users.models import TinvestUser, User
 
             __all__ = [
@@ -66,8 +68,10 @@ class DatabaseManager:
                 BondPriceHistory,
                 PriceAlertSent,
                 PriceAlertSettings,
-                TinvestUser,
+                NraRelease,
+                RatingAlertSettings,
                 User,
+                TinvestUser,
             ]
         except ImportError as e:
             logger.critical(f"Критическая ошибка импорта моделей при инициализации БД: {e}")

@@ -14,6 +14,8 @@ from features.issuers import IssuerSyncService
 from features.offer_warning import OfferAlertService
 from features.offer_warning import handlers as offer_warning_handlers
 from features.price_monitoring import PriceAlertService, price_alert_handlers
+from features.rating_nra import RatingAlertService
+from features.ratings import router as ratings_router
 from features.reports import ReportService
 from features.users import users_handlers
 
@@ -33,6 +35,7 @@ async def main():
         notify_handlers.router,
         coupon_handlers.router,
         users_handlers.router,
+        ratings_router,
     )
 
     # register_handlers(dp, bot)
@@ -77,13 +80,22 @@ async def main():
         CronTrigger(day_of_week="sun", hour=5, minute=0, timezone="Europe/Moscow"),
     )
 
+    # Проверка обновлений рейтингов НРА каждые 10 минут днём (08:00–22:50 МСК).
+    scheduler.add_job(
+        RatingAlertService.check_rating_updates,
+        CronTrigger(hour="8-22", minute="*/10", timezone="Europe/Moscow"),
+        kwargs={"bot": bot},
+        max_instances=1,
+        coalesce=True,
+    )
+
     scheduler.start()
 
     # Восстанавливаем DateTrigger-джобы после возможного рестарта
     await OfferAlertService.schedule_daily_jobs(bot, scheduler)
 
     # Разовый синк реестра эмитентов на старте (в фоне, не блокирует polling).
-    scheduler.add_job(IssuerSyncService.sync_all_issuers)
+    # scheduler.add_job(IssuerSyncService.sync_all_issuers)
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
