@@ -1,7 +1,7 @@
 """Base keyboards for the bot."""
 
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
-from core.enums import MainKeyboardButtonTexts, NotificationKeybordButtonTexts
+from core.enums import MainKeyboardButtonTexts
 
 
 def create_main_keyboard() -> ReplyKeyboardMarkup:
@@ -31,22 +31,6 @@ def create_new_user_keyboard() -> ReplyKeyboardMarkup:
         keyboard=[
             [KeyboardButton(text=MainKeyboardButtonTexts.SETTINGS.value)],
             [KeyboardButton(text=MainKeyboardButtonTexts.HELP.value)],
-        ],
-        resize_keyboard=True,
-        one_time_keyboard=False,
-    )
-
-
-def create_notifications_keyboard() -> ReplyKeyboardMarkup:
-    """Создает клавиатуру раздела уведомлений."""
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [
-                KeyboardButton(text=NotificationKeybordButtonTexts.PRICE_ALERT.value),
-                KeyboardButton(text=NotificationKeybordButtonTexts.OFFER_ALERT.value),
-            ],
-            [KeyboardButton(text=NotificationKeybordButtonTexts.RATING_ALERT.value)],
-            [KeyboardButton(text=NotificationKeybordButtonTexts.BACK_TO_MAIN_KEYBORD.value)],
         ],
         resize_keyboard=True,
         one_time_keyboard=False,

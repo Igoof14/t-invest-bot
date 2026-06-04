@@ -8,7 +8,7 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 
 from .enums import RatingAgency
-from .keyboards import create_rating_alerts_keyboard
+from .menu import render
 from .repository import RatingAlertSettingsRepository
 from .schemas import RatingAlertCallback
 
@@ -32,11 +32,10 @@ async def handle_toggle_agency(
 
     try:
         new_state = await RatingAlertSettingsRepository.toggle(telegram_id, agency)
-        enabled = await RatingAlertSettingsRepository.get_enabled_agencies(telegram_id)
 
-        builder = create_rating_alerts_keyboard(enabled)
+        text, markup = await render(telegram_id)
         if callback.message and isinstance(callback.message, Message):
-            await callback.message.edit_reply_markup(reply_markup=builder.as_markup())
+            await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
 
         await callback.answer(
             f"{agency.display_name}: " + ("включено" if new_state else "выключено")

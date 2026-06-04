@@ -14,10 +14,11 @@ from core.clients.t_invest.bonds import (
 )
 from core.enums import MainKeyboardButtonTexts, Messages
 from features.coupons.keyboards import create_coupons_keyboard
+from features.menu import render_hub
 from features.users.keyboards import create_settings_keyboard
 from features.users.repository import BotUserRepository
 
-from .keyboards import create_main_keyboard, create_new_user_keyboard, create_notifications_keyboard
+from .keyboards import create_main_keyboard, create_new_user_keyboard
 
 logger = logging.getLogger(__name__)
 
@@ -91,9 +92,11 @@ async def start_handler(message: Message) -> None:
 
 
 @router.message(F.text == MainKeyboardButtonTexts.NOTIFICATIONS.value)
-async def handle_notifications_button(message: Message):
-    """Обработка кнопки 'Уведомления'."""
-    await message.answer("Уведомления:", reply_markup=create_notifications_keyboard())
+async def handle_notifications_button(message: Message) -> None:
+    """Открывает инлайн-хаб «Уведомления»."""
+    telegram_id = message.from_user.id if message.from_user else message.chat.id
+    text, markup = await render_hub(telegram_id)
+    await message.answer(text, reply_markup=markup, parse_mode="HTML")
     await message.delete()
 
 

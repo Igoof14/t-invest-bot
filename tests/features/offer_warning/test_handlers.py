@@ -161,7 +161,10 @@ async def test_handle_toggle_enabled_edits_message(
         "get_or_create",
         AsyncMock(
             return_value=SimpleNamespace(
-                first_alert=14, second_alert=5, notification_time=time(10, 0)
+                alerts_enabled=True,
+                first_alert=14,
+                second_alert=5,
+                notification_time=time(10, 0),
             )
         ),
     )

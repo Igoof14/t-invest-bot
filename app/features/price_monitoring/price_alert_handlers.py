@@ -5,10 +5,10 @@ from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
-from core.enums import Messages
 
 from .enums import PriceAlertCallbackData
-from .keyboards import create_price_alerts_keyboard, create_thresholds_keyboard
+from .keyboards import create_thresholds_keyboard
+from .menu import render
 from .repository import AlertSettingsRepository
 
 logger = logging.getLogger(__name__)
@@ -26,34 +26,11 @@ class ThresholdStates(StatesGroup):
 
 @router.callback_query(F.data == PriceAlertCallbackData.PRICE_ALERTS_SETTINGS.value)
 async def handle_price_alerts_menu(callback: CallbackQuery) -> None:
-    """Обработчик для кнопки 'Настроить пороги'."""
+    """Показывает раздел мониторинга цен (возврат из настройки порогов)."""
     try:
-        telegram_id = callback.from_user.id
-        settings = await AlertSettingsRepository.get_or_create(telegram_id)
-
-        # Формируем текст с текущим состоянием
-        status_text = "включены" if settings.alerts_enabled else "выключены"
-        message_text = f"{Messages.PRICE_ALERTS_MENU.value}\n\nСтатус: <b>{status_text}</b>"
-
-        if settings.alerts_enabled:
-            message_text += (
-                f"\n\n<b>Текущие пороги:</b>\n\n"
-                f"Падение:\n"
-                f"  • Умеренное: {settings.drop_warning_threshold}%\n"
-                f"  • Сильное: {settings.drop_critical_threshold}%\n\n"
-                f"Рост:\n"
-                f"  • Умеренное: {settings.rise_warning_threshold}%\n"
-                f"  • Сильное: {settings.rise_critical_threshold}%"
-            )
-
-        builder = create_price_alerts_keyboard(settings.alerts_enabled)
-
+        text, markup = await render(callback.from_user.id)
         if callback.message and isinstance(callback.message, Message):
-            await callback.message.edit_text(
-                message_text,
-                reply_markup=builder.as_markup(),
-                parse_mode="HTML",
-            )
+            await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
         await callback.answer()
 
     except Exception as e:
@@ -67,34 +44,10 @@ async def handle_toggle_alerts(callback: CallbackQuery) -> None:
     try:
         telegram_id = callback.from_user.id
         new_state = await AlertSettingsRepository.toggle_alerts(telegram_id)
-        settings = await AlertSettingsRepository.get_or_create(telegram_id)
 
-        status_text = "включен" if new_state else "выключен"
-        message_text = (
-            f"<b>Мониторинг цен облигаций</b>\n\n"
-            f"Получайте уведомления при значительных изменениях цен "
-            f"облигаций в вашем портфеле.\n\n"
-            f"Статус: <b>{status_text}</b>"
-        )
-        if new_state:
-            message_text += (
-                f"\n\n<b>Текущие пороги:</b>\n\n"
-                f"Падение:\n"
-                f"  • Умеренное: {settings.drop_warning_threshold}%\n"
-                f"  • Сильное: {settings.drop_critical_threshold}%\n\n"
-                f"Рост:\n"
-                f"  • Умеренное: {settings.rise_warning_threshold}%\n"
-                f"  • Сильное: {settings.rise_critical_threshold}%"
-            )
-
-        builder = create_price_alerts_keyboard(new_state)
-
+        text, markup = await render(telegram_id)
         if callback.message and isinstance(callback.message, Message):
-            await callback.message.edit_text(
-                message_text,
-                reply_markup=builder.as_markup(),
-                parse_mode="HTML",
-            )
+            await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
 
         await callback.answer("Уведомления " + ("включены" if new_state else "выключены"))
 

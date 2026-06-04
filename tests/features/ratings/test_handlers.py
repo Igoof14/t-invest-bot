@@ -16,7 +16,7 @@ def _callback() -> MagicMock:
     callback = MagicMock()
     callback.from_user.id = 555
     callback.message = MagicMock(spec=Message)
-    callback.message.edit_reply_markup = AsyncMock()
+    callback.message.edit_text = AsyncMock()
     callback.answer = AsyncMock()
     return callback
 
@@ -34,7 +34,7 @@ async def test_toggle_updates_keyboard_and_answers(monkeypatch: pytest.MonkeyPat
 
     await handle_toggle_agency(callback, RatingAlertCallback(action="toggle", agency="nra"))
 
-    callback.message.edit_reply_markup.assert_awaited_once()
+    callback.message.edit_text.assert_awaited_once()
     callback.answer.assert_awaited_once()
     assert "включено" in callback.answer.await_args.args[0]
 
@@ -46,5 +46,5 @@ async def test_toggle_unknown_agency_answers_error() -> None:
         callback, RatingAlertCallback(action="toggle", agency="unknown")
     )
 
-    callback.message.edit_reply_markup.assert_not_awaited()
+    callback.message.edit_text.assert_not_awaited()
     callback.answer.assert_awaited_once_with("Неизвестное агентство")

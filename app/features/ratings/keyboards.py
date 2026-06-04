@@ -19,7 +19,7 @@ def create_rating_alerts_keyboard(enabled: set[RatingAgency]) -> InlineKeyboardB
     """
     builder = InlineKeyboardBuilder()
     for agency in AVAILABLE_AGENCIES:
-        mark: str = ": Включено 🟢" if agency in enabled else ": Выключено 🔴"
+        mark: str = ": Включено 🔔" if agency in enabled else ": Выключено 🔕"
         builder.add(
             InlineKeyboardButton(
                 text=f"{agency.display_name} {mark}",

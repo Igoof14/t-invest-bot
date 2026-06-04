@@ -1,15 +1,16 @@
 import logging
 import re
 from datetime import datetime
-from typing import Literal
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from common.utils.bot_utils import pluralize_days
+from features.menu import nav_button
 
-from .keyboards import create_offer_alert_setting_keyboard, create_offer_alerts_keyboard
+from .keyboards import create_offer_alert_setting_keyboard
+from .menu import SECTION_KEY, render
 from .repository import OfferSettingsRepository
 from .schemas import OfferAlertCallback
 
@@ -23,34 +24,10 @@ async def handle_toggle_alerts(callback: CallbackQuery, callback_data: OfferAler
     try:
         telegram_id = callback.from_user.id
         new_state = await OfferSettingsRepository.toggle_alerts(telegram_id)
-        settings = await OfferSettingsRepository.get_or_create(telegram_id)
 
-        status_text = "включен" if new_state else "выключен"
-        text = (
-            f"*Напоминание об оферте*\n\n"
-            f"Не пропустите важную дату — получайте уведомления о приближающейся оферте (PUT-опцион) заранее.\n\n"
-            f"*Как работает:*\n"
-            f"• Выберите диапазон — за сколько дней напомнить (например, за 20 и за 7 дней)\n"
-            f"• Укажите удобное время уведомления\n"
-            f"• Бот напомнит вам точно в срок\n\n"
-            f"Статус: *{status_text}*\n\n"
-            f"[Что такое оферта](https://www.google.com/search?q=что+такое+оферта+в+облигациях)"
-        )
-        if new_state:
-            text += (
-                f"\n\n*Текущие настройки:*\n\n"
-                f"Первое напоминаие за: {settings.first_alert} {pluralize_days(settings.first_alert)}\n"
-                f"Второе напоминаие за: {settings.second_alert} {pluralize_days(settings.second_alert)}\n"
-                f"Время уведомления: {str(settings.notification_time)[:-3]} МСК"  # Удаляем секунды
-            )
-        builder = create_offer_alerts_keyboard(new_state)
-
+        text, markup = await render(telegram_id)
         if callback.message and isinstance(callback.message, Message):
-            await callback.message.edit_text(
-                text,
-                reply_markup=builder.as_markup(),
-                parse_mode="Markdown",
-            )
+            await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
 
         await callback.answer("Уведомления " + ("включены" if new_state else "выключены"))
 
@@ -65,10 +42,7 @@ async def handle_offer_alert_setting(callback: CallbackQuery) -> None:
     try:
         telegram_id = callback.from_user.id
         settings = await OfferSettingsRepository.get_or_create(telegram_id)
-        status_text: Literal["включен", "выключен"] = (
-            "включен" if settings.alerts_enabled else "выключен"
-        )
-        message_text = f"<b>Настройки уведомлений об офертах</b>\n\n"
+        message_text = "<b>Настройки уведомлений об офертах</b>\n\n"
 
         if settings.alerts_enabled:
             message_text += (
@@ -80,6 +54,7 @@ async def handle_offer_alert_setting(callback: CallbackQuery) -> None:
             )
 
         builder = create_offer_alert_setting_keyboard()
+        builder.row(nav_button(SECTION_KEY))
 
         if callback.message and isinstance(callback.message, Message):
             await callback.message.edit_text(

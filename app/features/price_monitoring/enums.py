@@ -21,4 +21,4 @@ class PriceAlertButtonTexts(Enum):
     ALERTS_ON = "Вкл. уведомления"
     ALERTS_OFF = "Выкл. уведомления"
     ALERTS_SETTINGS = "Настроить пороги"
-    BACK_TO_SETTINGS = "Назад"
+    BACK_TO_SETTINGS = "⬅️ Назад"

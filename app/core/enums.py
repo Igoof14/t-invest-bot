@@ -20,15 +20,6 @@ class MainKeyboardButtonTexts(Enum):
     SETTINGS = "Настройки"
 
 
-class NotificationKeybordButtonTexts(Enum):
-    """Кнопки для уведомлений."""
-
-    PRICE_ALERT = "Мониторинг цен"
-    OFFER_ALERT = "Напоминание об оферте"
-    RATING_ALERT = "Кредитные рейтинги"
-    BACK_TO_MAIN_KEYBORD = "Назад"
-
-
 class Messages(Enum):
     """Enum texts for messages."""
 

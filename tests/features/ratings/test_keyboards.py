@@ -11,14 +11,14 @@ def _button_texts(enabled: set[RatingAgency]) -> list[str]:
     return [btn.text for row in markup.inline_keyboard for btn in row]
 
 
-def test_disabled_agency_shows_cross() -> None:
+def test_disabled_agency_shows_off_state() -> None:
     texts = _button_texts(set())
-    assert any(t == "❌ НРА" for t in texts)
+    assert any("НРА" in t and "Выключено" in t for t in texts)
 
 
-def test_enabled_agency_shows_check() -> None:
+def test_enabled_agency_shows_on_state() -> None:
     texts = _button_texts({RatingAgency.NRA})
-    assert any(t == "✅ НРА" for t in texts)
+    assert any("НРА" in t and "Включено" in t for t in texts)
 
 
 def test_one_button_per_available_agency() -> None:
