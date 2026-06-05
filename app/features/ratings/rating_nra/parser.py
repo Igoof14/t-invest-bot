@@ -8,8 +8,7 @@ from datetime import date
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup, Tag
-
-from .schemas import RatingEvent, ReleaseStub
+from features.ratings.events import RatingEvent, ReleaseStub
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +116,7 @@ def parse_release(html: str, stub: ReleaseStub) -> RatingEvent | None:
 
     try:
         return RatingEvent(
-            post_id=stub.post_id,
+            uid=stub.uid,
             url=stub.url,
             release_id=_release_id_from_url(stub.url),
             entity_name=_clean(fields.get("entity_short_name"))

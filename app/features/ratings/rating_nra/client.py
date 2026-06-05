@@ -7,10 +7,10 @@ import logging
 from datetime import datetime
 
 import aiohttp
+from features.ratings.events import RatingEvent, ReleaseStub
 
 from . import config
 from .parser import parse_release
-from .schemas import RatingEvent, ReleaseStub
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ def _parse_iso(value: str | None) -> datetime | None:
 def _stub_from_item(item: dict) -> ReleaseStub:
     """Преобразует элемент REST-листинга в ``ReleaseStub``."""
     return ReleaseStub(
-        post_id=int(item["id"]),
+        uid=str(item["id"]),
         url=str(item["link"]),
         title=str(item.get("title", {}).get("rendered", "")),
         modified=_parse_iso(item.get("modified")),

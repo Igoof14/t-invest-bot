@@ -1,4 +1,4 @@
-"""Доменные модели фичи рейтингов НРА."""
+"""Доменные модели рейтинговых событий (общие для всех провайдеров)."""
 
 from __future__ import annotations
 
@@ -9,28 +9,29 @@ from pydantic import BaseModel
 
 
 class ChangeType(Enum):
-    """Тип изменения релиза рейтинга относительно сохранённого состояния."""
+    """Тип изменения релиза относительно сохранённого состояния."""
 
     NEW = "new"
     CHANGED = "changed"
 
 
 class ReleaseStub(BaseModel):
-    """Лёгкая листинговая запись релиза из REST API НРА.
+    """Лёгкая листинговая запись релиза.
 
-    Достаточно, чтобы решить, нужно ли (пере)качивать страницу деталей.
+    ``uid`` — стабильный идентификатор релиза у конкретного агентства
+    (например, WordPress post id у НРА или slug у НКР).
     """
 
-    post_id: int
+    uid: str
     url: str
     title: str = ""
     modified: datetime | None = None
 
 
 class RatingEvent(BaseModel):
-    """Распарсенное рейтинговое событие (релиз НРА)."""
+    """Распарсенное рейтинговое событие (релиз агентства)."""
 
-    post_id: int
+    uid: str
     url: str
     release_id: str | None = None
 

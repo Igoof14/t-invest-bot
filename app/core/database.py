@@ -56,8 +56,7 @@ class DatabaseManager:
                 PriceAlertSent,
                 PriceAlertSettings,
             )
-            from features.rating_nra.models import NraRelease
-            from features.ratings.models import RatingAlertSettings
+            from features.ratings.models import RatingAlertSettings, RatingRelease
             from features.users.models import TinvestUser, User
 
             __all__ = [
@@ -68,8 +67,8 @@ class DatabaseManager:
                 BondPriceHistory,
                 PriceAlertSent,
                 PriceAlertSettings,
-                NraRelease,
                 RatingAlertSettings,
+                RatingRelease,
                 User,
                 TinvestUser,
             ]

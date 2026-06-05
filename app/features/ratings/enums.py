@@ -16,6 +16,7 @@ class RatingAgency(Enum):
     """
 
     NRA = "nra"
+    NKR = "nkr"
 
     @property
     def display_name(self) -> str:
@@ -25,6 +26,7 @@ class RatingAgency(Enum):
 
 _DISPLAY_NAMES = {
     RatingAgency.NRA: "НРА",
+    RatingAgency.NKR: "НКР",
 }
 
 # Агентства, по которым уже есть скрейпер и можно получать уведомления.
@@ -32,6 +34,7 @@ _DISPLAY_NAMES = {
 # дополняем список.
 AVAILABLE_AGENCIES: list[RatingAgency] = [
     RatingAgency.NRA,
+    RatingAgency.NKR,
 ]
 
 # Краткий текст экрана секции.

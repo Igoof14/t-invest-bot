@@ -1,8 +1,8 @@
-"""Форматирование уведомлений об изменении рейтинга НРА для Telegram."""
+"""Форматирование уведомлений об изменении рейтинга для Telegram (общее)."""
 
 from __future__ import annotations
 
-from .schemas import RatingChange
+from .events import RatingChange
 
 # Иконка по каноничному рейтинговому действию.
 _ACTION_ICONS = {
@@ -42,16 +42,18 @@ def _format_single(change: RatingChange) -> str:
     return "\n".join(lines)
 
 
-def format_rating_alert(changes: list[RatingChange]) -> str:
+def format_rating_alert(agency_name: str, changes: list[RatingChange]) -> str:
     """Формирует HTML-сообщение об изменениях рейтинга по бумагам пользователя.
 
     Args:
+        agency_name: Отображаемое имя агентства (например, «НКР»).
         changes: Список изменений, затрагивающих портфель пользователя.
 
     Returns:
         Отформатированное HTML-сообщение.
 
     """
-    blocks: list[str] = ["<b>📊 Обновление кредитного рейтинга по вашим облигациям</b>\n"]
+    header = f"<b>📊 {agency_name}: обновление кредитного рейтинга по вашим облигациям</b>\n"
+    blocks: list[str] = [header]
     blocks.extend(_format_single(change) for change in changes)
     return "\n".join(blocks)

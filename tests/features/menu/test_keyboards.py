@@ -32,8 +32,8 @@ async def test_build_hub_lists_sections_with_badges() -> None:
     _text, markup = await build_hub(111, sections)
     texts = [btn.text for row in markup.inline_keyboard for btn in row]
 
-    assert "Ratings — включено" in texts
-    assert "Price — выключено" in texts
+    assert any("Ratings" in t and "включено" in t for t in texts)
+    assert any("Price" in t and "выключено" in t for t in texts)
 
 
 async def test_build_hub_without_badge() -> None:

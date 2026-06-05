@@ -1,4 +1,4 @@
-"""Получение идентификаторов облигаций из портфеля через T-Invest API."""
+"""Получение идентификаторов облигаций из портфеля через T-Invest API (общее)."""
 
 from __future__ import annotations
 
@@ -12,19 +12,10 @@ logger = logging.getLogger(__name__)
 async def get_portfolio_bond_identifiers(
     token: str, telegram_id: int | None = None
 ) -> set[str]:
-    """Возвращает идентификаторы облигаций из всех счетов пользователя.
+    """Возвращает идентификаторы облигаций (figi + ticker) из всех счетов пользователя.
 
-    Собирает ``figi`` и ``ticker`` каждой облигационной позиции — этого
-    достаточно, чтобы сопоставить позиции с облигациями эмитента (у которых
-    известны figi/ticker/isin) по пересечению множеств.
-
-    Args:
-        token: T-Invest API токен пользователя.
-        telegram_id: Telegram ID для логов.
-
-    Returns:
-        Множество идентификаторов. Пустое при ошибке или отсутствии облигаций.
-
+    Этого достаточно, чтобы сопоставить позиции с облигациями эмитента
+    (у которых известны figi/ticker/isin) по пересечению множеств.
     """
     user_label = f" пользователя {telegram_id}" if telegram_id is not None else ""
     identifiers: set[str] = set()

@@ -1,4 +1,4 @@
-"""Отправка уведомлений об изменении рейтинга через Telegram-бота."""
+"""Отправка уведомлений об изменении рейтинга через Telegram-бота (общее)."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ import logging
 
 from aiogram import Bot
 
+from .events import RatingChange
 from .formatter import format_rating_alert
-from .schemas import RatingChange
 
 logger = logging.getLogger(__name__)
 
@@ -16,20 +16,13 @@ class RatingAlertNotifier:
     """Отправляет пользователю сообщение об изменениях рейтинга по его бумагам."""
 
     def __init__(self, bot: Bot) -> None:
-        """Инициализирует notifier.
-
-        Args:
-            bot: Экземпляр aiogram-бота.
-
-        """
+        """Инициализирует notifier."""
         self._bot = bot
 
-    async def send(self, telegram_id: int, changes: list[RatingChange]) -> bool:
+    async def send(
+        self, telegram_id: int, agency_name: str, changes: list[RatingChange]
+    ) -> bool:
         """Отправляет одно сообщение со всеми изменениями рейтинга пользователя.
-
-        Args:
-            telegram_id: Telegram ID получателя.
-            changes: Список изменений рейтинга для уведомления.
 
         Returns:
             True при успешной отправке, False при ошибке.
@@ -38,7 +31,7 @@ class RatingAlertNotifier:
         if not changes:
             return True
 
-        message = format_rating_alert(changes)
+        message = format_rating_alert(agency_name, changes)
 
         try:
             await self._bot.send_message(
