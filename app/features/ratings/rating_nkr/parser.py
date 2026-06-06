@@ -19,6 +19,8 @@ _DETAIL_HREF_RE = re.compile(r"^/ratings/press-releases/([^/]+)/$")
 _VALUE_RE = re.compile(r"([A-D][A-D+\-]{0,4}\.ru)")
 # ISIN: 2 буквы кода страны + 10 буквенно-цифровых символов.
 _ISIN_RE = re.compile(r"\b([A-Z]{2}[A-Z0-9]{10})\b")
+# Основной (левый) блок релиза НКР; сайдбар «похожие» сюда не входит.
+_MAIN_CLASS_RE = re.compile(r"npr-l")
 # ИНН рейтингуемого лица из блока на детальной странице.
 _INN_RE = re.compile(r"\(ИНН\)\s*рейтингуемого лица\s*([0-9]{10,12})")
 # Дата ДД.ММ.ГГГГ.
@@ -79,10 +81,15 @@ def parse_listing(html: str) -> list[ReleaseStub]:
 
 
 def _extract_action(title: str) -> str | None:
-    """Каноничное действие по корню глагола из заголовка."""
-    upper = title.upper()
+    """Каноничное действие по первому глаголу после «НКР».
+
+    Берём именно ведущий глагол, иначе слова вроде «без подтверждения» в конце
+    заголовка об отзыве дают ложное «Подтверждён».
+    """
+    match = re.search(r"НКР\s+([А-Яа-яЁё]+)", title)
+    verb = match.group(1).upper() if match else ""
     for stem, label in _ACTION_STEMS:
-        if stem in upper:
+        if stem in verb:
             return label
     return None
 
@@ -93,13 +100,42 @@ def _extract_value(title: str) -> str | None:
     return matches[-1] if matches else None
 
 
-def _extract_outlook(title: str) -> str | None:
-    """Прогноз по ключевому слову в заголовке."""
-    lowered = title.lower()
+def _extract_outlook(text: str) -> str | None:
+    """Прогноз по ключевому слову в тексте."""
+    lowered = text.lower()
     for stem, canonical in _OUTLOOK_WORDS.items():
         if stem in lowered:
             return canonical
     return None
+
+
+def _parse_structure(soup: BeautifulSoup) -> dict[str, str]:
+    """Извлекает блок «Структура рейтинга» как словарь {метка: значение}."""
+    out: dict[str, str] = {}
+    for label_el in soup.find_all("span", class_="npr-r-u-l"):
+        if not isinstance(label_el, Tag):
+            continue
+        value_el = label_el.find_next("span", class_="npr-r-u-r")
+        if not isinstance(value_el, Tag):
+            continue
+        label = label_el.get_text(" ", strip=True).lower()
+        if label and label not in out:
+            out[label] = value_el.get_text(" ", strip=True)
+    return out
+
+
+def _main_text(soup: BeautifulSoup) -> str:
+    """Текст основного блока релиза (без сайдбара «похожие»)."""
+    parts = [el.get_text(" ", strip=True) for el in soup.find_all(class_=_MAIN_CLASS_RE)]
+    return " ".join(parts) if parts else soup.get_text(" ", strip=True)
+
+
+def _value_from_cell(cell: str | None) -> str | None:
+    """Возвращает рейтинг `X.ru` из ячейки (None, если отозван/пусто)."""
+    if not cell:
+        return None
+    match = _VALUE_RE.search(cell)
+    return match.group(1) if match else None
 
 
 def _extract_entity(title: str) -> str | None:
@@ -127,8 +163,18 @@ def parse_release(html: str, stub: ReleaseStub) -> RatingEvent | None:
     ИНН и ISIN — со страницы релиза.
     """
     soup = BeautifulSoup(html, "html.parser")
-    text = soup.get_text(" ", strip=True)
+    # Сайдбар «похожие релизы» — это ссылки blue-link; убираем их, чтобы их ISIN
+    # не попали в событие. ИНН и ISIN берём из основного блока.
+    for link in soup.find_all("a", class_="blue-link"):
+        link.decompose()
+    text = _main_text(soup)
     title = stub.title or text[:300]
+
+    # Значение и прогноз надёжнее всего в блоке «Структура рейтинга»;
+    # заголовок — фолбэк. Для отозванных рейтинг/прогноз = None.
+    structure = _parse_structure(soup)
+    rating_value = _value_from_cell(structure.get("рейтинг")) or _extract_value(title)
+    outlook = _extract_outlook(structure.get("прогноз", "")) or _extract_outlook(title)
 
     inn_match = _INN_RE.search(text)
     isins: list[str] = []
@@ -156,8 +202,8 @@ def parse_release(html: str, stub: ReleaseStub) -> RatingEvent | None:
             inn=inn_match.group(1) if inn_match else None,
             isins=isins,
             rating_action=_extract_action(title),
-            rating_value=_extract_value(title),
-            outlook=_extract_outlook(title),
+            rating_value=rating_value,
+            outlook=outlook,
             publication_date=publication_date,
         )
     except Exception as e:
