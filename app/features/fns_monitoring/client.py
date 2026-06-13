@@ -24,29 +24,42 @@ _HEADERS = {
 }
 
 
-async def _get_captcha_token(session: aiohttp.ClientSession) -> str:
+def _fns_proxy() -> str | None:
+    """Возвращает прокси для запросов к ФНС или ``None`` (прямое соединение)."""
+    return config.fns_proxy or None
+
+
+async def _get_captcha_token(
+    session: aiohttp.ClientSession, proxy: str | None
+) -> str:
     """Получает токен капчи от сервиса ФНС.
 
     Args:
         session: Активная aiohttp-сессия.
+        proxy: Прокси для запроса (или ``None``).
 
     Returns:
         Строка токена капчи.
 
     """
-    async with session.get("https://service.nalog.ru/static/captcha.bin") as resp:
+    async with session.get(
+        "https://service.nalog.ru/static/captcha.bin", proxy=proxy
+    ) as resp:
         resp.raise_for_status()
         token = (await resp.text()).strip()
     logger.debug("captchaToken: %s", token)
     return token
 
 
-async def _download_captcha_image(session: aiohttp.ClientSession, token: str) -> bytes:
+async def _download_captcha_image(
+    session: aiohttp.ClientSession, token: str, proxy: str | None
+) -> bytes:
     """Скачивает изображение капчи.
 
     Args:
         session: Активная aiohttp-сессия.
         token: Токен капчи.
+        proxy: Прокси для запроса (или ``None``).
 
     Returns:
         Байты изображения капчи.
@@ -55,6 +68,7 @@ async def _download_captcha_image(session: aiohttp.ClientSession, token: str) ->
     async with session.get(
         "https://service.nalog.ru/static/captcha.bin",
         params={"a": token, "version": "2"},
+        proxy=proxy,
     ) as resp:
         resp.raise_for_status()
         image = await resp.read()
@@ -135,6 +149,7 @@ async def _poll_2captcha(captcha_id: str) -> str:
 async def _keepalive_fns(
     fns_session: aiohttp.ClientSession,
     stop: asyncio.Event,
+    proxy: str | None,
 ) -> None:
     """Поддерживает FNS-сессию живой, пока решается капча.
 
@@ -143,6 +158,7 @@ async def _keepalive_fns(
     Args:
         fns_session: Активная FNS-сессия (с JSESSIONID).
         stop: Событие остановки.
+        proxy: Прокси для запроса (или ``None``).
 
     """
     while not stop.is_set():
@@ -150,7 +166,9 @@ async def _keepalive_fns(
         if stop.is_set():
             break
         try:
-            async with fns_session.get("https://service.nalog.ru/bi.do") as resp:
+            async with fns_session.get(
+                "https://service.nalog.ru/bi.do", proxy=proxy
+            ) as resp:
                 logger.debug("FNS keepalive: HTTP %d", resp.status)
         except Exception as e:
             logger.debug("FNS keepalive ошибка: %s", e)
@@ -159,12 +177,14 @@ async def _keepalive_fns(
 async def _solve_captcha(
     image_bytes: bytes,
     fns_session: aiohttp.ClientSession,
+    proxy: str | None,
 ) -> tuple[str, str]:
     """Отправляет капчу в 2captcha и ждёт решения, поддерживая FNS-сессию живой.
 
     Args:
         image_bytes: Байты изображения капчи.
         fns_session: Активная FNS-сессия для keepalive-запросов.
+        proxy: Прокси для keepalive-запросов к ФНС (или ``None``).
 
     Returns:
         Кортеж (текст_капчи, captcha_id).
@@ -199,7 +219,7 @@ async def _solve_captcha(
 
     stop = asyncio.Event()
     poll_task = asyncio.create_task(_poll_2captcha(captcha_id))
-    keepalive_task = asyncio.create_task(_keepalive_fns(fns_session, stop))
+    keepalive_task = asyncio.create_task(_keepalive_fns(fns_session, stop, proxy))
 
     try:
         answer = await poll_task
@@ -228,19 +248,24 @@ async def check_blocking(inn: str) -> dict:
         aiohttp.ClientResponseError: При HTTP-ошибках, кроме неверной капчи.
 
     """
+    proxy = _fns_proxy()
+    if proxy:
+        logger.info("FNS-запросы идут через proxy")
+
     async with aiohttp.ClientSession(headers=_HEADERS) as session:
         # Открываем страницу как обычный браузер (без X-Requested-With) — FNS ставит JSESSIONID.
         async with session.get(
             "https://service.nalog.ru/bi.do",
             headers={"User-Agent": _HEADERS["User-Agent"]},
+            proxy=proxy,
         ) as resp:
             cookies = {c.key: c.value for c in session.cookie_jar.filter_cookies(URL("https://service.nalog.ru")).values()}
             logger.info("bi.do: HTTP %d, cookies: %s", resp.status, cookies)
 
-        token = await _get_captcha_token(session)
+        token = await _get_captcha_token(session, proxy)
         logger.info("captchaToken: '%s'", token)
-        image = await _download_captcha_image(session, token)
-        captcha_text, captcha_id = await _solve_captcha(image, fns_session=session)
+        image = await _download_captcha_image(session, token, proxy)
+        captcha_text, captcha_id = await _solve_captcha(image, fns_session=session, proxy=proxy)
         logger.info("2captcha ответ: inn=%s captcha='%s'", inn, captcha_text)
 
         # Шаг 1: валидируем ответ через captcha-proc.json (браузерный диалог-флоу).
@@ -248,6 +273,7 @@ async def check_blocking(inn: str) -> dict:
         async with session.post(
             "https://service.nalog.ru/static/captcha-proc.json",
             data={"captcha": captcha_text, "captchaToken": token},
+            proxy=proxy,
         ) as resp:
             proc_raw = await resp.text()
             if resp.status != 200:
@@ -282,6 +308,7 @@ async def check_blocking(inn: str) -> dict:
                 "captcha": "",
                 "captchaToken": validated_token,
             },
+            proxy=proxy,
         ) as resp:
             logger.debug("HTTP %d", resp.status)
 
