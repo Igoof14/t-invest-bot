@@ -22,7 +22,7 @@ from .events import (
     parse_rows,
 )
 from .notifier import FnsBlockNotifier
-from .recerence import run
+from .client import run
 from .repository import FnsAlertSettingsRepository, FnsBlockingRepository
 
 logger = logging.getLogger(__name__)

@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     # API-ключ 2captcha для решения капч ФНС.
     captcha_api_key: str | None = None
 
+    # Прокси для запросов к сервису ФНС (например, http://user:pass@host:port).
+    # Если не задан — обращения идут напрямую.
+    fns_proxy: str | None = None
+
     model_config = SettingsConfigDict(env_file=_ENV_FILE, env_file_encoding="utf-8", extra="ignore")
 
 
