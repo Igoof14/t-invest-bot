@@ -48,6 +48,10 @@ class DatabaseManager:
         try:
             # Укажите здесь актуальные пути в зависимости от вашей структуры.
             # Если перешли на Feature-driven, пути будут такими:
+            from features.fns_monitoring.models import (
+                FnsAlertSettings,
+                FnsBlockingRecord,
+            )
             from features.issuers.models import Issuer, IssuerBond
             from features.offer_warning.models import OfferAlertSettings
             from features.price_monitoring.models import (
@@ -69,6 +73,8 @@ class DatabaseManager:
                 PriceAlertSettings,
                 RatingAlertSettings,
                 RatingRelease,
+                FnsAlertSettings,
+                FnsBlockingRecord,
                 User,
                 TinvestUser,
             ]

@@ -6,12 +6,10 @@ import asyncio
 import base64
 import json
 import logging
-from datetime import datetime, timezone
-from pathlib import Path
 
 import aiohttp
-from yarl import URL
 from core.config import config
+from yarl import URL
 
 logger = logging.getLogger(__name__)
 
@@ -93,15 +91,6 @@ async def _report_bad_captcha(captcha_id: str) -> None:
     logger.warning("Сообщили 2captcha об ошибке (ID: %s)", captcha_id)
 
 
-def _save_captcha(image_bytes: bytes, inn: str) -> Path:
-    """Сохраняет изображение капчи в папку reports для визуальной проверки."""
-    out = Path(__file__).parent / "reports"
-    out.mkdir(exist_ok=True)
-    ts = datetime.now(timezone.utc).strftime("%H%M%S")
-    path = out / f"captcha_{inn}_{ts}.png"
-    path.write_bytes(image_bytes)
-    return path
-
 
 async def _poll_2captcha(captcha_id: str) -> str:
     """Ждёт решения от 2captcha и возвращает ответ.
@@ -115,6 +104,7 @@ async def _poll_2captcha(captcha_id: str) -> str:
     Raises:
         RuntimeError: При ошибке API 2captcha.
         TimeoutError: Если капча не решена за отведённое время.
+
     """
     async with aiohttp.ClientSession() as s:
         for attempt in range(24):
@@ -153,6 +143,7 @@ async def _keepalive_fns(
     Args:
         fns_session: Активная FNS-сессия (с JSESSIONID).
         stop: Событие остановки.
+
     """
     while not stop.is_set():
         await asyncio.sleep(10)
@@ -168,14 +159,12 @@ async def _keepalive_fns(
 async def _solve_captcha(
     image_bytes: bytes,
     fns_session: aiohttp.ClientSession,
-    inn: str = "",
 ) -> tuple[str, str]:
     """Отправляет капчу в 2captcha и ждёт решения, поддерживая FNS-сессию живой.
 
     Args:
         image_bytes: Байты изображения капчи.
         fns_session: Активная FNS-сессия для keepalive-запросов.
-        inn: ИНН (для имени файла при сохранении).
 
     Returns:
         Кортеж (текст_капчи, captcha_id).
@@ -185,9 +174,6 @@ async def _solve_captcha(
         TimeoutError: Если капча не решена за отведённое время.
 
     """
-    path = _save_captcha(image_bytes, inn)
-    logger.info("Капча сохранена → %s (%d байт)", path.name, len(image_bytes))
-
     b64 = base64.b64encode(image_bytes).decode()
 
     async with aiohttp.ClientSession() as s:
@@ -254,7 +240,7 @@ async def check_blocking(inn: str) -> dict:
         token = await _get_captcha_token(session)
         logger.info("captchaToken: '%s'", token)
         image = await _download_captcha_image(session, token)
-        captcha_text, captcha_id = await _solve_captcha(image, fns_session=session, inn=inn)
+        captcha_text, captcha_id = await _solve_captcha(image, fns_session=session)
         logger.info("2captcha ответ: inn=%s captcha='%s'", inn, captcha_text)
 
         # Шаг 1: валидируем ответ через captcha-proc.json (браузерный диалог-флоу).

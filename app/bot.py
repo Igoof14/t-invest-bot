@@ -10,6 +10,9 @@ from core.database import db_manager
 from core.enums import ReportType
 from features.base import base_handlers
 from features.coupons import coupon_handlers
+from features.fns_monitoring import FnsBlockingMonitorService
+from features.fns_monitoring import router as fns_router
+from features.fns_monitoring.menu import SECTION as fns_section
 from features.issuers import IssuerSyncService
 from features.menu import register_section
 from features.menu import router as menu_router
@@ -39,6 +42,7 @@ async def main():
     register_section(price_section)
     register_section(offer_section)
     register_section(ratings_section)
+    register_section(fns_section)
 
     dp.include_routers(
         base_handlers.router,
@@ -47,6 +51,7 @@ async def main():
         coupon_handlers.router,
         users_handlers.router,
         ratings_router,
+        fns_router,
         menu_router,
     )
 
@@ -102,6 +107,15 @@ async def main():
     scheduler.add_job(
         NkrRatingAlertService.check_rating_updates,
         CronTrigger(hour="8-22", minute="*/10", timezone="Europe/Moscow"),
+        kwargs={"bot": bot},
+        max_instances=1,
+        coalesce=True,
+    )
+
+    # Ежедневная проверка блокировок счетов ФНС по бумагам подписчиков (09:00 МСК).
+    scheduler.add_job(
+        FnsBlockingMonitorService.check_blocks,
+        CronTrigger(hour=9, minute=0, timezone="Europe/Moscow"),
         kwargs={"bot": bot},
         max_instances=1,
         coalesce=True,

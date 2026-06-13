@@ -58,4 +58,4 @@ jobs:
             echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ secrets.GHCR_USER }} --password-stdin
             cd ${{ secrets.BOT_SERVER_DEPLOY_DIR }}
             docker compose pull
-            docker compose up -d --remove-orphans
+            docker compose up --detach --remove-orphans

@@ -6,7 +6,7 @@ import logging
 
 from core.clients.moex.moex_bonds import MoexEmitter
 from core.database import session_scope
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from .models import Issuer, IssuerBond
 
@@ -117,6 +117,41 @@ class IssuerRepository:
         """Возвращает всех эмитентов реестра."""
         async with session_scope() as session:
             result = await session.execute(select(Issuer))
+            issuers = list(result.scalars().all())
+            for issuer in issuers:
+                session.expunge(issuer)
+            return issuers
+
+    @classmethod
+    async def get_issuers_by_identifiers(
+        cls, identifiers: set[str]
+    ) -> list[Issuer]:
+        """Возвращает эмитентов, чьи облигации совпадают с идентификаторами.
+
+        Args:
+            identifiers: Множество figi/ticker/isin (например, из портфеля).
+
+        Returns:
+            Список уникальных эмитентов, держащих эти бумаги.
+
+        """
+        if not identifiers:
+            return []
+
+        ids = list(identifiers)
+        async with session_scope() as session:
+            result = await session.execute(
+                select(Issuer)
+                .join(IssuerBond, IssuerBond.issuer_id == Issuer.id)
+                .where(
+                    or_(
+                        IssuerBond.figi.in_(ids),
+                        IssuerBond.ticker.in_(ids),
+                        IssuerBond.isin.in_(ids),
+                    )
+                )
+                .distinct()
+            )
             issuers = list(result.scalars().all())
             for issuer in issuers:
                 session.expunge(issuer)
