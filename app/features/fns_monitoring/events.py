@@ -23,6 +23,14 @@ class BlockingOrder(BaseModel):
     ifns: str | None = None
 
 
+@dataclass(frozen=True)
+class MatchedBond:
+    """Облигация пользователя, затронутая блокировкой (имя + тикер)."""
+
+    name: str
+    ticker: str | None = None
+
+
 @dataclass
 class ResolvedBlock:
     """Новые блокировки эмитента, привязанные к его облигациям из реестра."""
@@ -31,7 +39,7 @@ class ResolvedBlock:
     entity_name: str | None
     new_orders: list[BlockingOrder]
     identifiers: set[str] = field(default_factory=set)
-    name_by_id: dict[str, str] = field(default_factory=dict)
+    bond_by_id: dict[str, MatchedBond] = field(default_factory=dict)
 
 
 @dataclass
@@ -41,7 +49,7 @@ class UserBlockAlert:
     inn: str
     entity_name: str | None
     orders: list[BlockingOrder]
-    matched_bond_names: list[str]
+    matched_bonds: list[MatchedBond]
 
 
 @dataclass

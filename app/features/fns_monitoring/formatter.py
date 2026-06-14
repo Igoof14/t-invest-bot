@@ -4,43 +4,57 @@ from __future__ import annotations
 
 from html import escape
 
-from .events import BlockingOrder, UserBlockAlert, UserScanReport
-
-# Расшифровка кода основания приостановления операций по счетам.
-_REASON_BY_CODE = {
-    "1": "Решение о взыскании задолженности",
-    "2": "Непредставление налоговой декларации",
-    "3": "Обеспечение исполнения решения по проверке",
-    "4": "Непередача квитанции о приёме требования",
-    "5": "Необеспечение электронного документооборота",
-    "6": "Непредставление расчёта НДФЛ/взносов",
-}
+from .events import BlockingOrder, MatchedBond, UserBlockAlert, UserScanReport
 
 
-def _format_order(order: BlockingOrder) -> str:
-    """Форматирует одну строку решения о блокировке."""
-    bits: list[str] = []
-    if order.nomer:
-        nomer = escape(order.nomer)
-        date = f" от {escape(order.decision_date)}" if order.decision_date else ""
-        bits.append(f"Решение №{nomer}{date}")
-    if order.bik:
-        bits.append(f"БИК {escape(order.bik)}")
-    if order.kod_osnov:
-        reason = _REASON_BY_CODE.get(order.kod_osnov, f"код {escape(order.kod_osnov)}")
-        bits.append(reason)
-    if order.saldo:
-        bits.append(f"сальдо {escape(order.saldo)} ₽")
-    return "  • " + " | ".join(bits)
+def _parse_saldo(raw: str | None) -> float | None:
+    """Преобразует строку сальдо ФНС в число (или ``None``)."""
+    if not raw:
+        return None
+    cleaned = raw.replace("\xa0", "").replace(" ", "").replace(",", ".")
+    try:
+        return float(cleaned)
+    except ValueError:
+        return None
+
+
+def _max_saldo(orders: list[BlockingOrder]) -> float | None:
+    """Возвращает максимальное (по модулю) отрицательное сальдо ЕНС по решениям."""
+    values = [v for v in (_parse_saldo(o.saldo) for o in orders) if v is not None]
+    return max(values) if values else None
+
+
+# Неразрывный пробел как разделитель тысяч — число не переносится в Telegram.
+_NBSP = "\u00a0"
+
+
+def _format_money(value: float) -> str:
+    """Форматирует сумму с разделителем тысяч и двумя знаками: ``1 647 440,01``."""
+    return f"{value:,.2f}".replace(",", _NBSP).replace(".", ",")
+
+
+def _format_bond(bond: MatchedBond) -> str:
+    """Форматирует облигацию: имя + тикер в ``<code>`` (копируется по тапу)."""
+    name = escape(bond.name)
+    if bond.ticker and bond.ticker != bond.name:
+        return f"{name} (<code>{escape(bond.ticker)}</code>)"
+    if bond.ticker:
+        return f"<code>{escape(bond.ticker)}</code>"
+    return name
 
 
 def _format_single(alert: UserBlockAlert) -> str:
-    """Форматирует блок одного эмитента."""
+    """Форматирует агрегированный блок одного эмитента."""
     name = escape(alert.entity_name or f"ИНН {alert.inn}")
-    lines: list[str] = [f"🚫 <b>{name}</b>"]
-    lines.extend(_format_order(order) for order in alert.orders)
-    if alert.matched_bond_names:
-        bonds = escape(", ".join(alert.matched_bond_names))
+    lines: list[str] = [
+        f"🚫 <b>{name}</b>",
+        f"  Заблокировано счетов: {len(alert.orders)}",
+    ]
+    saldo = _max_saldo(alert.orders)
+    if saldo is not None:
+        lines.append(f"  Отрицательное сальдо ЕНС: {_format_money(saldo)} ₽")
+    if alert.matched_bonds:
+        bonds = ", ".join(_format_bond(b) for b in alert.matched_bonds)
         lines.append(f"  В вашем портфеле: {bonds}")
     return "\n".join(lines)
 

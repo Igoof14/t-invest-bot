@@ -104,9 +104,12 @@ class FnsBlockingMonitorService:
         if not orders:
             return (True, None)
 
-        identifiers, name_by_id = await build_issuer_bond_index(issuer.id)
+        identifiers, bond_by_id = await build_issuer_bond_index(issuer.id)
         matched = held & identifiers
-        matched_names = sorted({name_by_id[m] for m in matched if m in name_by_id})
+        matched_bonds = sorted(
+            {bond_by_id[m] for m in matched if m in bond_by_id},
+            key=lambda b: b.name,
+        )
         entity_name = issuer.short_title or issuer.title or orders[0].entity_name
         return (
             True,
@@ -114,6 +117,6 @@ class FnsBlockingMonitorService:
                 inn=inn,
                 entity_name=entity_name,
                 orders=orders,
-                matched_bond_names=matched_names,
+                matched_bonds=matched_bonds,
             ),
         )

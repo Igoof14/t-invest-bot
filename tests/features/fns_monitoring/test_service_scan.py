@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 from features.fns_monitoring import service as service_module
+from features.fns_monitoring.events import MatchedBond
 from features.fns_monitoring.service import FnsBlockingMonitorService
 
 pytestmark = pytest.mark.asyncio
@@ -27,7 +28,7 @@ def _bond(**kw: object) -> SimpleNamespace:
         "name": "ТЕСТ-БО-01",
         "isin": "RU000A0TEST1",
         "figi": "BBG00TEST",
-        "ticker": "RU000A0TEST1",
+        "ticker": "TST1",
     }
     base.update(kw)
     return SimpleNamespace(**base)
@@ -107,7 +108,7 @@ async def test_scan_finds_block(monkeypatch: pytest.MonkeyPatch) -> None:
     alert = report.blocked[0]
     assert alert.inn == "7700000000"
     assert alert.entity_name == "ООО ТЕСТ"
-    assert alert.matched_bond_names == ["ТЕСТ-БО-01"]
+    assert alert.matched_bonds == [MatchedBond(name="ТЕСТ-БО-01", ticker="TST1")]
     assert alert.orders[0].block_uid == "044525225:12345"
 
 

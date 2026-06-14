@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 from features.fns_monitoring import scanner as scanner_module
-from features.fns_monitoring.events import BlockingOrder, ResolvedBlock
+from features.fns_monitoring.events import BlockingOrder, MatchedBond, ResolvedBlock
 from features.fns_monitoring.scanner import (
     FnsScanner,
     in_window,
@@ -96,7 +96,7 @@ async def test_check_and_notify_sends_on_new_block(
             entity_name="ООО ТЕСТ",
             new_orders=new_orders,
             identifiers={"BBG"},
-            name_by_id={"BBG": "ТЕСТ-БО-01"},
+            bond_by_id={"BBG": MatchedBond(name="ТЕСТ-БО-01", ticker="TST1")},
         )
 
     monkeypatch.setattr(scanner_module.FnsBlockingRepository, "has_any", _has_any)
