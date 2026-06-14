@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     # Если не задан — обращения идут напрямую.
     fns_proxy: str | None = None
 
+    # Пул прокси для ФНС: список через запятую/перенос строки. Каждый элемент —
+    # URL или формат провайдера ip:port:user:pass. Размазывает сканирование по IP.
+    fns_proxies: str | None = None
+
     model_config = SettingsConfigDict(env_file=_ENV_FILE, env_file_encoding="utf-8", extra="ignore")
 
 

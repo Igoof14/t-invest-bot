@@ -24,11 +24,6 @@ _HEADERS = {
 }
 
 
-def _fns_proxy() -> str | None:
-    """Возвращает прокси для запросов к ФНС или ``None`` (прямое соединение)."""
-    return config.fns_proxy or None
-
-
 async def _get_captcha_token(
     session: aiohttp.ClientSession, proxy: str | None
 ) -> str:
@@ -234,11 +229,12 @@ async def _solve_captcha(
     return answer, captcha_id
 
 
-async def check_blocking(inn: str) -> dict:
+async def check_blocking(inn: str, proxy: str | None = None) -> dict:
     """Выполняет один запрос к ФНС для проверки блокировок счетов.
 
     Args:
         inn: ИНН организации.
+        proxy: Прокси для запросов к ФНС (или ``None`` — напрямую).
 
     Returns:
         JSON-ответ сервиса ФНС.
@@ -248,10 +244,6 @@ async def check_blocking(inn: str) -> dict:
         aiohttp.ClientResponseError: При HTTP-ошибках, кроме неверной капчи.
 
     """
-    proxy = _fns_proxy()
-    if proxy:
-        logger.info("FNS-запросы идут через proxy")
-
     async with aiohttp.ClientSession(headers=_HEADERS) as session:
         # Открываем страницу как обычный браузер (без X-Requested-With) — FNS ставит JSESSIONID.
         async with session.get(
@@ -361,12 +353,13 @@ def parse_result(result: dict) -> None:
         )
 
 
-async def run(inn: str, retries: int = 5) -> dict:
+async def run(inn: str, retries: int = 5, proxy: str | None = None) -> dict:
     """Проверяет ИНН на блокировки с повторными попытками при плохой капче.
 
     Args:
         inn: ИНН организации.
         retries: Максимальное число попыток.
+        proxy: Прокси для запросов к ФНС (или ``None`` — напрямую).
 
     Returns:
         JSON-ответ ФНС или ``None``, если все попытки исчерпаны.
@@ -377,7 +370,7 @@ async def run(inn: str, retries: int = 5) -> dict:
     for attempt in range(1, retries + 1):
         logger.info("Попытка %d/%d", attempt, retries)
         try:
-            result = await check_blocking(inn)
+            result = await check_blocking(inn, proxy=proxy)
         except ValueError as e:
             msg = str(e)
             if msg == "BAD_CAPTCHA":

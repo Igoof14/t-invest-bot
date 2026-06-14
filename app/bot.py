@@ -10,9 +10,9 @@ from core.database import db_manager
 from core.enums import ReportType
 from features.base import base_handlers
 from features.coupons import coupon_handlers
-from features.fns_monitoring import FnsBlockingMonitorService
 from features.fns_monitoring import router as fns_router
 from features.fns_monitoring.menu import SECTION as fns_section
+from features.fns_monitoring.scanner import FnsScanner
 from features.issuers import IssuerSyncService
 from features.menu import register_section
 from features.menu import router as menu_router
@@ -32,6 +32,9 @@ logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=config.bot_token.get_secret_value())
 dp = Dispatcher()
+
+# Удержание фоновых объектов/задач на время жизни процесса (защита от GC).
+_BACKGROUND: list[object] = []
 
 
 async def main():
@@ -112,15 +115,6 @@ async def main():
         coalesce=True,
     )
 
-    # Ежедневная проверка блокировок счетов ФНС по бумагам подписчиков (09:00 МСК).
-    scheduler.add_job(
-        FnsBlockingMonitorService.check_blocks,
-        CronTrigger(hour=9, minute=0, timezone="Europe/Moscow"),
-        kwargs={"bot": bot},
-        max_instances=1,
-        coalesce=True,
-    )
-
     scheduler.start()
 
     # Восстанавливаем DateTrigger-джобы после возможного рестарта
@@ -128,6 +122,13 @@ async def main():
 
     # Разовый синк реестра эмитентов на старте (в фоне, не блокирует polling).
     scheduler.add_job(IssuerSyncService.sync_all_issuers)
+
+    # Непрерывный мониторинг блокировок ФНС (пул воркеров по прокси, окно 08:00–20:00 МСК).
+    # Запуск в фоне, чтобы сборка набора не блокировала старт polling. Держим ссылки,
+    # иначе сканер и его воркер-задачи может собрать GC.
+    fns_scanner = FnsScanner(bot)
+    _BACKGROUND.append(fns_scanner)
+    _BACKGROUND.append(asyncio.create_task(fns_scanner.start()))
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)

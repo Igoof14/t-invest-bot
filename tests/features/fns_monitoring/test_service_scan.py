@@ -58,7 +58,7 @@ def _patch(
     async def _bonds(issuer_id: int) -> list[SimpleNamespace]:
         return bonds
 
-    async def _run(inn: str, retries: int = 3) -> object:
+    async def _run(inn: str, retries: int = 3, proxy: str | None = None) -> object:
         if isinstance(run_result, Exception):
             raise run_result
         return run_result if run_result is not None else {"rows": []}
