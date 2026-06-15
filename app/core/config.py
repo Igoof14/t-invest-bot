@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     # URL или формат провайдера ip:port:user:pass. Размазывает сканирование по IP.
     fns_proxies: str | None = None
 
+    # Прокси для скрейпинга рейтинговых агентств (ratings.ru, ra-national.ru).
+    # Если не задан — обращения идут напрямую.
+    ratings_proxy: str | None = None
+
+    # Пул прокси для рейтингов: список через запятую/перенос строки. Каждый
+    # элемент — URL или формат провайдера ip:port:user:pass.
+    ratings_proxies: str | None = None
+
     model_config = SettingsConfigDict(env_file=_ENV_FILE, env_file_encoding="utf-8", extra="ignore")
 
 

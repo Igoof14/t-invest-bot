@@ -8,6 +8,7 @@ from datetime import datetime
 
 import aiohttp
 from features.ratings.events import RatingEvent, ReleaseStub
+from features.ratings.proxy_pool import ProxyRotator, load_rotator
 
 from . import config
 from .parser import parse_release
@@ -51,6 +52,7 @@ class NraClient:
         self._session: aiohttp.ClientSession | None = None
         self._semaphore = asyncio.Semaphore(concurrency_limit)
         self._timeout = aiohttp.ClientTimeout(total=timeout)
+        self._rotator: ProxyRotator = load_rotator()
 
     async def __aenter__(self) -> NraClient:
         """Открывает HTTP-сессию."""
@@ -86,13 +88,8 @@ class NraClient:
                 f"?per_page={self._per_page}&page={page}"
                 f"&orderby=modified&order=desc&_fields=id,link,title,modified"
             )
-            try:
-                async with self._semaphore, self._client.get(url) as response:
-                    response.raise_for_status()
-                    items = await response.json()
-                    total_pages = response.headers.get("X-WP-TotalPages")
-            except Exception as e:
-                logger.error(f"Ошибка при загрузке листинга НРА (страница {page}): {e}")
+            items, total_pages = await self._get_listing_page(url, page)
+            if items is None:
                 break
 
             if not items:
@@ -105,9 +102,35 @@ class NraClient:
 
         return stubs
 
+    async def _get_listing_page(
+        self, url: str, page: int
+    ) -> tuple[list[dict] | None, str | None]:
+        """Грузит одну страницу листинга, перебирая прокси до успеха.
+
+        Returns:
+            ``(items, total_pages)``; ``items=None`` — страницу взять не удалось.
+
+        """
+        last_error: Exception | None = None
+        for _ in range(len(self._rotator.proxies)):
+            proxy = self._rotator.next()
+            try:
+                async with self._semaphore, self._client.get(url, proxy=proxy) as response:
+                    response.raise_for_status()
+                    items = await response.json()
+                    return items, response.headers.get("X-WP-TotalPages")
+            except Exception as e:
+                last_error = e
+                logger.warning(
+                    f"Листинг НРА (стр. {page}) через прокси {proxy} не удался: {e}"
+                )
+
+        logger.error(f"Не удалось загрузить листинг НРА (страница {page}): {last_error}")
+        return None, None
+
     async def fetch_release(self, stub: ReleaseStub) -> RatingEvent | None:
         """Загружает и парсит страницу одного релиза."""
-        async with self._semaphore, self._client.get(stub.url) as response:
+        async with self._semaphore, self._client.get(stub.url, proxy=self._rotator.next()) as response:
             response.raise_for_status()
             html = await response.text()
         return parse_release(html, stub)

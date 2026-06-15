@@ -7,6 +7,7 @@ import logging
 
 import aiohttp
 from features.ratings.events import RatingEvent, ReleaseStub
+from features.ratings.proxy_pool import ProxyRotator, load_rotator
 
 from . import config
 from .parser import parse_listing, parse_release
@@ -28,6 +29,7 @@ class NkrClient:
         self._session: aiohttp.ClientSession | None = None
         self._semaphore = asyncio.Semaphore(concurrency_limit)
         self._timeout = aiohttp.ClientTimeout(total=timeout)
+        self._rotator: ProxyRotator = load_rotator()
 
     async def __aenter__(self) -> NkrClient:
         """Открывает HTTP-сессию с браузерным User-Agent."""
@@ -50,19 +52,25 @@ class NkrClient:
     async def iter_release_stubs(self, max_items: int = config.MAX_ITEMS) -> list[ReleaseStub]:
         """Возвращает верхние ``max_items`` листинговых записей (новейшие сверху)."""
         url = f"{self._base}{config.LIST_PATH}"
-        try:
-            async with self._semaphore, self._client.get(url) as response:
-                response.raise_for_status()
-                html = await response.text()
-        except Exception as e:
-            logger.error(f"Ошибка при загрузке листинга НКР: {e}")
-            return []
+        last_error: Exception | None = None
+        # Листинг критичен — перебираем прокси до успеха.
+        for _ in range(len(self._rotator.proxies)):
+            proxy = self._rotator.next()
+            try:
+                async with self._semaphore, self._client.get(url, proxy=proxy) as response:
+                    response.raise_for_status()
+                    html = await response.text()
+                return parse_listing(html)[:max_items]
+            except Exception as e:
+                last_error = e
+                logger.warning(f"Листинг НКР через прокси {proxy} не удался: {e}")
 
-        return parse_listing(html)[:max_items]
+        logger.error(f"Не удалось загрузить листинг НКР: {last_error}")
+        return []
 
     async def fetch_release(self, stub: ReleaseStub) -> RatingEvent | None:
         """Загружает и парсит страницу одного релиза."""
-        async with self._semaphore, self._client.get(stub.url) as response:
+        async with self._semaphore, self._client.get(stub.url, proxy=self._rotator.next()) as response:
             response.raise_for_status()
             html = await response.text()
         return parse_release(html, stub)

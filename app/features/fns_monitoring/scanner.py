@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 _MSK = ZoneInfo("Europe/Moscow")
 
-# Рабочее окно по МСК: [08:00, 20:00).
+# Рабочее окно по МСК: будни (Пн–Пт), [08:00, 20:00).
 WINDOW_START_HOUR = 8
 WINDOW_END_HOUR = 20
 # Пересборка рабочего набора ИНН (подхват новых подписчиков/портфелей).
@@ -44,20 +44,23 @@ WINDOW_SLEEP_CAP = 600
 
 
 def in_window(now: datetime) -> bool:
-    """Возвращает, попадает ли момент в рабочее окно по МСК."""
-    return WINDOW_START_HOUR <= now.hour < WINDOW_END_HOUR
+    """Возвращает, попадает ли момент в рабочее окно по МСК (Пн–Пт, [08:00, 20:00))."""
+    return now.weekday() < 5 and WINDOW_START_HOUR <= now.hour < WINDOW_END_HOUR
 
 
 def seconds_until_open(now: datetime) -> float:
-    """Возвращает число секунд до открытия окна (0, если оно уже открыто)."""
+    """Возвращает число секунд до открытия окна (0, если оно уже открыто).
+
+    Выходные пропускаются — ближайшее открытие переносится на понедельник.
+    """
     if in_window(now):
         return 0.0
-    target = now.replace(
-        hour=WINDOW_START_HOUR, minute=0, second=0, microsecond=0
-    )
-    if now.hour >= WINDOW_START_HOUR:
-        target = target + timedelta(days=1)
-    return (target - now).total_seconds()
+    candidate = now.replace(hour=WINDOW_START_HOUR, minute=0, second=0, microsecond=0)
+    if candidate <= now:
+        candidate += timedelta(days=1)
+    while candidate.weekday() >= 5:  # пропускаем Сб/Вс
+        candidate += timedelta(days=1)
+    return (candidate - now).total_seconds()
 
 
 def should_skip_revisit(

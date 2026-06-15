@@ -19,19 +19,25 @@ from features.fns_monitoring.scanner import (
 _MSK = ZoneInfo("Europe/Moscow")
 
 
-def _at(hour: int, minute: int = 0) -> datetime:
-    return datetime(2026, 6, 14, hour, minute, tzinfo=_MSK)
+def _at(hour: int, minute: int = 0, day: int = 15) -> datetime:
+    # 2026-06-15 — понедельник; дни 20/21 — суббота/воскресенье.
+    return datetime(2026, 6, day, hour, minute, tzinfo=_MSK)
 
 
 # --- чистые хелперы ---
 
 
-def test_in_window() -> None:
+def test_in_window_weekday() -> None:
     assert in_window(_at(8)) is True
     assert in_window(_at(19, 59)) is True
     assert in_window(_at(7, 59)) is False
     assert in_window(_at(20)) is False
     assert in_window(_at(23)) is False
+
+
+def test_in_window_false_on_weekend() -> None:
+    assert in_window(_at(12, day=20)) is False  # суббота
+    assert in_window(_at(12, day=21)) is False  # воскресенье
 
 
 def test_seconds_until_open_inside_is_zero() -> None:
@@ -43,8 +49,18 @@ def test_seconds_until_open_before_window() -> None:
 
 
 def test_seconds_until_open_after_window_is_next_day() -> None:
-    # 21:00 → завтра 08:00 = 11 часов.
+    # Пн 21:00 → Вт 08:00 = 11 часов.
     assert seconds_until_open(_at(21)) == 11 * 3600.0
+
+
+def test_seconds_until_open_friday_evening_to_monday() -> None:
+    # Пт 21:00 → Пн 08:00 = 59 часов (выходные пропущены).
+    assert seconds_until_open(_at(21, day=19)) == 59 * 3600.0
+
+
+def test_seconds_until_open_saturday_to_monday() -> None:
+    # Сб 12:00 → Пн 08:00 = 44 часа.
+    assert seconds_until_open(_at(12, day=20)) == 44 * 3600.0
 
 
 def test_should_skip_revisit() -> None:
