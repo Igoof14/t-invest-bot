@@ -30,6 +30,29 @@ class NsdNewsItem:
 
 
 @dataclass(frozen=True)
+class CouponPlan:
+    """Плановый купон из календаря T-Invest для отслеживания.
+
+    Attributes:
+        isin: ISIN облигации.
+        figi: FIGI облигации (для повторных обращений к T-Invest).
+        coupon_number: Порядковый номер купона.
+        coupon_date: Плановая дата выплаты купона.
+        amount: Размер купона на одну бумагу (или ``None``).
+        bond_name: Название облигации (или ``None``).
+        issuer_name: Наименование эмитента (или ``None``).
+    """
+
+    isin: str
+    figi: str | None
+    coupon_number: int
+    coupon_date: date
+    amount: float | None = None
+    bond_name: str | None = None
+    issuer_name: str | None = None
+
+
+@dataclass(frozen=True)
 class NsdCardDetails:
     """Детали карточки новости НРД о выплате дохода (INTR).
 
