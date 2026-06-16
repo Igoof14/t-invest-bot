@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import date
 from types import TracebackType
 from urllib.parse import quote, urlsplit
 
@@ -151,16 +152,32 @@ class NsdClient:
         finally:
             await page.close()
 
-    async def search_by_isin(self, isin: str) -> str:
+    async def search_by_isin(
+        self,
+        isin: str,
+        *,
+        date_from: date | None = None,
+        date_to: date | None = None,
+    ) -> str:
         """Возвращает HTML страницы поиска новостей НРД по ISIN.
+
+        По умолчанию НРД отдаёт новости только за последнюю неделю; диапазон дат
+        задаётся параметрами ``date_from``/``date_to``.
 
         Args:
             isin: ISIN облигации.
+            date_from: Начало периода поиска (включительно) или ``None``.
+            date_to: Конец периода поиска (включительно) или ``None``.
 
         Returns:
             HTML списка новостей по этой бумаге.
         """
-        return await self._open(f"{_NEWS}?text={quote(isin)}")
+        params = f"text={quote(isin)}"
+        if date_from is not None:
+            params += f"&from={date_from.strftime('%d.%m.%Y')}"
+        if date_to is not None:
+            params += f"&to={date_to.strftime('%d.%m.%Y')}"
+        return await self._open(f"{_NEWS}?{params}")
 
     async def fetch_card(self, news_id: int) -> str:
         """Возвращает HTML карточки новости НРД.
