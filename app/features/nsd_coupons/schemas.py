@@ -4,6 +4,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from typing import Literal
+
+from aiogram.filters.callback_data import CallbackData
+
+
+class NsdCouponAlertCallback(CallbackData, prefix="nsd_coupon"):
+    """Callback data для кнопок раздела уведомлений о купонах."""
+
+    action: Literal["toggle"]
 
 
 @dataclass(frozen=True)

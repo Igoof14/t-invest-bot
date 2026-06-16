@@ -4,3 +4,8 @@
 портфеле подписчика наступила плановая дата купона, а публикации о выплате в
 ленте НРД нет — уведомляет держателя.
 """
+
+from .handlers import router
+from .service import NsdCouponService
+
+__all__ = ["NsdCouponService", "router"]
