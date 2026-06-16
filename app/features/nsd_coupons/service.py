@@ -10,10 +10,11 @@ from aiogram import Bot
 
 from .client import NsdClient
 from .models import NsdCouponTracking
+from .notifier import NsdCouponNotifier
 from .parser import parse_card, parse_listing
 from .proxy_pool import load_proxies
 from .repository import NsdCouponAlertSettingsRepository, NsdCouponTrackingRepository
-from .schemas import NsdCardDetails, NsdNewsItem
+from .schemas import CouponMissAlert, NsdCardDetails, NsdNewsItem
 from .t_invest import collect_coupon_plans
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,8 @@ logger = logging.getLogger(__name__)
 PAYMENT_LOOKAHEAD_DAYS = 3
 # Насколько назад от даты купона искать публикацию в ленте НРД.
 PUBLISH_LOOKBACK_DAYS = 7
+# Отсрочка перед алертом после плановой даты (рабочих/календарных дней).
+GRACE_DAYS = 0
 
 
 class NsdCouponService:
@@ -38,6 +41,7 @@ class NsdCouponService:
             bot: Экземпляр бота для отправки уведомлений.
         """
         self._bot = bot
+        self._notifier = NsdCouponNotifier(bot)
         # ISIN -> множество telegram_id подписчиков, держащих бумагу.
         self._holders_by_isin: dict[str, set[int]] = {}
 
@@ -175,3 +179,50 @@ class NsdCouponService:
             ):
                 return item.news_id, card
         return None
+
+    async def check_deadlines(self, today: date | None = None) -> int:
+        """Уведомляет о купонах, не подтверждённых выплатой к дедлайну.
+
+        Ожидаемые купоны, чья плановая дата прошла более чем на ``GRACE_DAYS``
+        и которые всё ещё в статусе ``pending`` (НРД не опубликовал выплату),
+        считаются непоступившими: уведомляем держателей и помечаем ``alerted``.
+
+        Args:
+            today: Опорная дата (по умолчанию сегодня) — для тестов.
+
+        Returns:
+            Число купонов, по которым разосланы уведомления.
+        """
+        today = today or datetime.now(UTC).date()
+        deadline = today - timedelta(days=GRACE_DAYS)
+        overdue = await NsdCouponTrackingRepository.list_pending_due(deadline)
+        if not overdue:
+            return 0
+
+        alerted = 0
+        for coupon in overdue:
+            holders = self._holders_by_isin.get(coupon.isin, set())
+            alert = CouponMissAlert(
+                isin=coupon.isin,
+                bond_name=coupon.bond_name,
+                issuer_name=coupon.issuer_name,
+                coupon_number=coupon.coupon_number,
+                coupon_date=coupon.coupon_date,
+                amount=coupon.amount,
+            )
+            for telegram_id in holders:
+                await self._notifier.send(telegram_id, alert)
+            if holders:
+                alerted += 1
+            else:
+                logger.warning(
+                    "Купон %s №%d просрочен, но держателей в кэше нет",
+                    coupon.isin,
+                    coupon.coupon_number,
+                )
+            await NsdCouponTrackingRepository.mark_alerted(coupon.id)
+
+        logger.info(
+            "Дедлайн-проверка НРД: просрочено=%d, уведомлений=%d", len(overdue), alerted
+        )
+        return alerted

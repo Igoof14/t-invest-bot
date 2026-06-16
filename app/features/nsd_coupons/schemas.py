@@ -53,6 +53,27 @@ class CouponPlan:
 
 
 @dataclass(frozen=True)
+class CouponMissAlert:
+    """Уведомление о невыплаченном в срок купоне.
+
+    Attributes:
+        isin: ISIN облигации.
+        bond_name: Название облигации (или ``None``).
+        issuer_name: Наименование эмитента (или ``None``).
+        coupon_number: Порядковый номер купона.
+        coupon_date: Плановая дата выплаты, которая прошла без публикации НРД.
+        amount: Ожидавшийся размер купона на одну бумагу (или ``None``).
+    """
+
+    isin: str
+    bond_name: str | None
+    issuer_name: str | None
+    coupon_number: int
+    coupon_date: date
+    amount: float | None
+
+
+@dataclass(frozen=True)
 class NsdCardDetails:
     """Детали карточки новости НРД о выплате дохода (INTR).
 
