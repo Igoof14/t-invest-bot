@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     # элемент — URL или формат провайдера ip:port:user:pass.
     ratings_proxies: str | None = None
 
+    # Прокси для скрейпинга ленты НРД (nsddata.ru). Если не задан — напрямую.
+    nsd_proxy: str | None = None
+
+    # Пул прокси для НРД: список через запятую/перенос строки. Каждый элемент —
+    # URL или формат провайдера ip:port:user:pass.
+    nsd_proxies: str | None = None
+
     model_config = SettingsConfigDict(env_file=_ENV_FILE, env_file_encoding="utf-8", extra="ignore")
 
 
