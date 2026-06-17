@@ -12,7 +12,7 @@ from aiogram.filters.callback_data import CallbackData
 class NsdCouponAlertCallback(CallbackData, prefix="nsd_coupon"):
     """Callback data для кнопок раздела уведомлений о купонах."""
 
-    action: Literal["toggle", "scan"]
+    action: Literal["toggle", "scan", "set_report_time"]
 
 
 @dataclass(frozen=True)

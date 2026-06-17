@@ -2,16 +2,31 @@
 
 from __future__ import annotations
 
+from datetime import time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from aiogram.types import Message
 from features.nsd_coupons import handlers as handlers_module
-from features.nsd_coupons.handlers import handle_scan, handle_toggle, show_settings
+from features.nsd_coupons.handlers import (
+    handle_scan,
+    handle_set_report_time,
+    handle_toggle,
+    process_report_time,
+    show_settings,
+)
 from features.nsd_coupons.repository import NsdCouponAlertSettingsRepository
 from features.nsd_coupons.schemas import CouponScanReport
 
 pytestmark = pytest.mark.usefixtures("patch_session_scope")
+
+
+def _text_message(text: str, telegram_id: int = 42) -> MagicMock:
+    message = MagicMock(spec=Message)
+    message.text = text
+    message.chat = MagicMock(id=telegram_id)
+    message.answer = AsyncMock()
+    return message
 
 
 def _callback(telegram_id: int) -> MagicMock:
@@ -57,6 +72,52 @@ async def test_scan_guards_double_run() -> None:
         callback.message.edit_text.assert_not_awaited()
     finally:
         handlers_module._scanning.discard(42)
+
+
+async def test_set_report_time_prompts_and_sets_state() -> None:
+    callback = _callback(42)
+    callback.message.answer = AsyncMock()
+    state = MagicMock()
+    state.set_state = AsyncMock()
+
+    await handle_set_report_time(callback, state)
+
+    callback.message.answer.assert_awaited_once()
+    state.set_state.assert_awaited_once()
+
+
+async def test_process_report_time_valid() -> None:
+    message = _text_message("21:00", telegram_id=42)
+    state = MagicMock()
+    state.clear = AsyncMock()
+
+    await process_report_time(message, state)
+
+    assert await NsdCouponAlertSettingsRepository.get_report_time(42) == time(21, 0)
+    state.clear.assert_awaited_once()
+
+
+async def test_process_report_time_off() -> None:
+    await NsdCouponAlertSettingsRepository.set_report_time(42, time(21, 0))
+    message = _text_message("выкл", telegram_id=42)
+    state = MagicMock()
+    state.clear = AsyncMock()
+
+    await process_report_time(message, state)
+
+    assert await NsdCouponAlertSettingsRepository.get_report_time(42) is None
+    state.clear.assert_awaited_once()
+
+
+async def test_process_report_time_invalid_keeps_state() -> None:
+    message = _text_message("99:99", telegram_id=42)
+    state = MagicMock()
+    state.clear = AsyncMock()
+
+    await process_report_time(message, state)
+
+    assert await NsdCouponAlertSettingsRepository.get_report_time(42) is None
+    state.clear.assert_not_awaited()
 
 
 async def test_show_settings_answers_with_keyboard() -> None:

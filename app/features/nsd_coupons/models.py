@@ -1,6 +1,6 @@
 """Модели фичи мониторинга купонов: подписки и трекинг ожидаемых купонов."""
 
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from core.database import Base
 from sqlalchemy import (
@@ -11,6 +11,7 @@ from sqlalchemy import (
     Float,
     Integer,
     String,
+    Time,
     UniqueConstraint,
     func,
 )
@@ -31,6 +32,9 @@ class NsdCouponAlertSettings(Base):
     )
 
     alerts_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Время ежедневного отчёта по МСК; ``None`` — отчёт выключен.
+    report_time: Mapped[time | None] = mapped_column(Time, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

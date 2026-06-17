@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import logging
+import re
+from datetime import datetime
 
 from aiogram import Bot, F, Router
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 
 from .formatter import format_scan_report
@@ -20,6 +24,15 @@ router: Router = Router()
 
 # Пользователи, чья разовая проверка сейчас выполняется (защита от двойного запуска).
 _scanning: set[int] = set()
+
+_TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+_OFF_WORDS = {"выкл", "off", "выключить", "0", "-"}
+
+
+class NsdReportStates(StatesGroup):
+    """Состояния настройки ежедневного отчёта по купонам."""
+
+    waiting_for_report_time = State()
 
 
 @router.message(Command("coupon_alerts"))
@@ -83,3 +96,44 @@ async def handle_scan(callback: CallbackQuery, bot: Bot) -> None:
         )
     finally:
         _scanning.discard(telegram_id)
+
+
+@router.callback_query(NsdCouponAlertCallback.filter(F.action == "set_report_time"))
+async def handle_set_report_time(callback: CallbackQuery, state: FSMContext) -> None:
+    """Запрашивает у пользователя время ежедневного отчёта."""
+    if not isinstance(callback.message, Message):
+        await callback.answer()
+        return
+    await callback.message.answer(
+        "🕘 Введите время ежедневного отчёта по купонам в формате ЧЧ:ММ "
+        "(например, 21:00), по МСК.\nЧтобы отключить отчёт — отправьте «выкл»."
+    )
+    await state.set_state(NsdReportStates.waiting_for_report_time)
+    await callback.answer()
+
+
+@router.message(NsdReportStates.waiting_for_report_time)
+async def process_report_time(message: Message, state: FSMContext) -> None:
+    """Сохраняет время ежедневного отчёта или выключает его."""
+    text = (message.text or "").strip().lower()
+    telegram_id = message.chat.id
+
+    if text in _OFF_WORDS:
+        await NsdCouponAlertSettingsRepository.set_report_time(telegram_id, None)
+        await message.answer("Ежедневный отчёт по купонам выключен.")
+        await state.clear()
+        return
+
+    if not _TIME_RE.match(text):
+        await message.answer(
+            "Неверный формат. Введите время как ЧЧ:ММ (например, 21:00) "
+            "или «выкл»."
+        )
+        return
+
+    report_time = datetime.strptime(text, "%H:%M").time()
+    await NsdCouponAlertSettingsRepository.set_report_time(telegram_id, report_time)
+    await message.answer(
+        f"Готово: ежедневный отчёт по купонам в {text} МСК."
+    )
+    await state.clear()

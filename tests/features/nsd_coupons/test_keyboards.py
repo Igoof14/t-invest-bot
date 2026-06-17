@@ -23,3 +23,17 @@ def test_keyboard_has_scan_button() -> None:
     scan = markup.inline_keyboard[1][0]
     assert "Проверить" in scan.text
     assert NsdCouponAlertCallback.unpack(scan.callback_data).action == "scan"
+
+
+def test_keyboard_report_button_shows_time() -> None:
+    from datetime import time
+
+    markup = create_coupon_alerts_keyboard(True, report_time=time(21, 0)).as_markup()
+    report = markup.inline_keyboard[2][0]
+    assert "21:00" in report.text
+    assert NsdCouponAlertCallback.unpack(report.callback_data).action == "set_report_time"
+
+
+def test_keyboard_report_button_off_by_default() -> None:
+    markup = create_coupon_alerts_keyboard(True).as_markup()
+    assert "выкл" in markup.inline_keyboard[2][0].text

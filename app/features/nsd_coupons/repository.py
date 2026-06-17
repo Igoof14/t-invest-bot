@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 
 from core.database import session_scope
 from sqlalchemy import select
@@ -68,6 +68,52 @@ class NsdCouponAlertSettingsRepository:
                 return list(result.scalars().all())
         except Exception as e:
             logger.error(f"Ошибка при получении подписчиков на купоны: {e}")
+            return []
+
+    @classmethod
+    async def set_report_time(cls, telegram_id: int, value: time | None) -> None:
+        """Задаёт время ежедневного отчёта (``None`` — выключить отчёт)."""
+        async with session_scope() as session:
+            result = await session.execute(
+                select(NsdCouponAlertSettings).where(
+                    NsdCouponAlertSettings.telegram_id == telegram_id
+                )
+            )
+            settings = result.scalar_one_or_none()
+            if settings is None:
+                settings = NsdCouponAlertSettings(telegram_id=telegram_id)
+                session.add(settings)
+            settings.report_time = value
+            await session.commit()
+
+    @classmethod
+    async def get_report_time(cls, telegram_id: int) -> time | None:
+        """Возвращает время ежедневного отчёта пользователя или ``None``."""
+        try:
+            async with session_scope() as session:
+                result = await session.execute(
+                    select(NsdCouponAlertSettings.report_time).where(
+                        NsdCouponAlertSettings.telegram_id == telegram_id
+                    )
+                )
+                return result.scalar_one_or_none()
+        except Exception as e:
+            logger.error(f"Ошибка при получении времени отчёта {telegram_id}: {e}")
+            return None
+
+    @classmethod
+    async def list_users_with_report_at(cls, hour: int, minute: int) -> list[int]:
+        """Возвращает telegram_id пользователей с временем отчёта = ``hour:minute``."""
+        try:
+            async with session_scope() as session:
+                result = await session.execute(
+                    select(NsdCouponAlertSettings.telegram_id).where(
+                        NsdCouponAlertSettings.report_time == time(hour, minute)
+                    )
+                )
+                return list(result.scalars().all())
+        except Exception as e:
+            logger.error(f"Ошибка при выборке отчётов на {hour}:{minute}: {e}")
             return []
 
 

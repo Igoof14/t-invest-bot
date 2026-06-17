@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, time
 
 import pytest
 from features.nsd_coupons.repository import (
@@ -41,6 +41,33 @@ async def test_list_users_with_alerts_enabled() -> None:
     await NsdCouponAlertSettingsRepository.toggle(2)  # off
 
     assert await NsdCouponAlertSettingsRepository.list_users_with_alerts_enabled() == [1]
+
+
+async def test_set_and_get_report_time() -> None:
+    assert await NsdCouponAlertSettingsRepository.get_report_time(5) is None
+    await NsdCouponAlertSettingsRepository.set_report_time(5, time(21, 0))
+    assert await NsdCouponAlertSettingsRepository.get_report_time(5) == time(21, 0)
+    # Выключение отчёта.
+    await NsdCouponAlertSettingsRepository.set_report_time(5, None)
+    assert await NsdCouponAlertSettingsRepository.get_report_time(5) is None
+
+
+async def test_set_report_time_preserves_alerts_flag() -> None:
+    await NsdCouponAlertSettingsRepository.toggle(5)  # alerts_enabled = True
+    await NsdCouponAlertSettingsRepository.set_report_time(5, time(9, 30))
+    assert await NsdCouponAlertSettingsRepository.is_enabled(5) is True
+
+
+async def test_list_users_with_report_at() -> None:
+    await NsdCouponAlertSettingsRepository.set_report_time(1, time(21, 0))
+    await NsdCouponAlertSettingsRepository.set_report_time(2, time(21, 0))
+    await NsdCouponAlertSettingsRepository.set_report_time(3, time(8, 15))
+
+    assert set(await NsdCouponAlertSettingsRepository.list_users_with_report_at(21, 0)) == {
+        1,
+        2,
+    }
+    assert await NsdCouponAlertSettingsRepository.list_users_with_report_at(10, 0) == []
 
 
 async def test_upsert_pending_skips_duplicates() -> None:

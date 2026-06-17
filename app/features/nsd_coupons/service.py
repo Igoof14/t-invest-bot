@@ -12,6 +12,7 @@ from aiogram import Bot
 from features.users.repository import BotUserRepository
 
 from .client import NsdClient
+from .formatter import format_scan_report
 from .models import NsdCouponTracking
 from .notifier import NsdCouponNotifier
 from .parser import parse_card, parse_listing
@@ -345,3 +346,48 @@ class NsdCouponService:
             "Дедлайн-проверка НРД: просрочено=%d, уведомлений=%d", len(overdue), alerted
         )
         return alerted
+
+    async def send_daily_reports(self, now: datetime | None = None) -> int:
+        """Рассылает ежедневный отчёт пользователям, чьё время совпало с текущим.
+
+        Вызывается минутным тиком планировщика. Для каждого совпавшего пользователя
+        собирает ту же сводку, что и ручная проверка, и шлёт её. Пропускает, если
+        нет токена или за вчера/сегодня нет купонов (без ежедневного спама).
+
+        Args:
+            now: Опорный момент по МСК (по умолчанию текущий) — для тестов.
+
+        Returns:
+            Число отправленных отчётов.
+        """
+        now = now or datetime.now(_MSK)
+        users = await NsdCouponAlertSettingsRepository.list_users_with_report_at(
+            now.hour, now.minute
+        )
+        if not users:
+            return 0
+
+        sent = 0
+        for telegram_id in users:
+            try:
+                report = await self.scan_user(telegram_id, today=now.date())
+            except Exception as e:  # noqa: BLE001 — сбой одного не валит рассылку
+                logger.error("Отчёт по купонам для %s не собран: %s", telegram_id, e)
+                continue
+            if report.no_token or not report.coupons:
+                continue
+            try:
+                await self._bot.send_message(
+                    telegram_id,
+                    format_scan_report(report),
+                    parse_mode="HTML",
+                    disable_web_page_preview=True,
+                )
+                sent += 1
+            except Exception as e:  # noqa: BLE001 — Telegram мог заблокировать бота
+                logger.error("Отправка отчёта %s не удалась: %s", telegram_id, e)
+
+        logger.info(
+            "Ежедневные отчёты НРД: получателей=%d, отправлено=%d", len(users), sent
+        )
+        return sent

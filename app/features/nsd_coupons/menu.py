@@ -29,9 +29,10 @@ SECTION_HELP = (
 
 
 async def render(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
-    """Экран секции: тумблер подписки + «Как это работает» + «Назад»."""
+    """Экран секции: тумблер, проверка, время отчёта + «Как это работает» + «Назад»."""
     enabled = await NsdCouponAlertSettingsRepository.is_enabled(telegram_id)
-    builder = create_coupon_alerts_keyboard(enabled)
+    report_time = await NsdCouponAlertSettingsRepository.get_report_time(telegram_id)
+    builder = create_coupon_alerts_keyboard(enabled, report_time)
     builder.row(help_button(SECTION_KEY))
     builder.row(back_to_hub_button())
     return SECTION_DESCRIPTION, builder.as_markup()

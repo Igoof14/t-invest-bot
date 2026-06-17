@@ -161,6 +161,13 @@ async def main():
         max_instances=1,
         coalesce=True,
     )
+    # Ежедневный отчёт по купонам в выбранное пользователем время (минутный тик МСК).
+    scheduler.add_job(
+        nsd_coupon_service.send_daily_reports,
+        CronTrigger(minute="*", timezone="Europe/Moscow"),
+        max_instances=1,
+        coalesce=True,
+    )
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
