@@ -45,6 +45,27 @@ def test_parse_card_extracts_payment_details() -> None:
     assert card.amount_per_bond == 0.53
 
 
+# Раскладка карточки с парами «метка | значение» (Совкомбанк/Аэрофлот): плановая
+# дата в «Дата КД (план.)», сумма — в «Размер купонного дохода в RUB».
+_KD_PLAN_CARD = """
+<table>
+  <tr><td>Код типа корпоративного действия</td><td>INTR</td></tr>
+  <tr><td>Дата КД (план.)</td><td>17 июня 2026 г.</td></tr>
+  <tr><td>Дата КД (расч.)</td><td>17 июня 2026 г.</td></tr>
+  <tr><td>Размер купонного дохода в RUB</td><td>13.56</td></tr>
+</table>
+"""
+
+
+def test_parse_card_kd_plan_layout() -> None:
+    card = parse_card(_KD_PLAN_CARD)
+    assert card.news_type == "INTR"
+    assert card.planned_pay_date == date(2026, 6, 17)
+    assert card.amount_per_bond == 13.56
+    # Анонс без поступления средств → дата поступления отсутствует.
+    assert card.nsd_received_date is None
+
+
 def test_parse_short_date() -> None:
     assert _parse_short_date("16.06.2026") == date(2026, 6, 16)
     assert _parse_short_date("нет даты") is None

@@ -195,9 +195,17 @@ def parse_card(html: str) -> NsdCardDetails:
     """
     soup = BeautifulSoup(html, "html.parser")
     type_value = _value_beside(soup, "Код типа корпоративного действия")
-    planned = _value_below(soup, "Дата выплаты плановая")
+    # Плановую дату берём из устойчивой пары «Дата КД (план.)» (есть во всех
+    # раскладках); запасной вариант — колоночная «Дата выплаты плановая».
+    planned = _value_beside(soup, "Дата КД (план.)") or _value_below(
+        soup, "Дата выплаты плановая"
+    )
     received = _value_below(soup, "Дата поступления в НРД денежных средств")
-    amount = _value_below(soup, "Размер денежных средств, подлежащих выплате на 1 ц.б.")
+    # Сумму ищем под разными метками у разных эмитентов.
+    amount = (
+        _value_below(soup, "Размер денежных средств, подлежащих выплате на 1 ц.б.")
+        or _value_beside(soup, "Размер купонного дохода")
+    )
     return NsdCardDetails(
         news_type=type_value,
         planned_pay_date=_parse_long_date(planned) if planned else None,

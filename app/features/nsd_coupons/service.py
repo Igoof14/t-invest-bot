@@ -274,11 +274,23 @@ class NsdCouponService:
                 for item in parse_listing(html)
                 if item.news_type == "INTR" and item.isin == isin
             ]
+            logger.info(
+                "НРД скан %s: новостей найдено, INTR=%d (купонов к проверке: %d)",
+                isin,
+                len(intr_items),
+                len(coupons),
+            )
             card_cache: dict[int, NsdCardDetails] = {}
             results: list[ScannedCoupon] = []
             for coupon in coupons:
                 match = await self._find_payment(
                     client, intr_items, coupon.coupon_date, card_cache
+                )
+                logger.info(
+                    "НРД %s купон %s: %s",
+                    isin,
+                    coupon.coupon_date,
+                    "выплата подтверждена" if match else "выплата не найдена",
                 )
                 results.append(
                     ScannedCoupon(
