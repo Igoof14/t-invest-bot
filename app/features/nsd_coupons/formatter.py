@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
+from datetime import date, datetime, timedelta
 from html import escape
+from zoneinfo import ZoneInfo
 
-from .schemas import CouponMissAlert
+from .schemas import CouponMissAlert, CouponScanReport, ScannedCoupon
+
+_MSK = ZoneInfo("Europe/Moscow")
 
 
 def _format_amount(amount: float | None) -> str | None:
@@ -41,4 +46,60 @@ def format_coupon_miss(alert: CouponMissAlert) -> str:
         "По данным НРД выплата по этому купону не зафиксирована к плановой дате. "
         "Возможна задержка или технический дефолт эмитента."
     )
+    return "\n".join(lines)
+
+
+def _day_label(day: date, today: date) -> str:
+    """Возвращает относительную подпись дня («Сегодня»/«Вчера»/дата)."""
+    if day == today:
+        return "Сегодня"
+    if day == today - timedelta(days=1):
+        return "Вчера"
+    return day.strftime("%d.%m")
+
+
+def format_scan_report(report: CouponScanReport) -> str:
+    """Собирает HTML-сводку разовой проверки купонов за вчера и сегодня.
+
+    Args:
+        report: Результат проверки.
+
+    Returns:
+        HTML-сообщение со сводкой по дням и списком непоступивших купонов.
+    """
+    if report.no_token:
+        return (
+            "⚠️ Не найден токен T-Invest. Добавьте его в настройках, "
+            "чтобы проверить ваши купоны."
+        )
+    if not report.coupons:
+        return "За вчера и сегодня выплат по вашим облигациям не запланировано."
+
+    today = datetime.now(_MSK).date()
+    by_date: dict[date, list[ScannedCoupon]] = defaultdict(list)
+    for coupon in report.coupons:
+        by_date[coupon.coupon_date].append(coupon)
+
+    lines = ["<b>🔍 Проверка купонов</b>", ""]
+    unpaid: list[ScannedCoupon] = []
+    for day in sorted(by_date):
+        items = by_date[day]
+        paid = sum(1 for c in items if c.paid)
+        lines.append(
+            f"{_day_label(day, today)} ({day.strftime('%d.%m')}): "
+            f"выплачено {paid} из {len(items)}"
+        )
+        unpaid.extend(c for c in items if not c.paid)
+
+    lines.append("")
+    if unpaid:
+        lines.append("❗ Не поступили:")
+        for coupon in sorted(unpaid, key=lambda c: (c.coupon_date, c.bond_name or c.isin)):
+            name = escape(coupon.bond_name or coupon.isin)
+            lines.append(
+                f"• {name} (<code>{escape(coupon.isin)}</code>) — "
+                f"{coupon.coupon_date.strftime('%d.%m')}"
+            )
+    else:
+        lines.append("✅ Все купоны за период выплачены.")
     return "\n".join(lines)

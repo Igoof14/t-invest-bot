@@ -16,3 +16,10 @@ def test_keyboard_shows_enabled_state() -> None:
 def test_keyboard_shows_disabled_state() -> None:
     markup = create_coupon_alerts_keyboard(enabled=False).as_markup()
     assert "Выключено" in markup.inline_keyboard[0][0].text
+
+
+def test_keyboard_has_scan_button() -> None:
+    markup = create_coupon_alerts_keyboard(enabled=True).as_markup()
+    scan = markup.inline_keyboard[1][0]
+    assert "Проверить" in scan.text
+    assert NsdCouponAlertCallback.unpack(scan.callback_data).action == "scan"

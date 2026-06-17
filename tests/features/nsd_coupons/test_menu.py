@@ -21,9 +21,10 @@ async def test_render_returns_text_and_keyboard() -> None:
     text, markup = await render(7)
 
     assert "купон" in text.lower()
-    # Тумблер + «как это работает» + «назад».
-    assert len(markup.inline_keyboard) == 3
+    # Тумблер + «проверить» + «как это работает» + «назад».
+    assert len(markup.inline_keyboard) == 4
     assert "Включено" in markup.inline_keyboard[0][0].text
+    assert "Проверить" in markup.inline_keyboard[1][0].text
 
 
 async def test_status_badge_reflects_subscription() -> None:

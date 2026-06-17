@@ -28,4 +28,10 @@ def create_coupon_alerts_keyboard(enabled: bool) -> InlineKeyboardBuilder:
             callback_data=NsdCouponAlertCallback(action="toggle").pack(),
         )
     )
+    builder.row(
+        InlineKeyboardButton(
+            text="🔍 Проверить мои купоны",
+            callback_data=NsdCouponAlertCallback(action="scan").pack(),
+        )
+    )
     return builder

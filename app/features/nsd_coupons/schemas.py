@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from typing import Literal
 
@@ -12,7 +12,7 @@ from aiogram.filters.callback_data import CallbackData
 class NsdCouponAlertCallback(CallbackData, prefix="nsd_coupon"):
     """Callback data для кнопок раздела уведомлений о купонах."""
 
-    action: Literal["toggle"]
+    action: Literal["toggle", "scan"]
 
 
 @dataclass(frozen=True)
@@ -80,6 +80,36 @@ class CouponMissAlert:
     coupon_number: int
     coupon_date: date
     amount: float | None
+
+
+@dataclass(frozen=True)
+class ScannedCoupon:
+    """Результат разовой проверки одного купона по ленте НРД.
+
+    Attributes:
+        isin: ISIN облигации.
+        bond_name: Название облигации (или ``None``).
+        coupon_date: Плановая дата выплаты купона.
+        paid: Подтверждена ли выплата публикацией НРД.
+    """
+
+    isin: str
+    bond_name: str | None
+    coupon_date: date
+    paid: bool
+
+
+@dataclass
+class CouponScanReport:
+    """Итог разовой проверки купонов пользователя за вчера и сегодня.
+
+    Attributes:
+        no_token: У пользователя не задан токен T-Invest.
+        coupons: Проверенные купоны (за вчера и сегодня).
+    """
+
+    no_token: bool = False
+    coupons: list[ScannedCoupon] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

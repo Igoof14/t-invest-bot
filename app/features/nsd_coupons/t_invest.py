@@ -23,16 +23,22 @@ def _is_ru_isin(isin: str | None) -> bool:
 
 
 async def collect_coupon_plans(
-    telegram_id: int, horizon_days: int = HORIZON_DAYS
+    telegram_id: int,
+    horizon_days: int = HORIZON_DAYS,
+    *,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
 ) -> list[CouponPlan]:
     """Собирает плановые купоны по облигациям портфеля пользователя.
 
     Берёт токен пользователя, обходит счета и для каждой уникальной облигации
-    (с рублёвым ISIN) запрашивает купонный календарь T-Invest на горизонт.
+    (с рублёвым ISIN) запрашивает купонный календарь T-Invest за период.
 
     Args:
         telegram_id: Telegram ID пользователя.
-        horizon_days: На сколько дней вперёд загружать купоны.
+        horizon_days: Горизонт вперёд (если ``date_from``/``date_to`` не заданы).
+        date_from: Начало периода купонов (по умолчанию — сейчас).
+        date_to: Конец периода купонов (по умолчанию — ``date_from`` + горизонт).
 
     Returns:
         Список плановых купонов; пустой, если токена нет или облигаций нет.
@@ -41,8 +47,8 @@ async def collect_coupon_plans(
     if not token:
         return []
 
-    now = datetime.now(UTC)
-    horizon = now + timedelta(days=horizon_days)
+    now = date_from or datetime.now(UTC)
+    horizon = date_to or (now + timedelta(days=horizon_days))
     plans: list[CouponPlan] = []
 
     async with AsyncClient(token) as client:
