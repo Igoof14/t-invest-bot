@@ -18,6 +18,7 @@ from features.menu import register_section
 from features.menu import router as menu_router
 from features.nsd_coupons import NsdCouponService
 from features.nsd_coupons import router as nsd_coupons_router
+from features.nsd_coupons.menu import SECTION as nsd_coupons_section
 from features.offer_warning import OfferAlertService
 from features.offer_warning import handlers as offer_warning_handlers
 from features.offer_warning.menu import SECTION as offer_section
@@ -48,6 +49,7 @@ async def main():
     register_section(offer_section)
     register_section(ratings_section)
     register_section(fns_section)
+    register_section(nsd_coupons_section)
 
     dp.include_routers(
         base_handlers.router,

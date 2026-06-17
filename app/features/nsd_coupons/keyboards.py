@@ -2,20 +2,23 @@
 
 from __future__ import annotations
 
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from .schemas import NsdCouponAlertCallback
 
 
-def create_coupon_alerts_keyboard(enabled: bool) -> InlineKeyboardMarkup:
-    """Создаёт клавиатуру с тумблером подписки на уведомления о купонах.
+def create_coupon_alerts_keyboard(enabled: bool) -> InlineKeyboardBuilder:
+    """Создаёт билдер с тумблером подписки на уведомления о купонах.
+
+    Возвращает билдер (а не готовую разметку), чтобы секция меню могла добавить
+    к нему кнопки «как это работает» и «назад».
 
     Args:
         enabled: Включены ли уведомления у пользователя.
 
     Returns:
-        Разметка с одной кнопкой-тумблером.
+        Билдер с одной кнопкой-тумблером.
     """
     builder = InlineKeyboardBuilder()
     mark = "Включено 🔔" if enabled else "Выключено 🔕"
@@ -25,4 +28,4 @@ def create_coupon_alerts_keyboard(enabled: bool) -> InlineKeyboardMarkup:
             callback_data=NsdCouponAlertCallback(action="toggle").pack(),
         )
     )
-    return builder.as_markup()
+    return builder
