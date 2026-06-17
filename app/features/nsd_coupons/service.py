@@ -35,7 +35,9 @@ _MSK = ZoneInfo("Europe/Moscow")
 # Насколько вперёд проверять купоны (ловим досрочные публикации НРД).
 PAYMENT_LOOKAHEAD_DAYS = 3
 # Насколько назад от даты купона искать публикацию в ленте НРД.
-PUBLISH_LOOKBACK_DAYS = 7
+# Эмитенты публикуют «О получении … выплат» заранее (наблюдали за неделю и более),
+# поэтому окно широкое.
+PUBLISH_LOOKBACK_DAYS = 35
 # Отсрочка перед алертом после плановой даты (рабочих/календарных дней).
 GRACE_DAYS = 0
 # Параллельность опроса НРД в разовой проверке (страницы одного браузера).
@@ -170,10 +172,12 @@ class NsdCouponService:
         coupon_date: date,
         card_cache: dict[int, NsdCardDetails],
     ) -> tuple[int, NsdCardDetails] | None:
-        """Ищет публикацию НРД, подтверждающую выплату купона на дату ``coupon_date``.
+        """Ищет публикацию НРД о выплате купона на дату ``coupon_date``.
 
-        Совпадение — ``INTR`` с плановой датой, равной дате купона, и заполненной
-        датой поступления средств в НРД.
+        Совпадение — ``INTR`` («О получении … выплат») с плановой датой
+        (``Дата КД (план.)``), равной дате купона. Сам факт такой публикации
+        означает, что НРД получил средства (заполненная «Дата поступления в НРД»
+        есть не у всех эмитентов, поэтому обязательной не считается).
 
         Returns:
             Пара (news_id, детали карточки) при совпадении, иначе ``None``.
@@ -188,10 +192,7 @@ class NsdCouponService:
                     logger.error("Карточка НРД %s не получена: %s", item.news_id, e)
                     continue
             card = card_cache[item.news_id]
-            if (
-                card.planned_pay_date == coupon_date
-                and card.nsd_received_date is not None
-            ):
+            if card.planned_pay_date == coupon_date:
                 return item.news_id, card
         return None
 
