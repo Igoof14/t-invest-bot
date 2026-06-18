@@ -29,9 +29,7 @@ class NsdCouponAlertSettingsRepository:
             settings = result.scalar_one_or_none()
 
             if settings is None:
-                settings = NsdCouponAlertSettings(
-                    telegram_id=telegram_id, alerts_enabled=True
-                )
+                settings = NsdCouponAlertSettings(telegram_id=telegram_id, alerts_enabled=True)
                 session.add(settings)
             else:
                 settings.alerts_enabled = not settings.alerts_enabled
@@ -141,13 +139,11 @@ class NsdCouponTrackingRepository:
             # не делать SELECT на каждый купон.
             isins = {plan.isin for plan in plans}
             result = await session.execute(
-                select(
-                    NsdCouponTracking.isin, NsdCouponTracking.coupon_number
-                ).where(NsdCouponTracking.isin.in_(isins))
+                select(NsdCouponTracking.isin, NsdCouponTracking.coupon_number).where(
+                    NsdCouponTracking.isin.in_(isins)
+                )
             )
-            known: set[tuple[str, int]] = {
-                (isin, number) for isin, number in result.all()
-            }
+            known: set[tuple[str, int]] = {(isin, number) for isin, number in result.all()}
 
             for plan in plans:
                 key = (plan.isin, plan.coupon_number)

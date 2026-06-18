@@ -107,9 +107,7 @@ class NsdClient:
             proxy=to_playwright_proxy(self._proxy),
             args=["--disable-blink-features=AutomationControlled"],
         )
-        self._context = await self._browser.new_context(
-            locale="ru-RU", user_agent=_USER_AGENT
-        )
+        self._context = await self._browser.new_context(locale="ru-RU", user_agent=_USER_AGENT)
         return self
 
     async def __aexit__(
@@ -142,9 +140,7 @@ class NsdClient:
 
         page = await self._context.new_page()
         try:
-            await page.goto(
-                url, wait_until="domcontentloaded", timeout=self._nav_timeout_ms
-            )
+            await page.goto(url, wait_until="domcontentloaded", timeout=self._nav_timeout_ms)
             try:
                 await page.wait_for_function(
                     f"document.title && document.title !== {_CHALLENGE_TITLE!r}",

@@ -53,9 +53,7 @@ async def handle_toggle(callback: CallbackQuery) -> None:
         text, markup = await render(telegram_id)
         if isinstance(callback.message, Message):
             await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
-        await callback.answer(
-            "Контроль купонов: " + ("включён" if new_state else "выключен")
-        )
+        await callback.answer("Контроль купонов: " + ("включён" if new_state else "выключен"))
     except Exception as e:
         logger.error("Ошибка переключения подписки на купоны %s: %s", telegram_id, e)
         await callback.answer("Произошла ошибка")
@@ -126,14 +124,11 @@ async def process_report_time(message: Message, state: FSMContext) -> None:
 
     if not _TIME_RE.match(text):
         await message.answer(
-            "Неверный формат. Введите время как ЧЧ:ММ (например, 21:00) "
-            "или «выкл»."
+            "Неверный формат. Введите время как ЧЧ:ММ (например, 21:00) или «выкл»."
         )
         return
 
     report_time = datetime.strptime(text, "%H:%M").time()
     await NsdCouponAlertSettingsRepository.set_report_time(telegram_id, report_time)
-    await message.answer(
-        f"Готово: ежедневный отчёт по купонам в {text} МСК."
-    )
+    await message.answer(f"Готово: ежедневный отчёт по купонам в {text} МСК.")
     await state.clear()
