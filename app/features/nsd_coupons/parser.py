@@ -104,6 +104,7 @@ def parse_listing(html: str) -> list[NsdNewsItem]:
 
     Returns:
         Список новостей; пустой, если новостей нет.
+
     """
     soup = BeautifulSoup(html, "html.parser")
     items: list[NsdNewsItem] = []
@@ -192,6 +193,7 @@ def parse_card(html: str) -> NsdCardDetails:
 
     Returns:
         Детали выплаты: тип КД, плановая дата, дата поступления в НРД, сумма.
+
     """
     soup = BeautifulSoup(html, "html.parser")
     type_value = _value_beside(soup, "Код типа корпоративного действия")

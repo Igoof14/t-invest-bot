@@ -129,6 +129,7 @@ class NsdCouponTrackingRepository:
 
         Returns:
             Число добавленных записей.
+
         """
         if not plans:
             return 0
@@ -182,6 +183,7 @@ class NsdCouponTrackingRepository:
 
         Returns:
             Список ожидаемых купонов в статусе ``pending``.
+
         """
         async with session_scope() as session:
             result = await session.execute(

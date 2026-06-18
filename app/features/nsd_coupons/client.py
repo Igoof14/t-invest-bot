@@ -46,6 +46,7 @@ def to_playwright_proxy(proxy: str | None) -> ProxySettings | None:
     Returns:
         ``ProxySettings`` с ``server``/``username``/``password`` или ``None`` для
         прямого соединения.
+
     """
     if not proxy:
         return None
@@ -87,6 +88,7 @@ class NsdClient:
             nav_timeout_ms: Таймаут навигации, мс.
             challenge_timeout_ms: Сколько ждать прохождения антибота, мс.
             settle_ms: Доп. пауза после прохождения челленджа, мс.
+
         """
         self._proxy = proxy
         self._headless = headless
@@ -98,6 +100,7 @@ class NsdClient:
         self._context: BrowserContext | None = None
 
     async def __aenter__(self) -> NsdClient:
+        """Запускает Playwright и браузер, возвращает готовый клиент."""
         self._playwright = await async_playwright().start()
         self._browser = await self._playwright.chromium.launch(
             headless=self._headless,
@@ -115,6 +118,7 @@ class NsdClient:
         exc: BaseException | None,
         tb: TracebackType | None,
     ) -> None:
+        """Закрывает браузер и останавливает Playwright."""
         if self._browser is not None:
             await self._browser.close()
         if self._playwright is not None:
@@ -131,6 +135,7 @@ class NsdClient:
 
         Raises:
             NsdAccessError: Если антибот не пройден за отведённое время.
+
         """
         if self._context is None:
             raise NsdAccessError("клиент не инициализирован (используйте async with)")
@@ -171,6 +176,7 @@ class NsdClient:
 
         Returns:
             HTML списка новостей по этой бумаге.
+
         """
         params = f"text={quote(isin)}"
         if date_from is not None:
@@ -187,5 +193,6 @@ class NsdClient:
 
         Returns:
             HTML карточки новости.
+
         """
         return await self._open(f"{_BASE}/ru/news/view/{news_id}")

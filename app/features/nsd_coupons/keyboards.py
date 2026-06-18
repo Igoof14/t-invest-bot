@@ -24,6 +24,7 @@ def create_coupon_alerts_keyboard(
 
     Returns:
         Билдер с кнопками тумблера, проверки и настройки времени отчёта.
+
     """
     builder = InlineKeyboardBuilder()
     mark = "Включено 🔔" if enabled else "Выключено 🔕"

@@ -28,6 +28,7 @@ class NsdCouponNotifier:
 
         Returns:
             ``True`` при успешной отправке, ``False`` при ошибке.
+
         """
         message = format_coupon_miss(alert)
         try:

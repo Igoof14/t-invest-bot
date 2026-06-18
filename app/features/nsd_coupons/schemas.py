@@ -27,6 +27,7 @@ class NsdNewsItem:
         issuer_name: Наименование эмитента из заголовка (или ``None``).
         inn: ИНН эмитента из заголовка (или ``None``).
         published_at: Дата публикации новости (или ``None``).
+
     """
 
     news_id: int
@@ -50,6 +51,7 @@ class CouponPlan:
         amount: Размер купона на одну бумагу (или ``None``).
         bond_name: Название облигации (или ``None``).
         issuer_name: Наименование эмитента (или ``None``).
+
     """
 
     isin: str
@@ -72,6 +74,7 @@ class CouponMissAlert:
         coupon_number: Порядковый номер купона.
         coupon_date: Плановая дата выплаты, которая прошла без публикации НРД.
         amount: Ожидавшийся размер купона на одну бумагу (или ``None``).
+
     """
 
     isin: str
@@ -91,6 +94,7 @@ class ScannedCoupon:
         bond_name: Название облигации (или ``None``).
         coupon_date: Плановая дата выплаты купона.
         paid: Подтверждена ли выплата публикацией НРД.
+
     """
 
     isin: str
@@ -106,6 +110,7 @@ class CouponScanReport:
     Attributes:
         no_token: У пользователя не задан токен T-Invest.
         coupons: Проверенные купоны (за вчера и сегодня).
+
     """
 
     no_token: bool = False
@@ -122,6 +127,7 @@ class NsdCardDetails:
         nsd_received_date: Дата поступления денежных средств в НРД (``None``,
             если средства ещё не поступили — выплаты не было).
         amount_per_bond: Размер выплаты на одну ценную бумагу (или ``None``).
+
     """
 
     news_type: str | None

@@ -28,6 +28,7 @@ def format_coupon_miss(alert: CouponMissAlert) -> str:
 
     Returns:
         Готовый HTML-текст для отправки в Telegram.
+
     """
     name = escape(alert.bond_name or alert.issuer_name or alert.isin)
     lines = [
@@ -66,6 +67,7 @@ def format_scan_report(report: CouponScanReport) -> str:
 
     Returns:
         HTML-сообщение со сводкой по дням и списком непоступивших купонов.
+
     """
     if report.no_token:
         return (

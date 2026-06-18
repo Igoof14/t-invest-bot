@@ -42,6 +42,7 @@ async def collect_coupon_plans(
 
     Returns:
         Список плановых купонов; пустой, если токена нет или облигаций нет.
+
     """
     token = await BotUserRepository.get_token_by_telegram_id(telegram_id=telegram_id)
     if not token:
@@ -75,21 +76,21 @@ async def collect_coupon_plans(
                 coupons = await client.instruments.get_bond_coupons(
                     figi=figi, from_=now, to=horizon
                 )
-                for coupon in coupons.events:
-                    plans.append(
-                        CouponPlan(
-                            isin=bond.isin,
-                            figi=figi,
-                            coupon_number=coupon.coupon_number,
-                            coupon_date=coupon.coupon_date.date(),
-                            amount=(
-                                to_float(coupon.pay_one_bond)
-                                if coupon.pay_one_bond
-                                else None
-                            ),
-                            bond_name=bond.name,
-                            issuer_name=None,
-                        )
+                plans.extend(
+                    CouponPlan(
+                        isin=bond.isin,
+                        figi=figi,
+                        coupon_number=coupon.coupon_number,
+                        coupon_date=coupon.coupon_date.date(),
+                        amount=(
+                            to_float(coupon.pay_one_bond)
+                            if coupon.pay_one_bond
+                            else None
+                        ),
+                        bond_name=bond.name,
+                        issuer_name=None,
                     )
+                    for coupon in coupons.events
+                )
 
     return plans
