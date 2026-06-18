@@ -48,6 +48,19 @@ SCAN_CONCURRENCY = 4
 # Модульный, т.к. ручной хендлер создаёт отдельный экземпляр сервиса.
 _SCAN_SEMAPHORE = asyncio.Semaphore(1)
 
+# Круговой выбор прокси из пула — распределяем запросы НРД по разным IP, чтобы
+# один адрес не упирался в троттлинг (что вызывало таймауты навигации).
+_proxy_index = 0
+
+
+def _pick_proxy() -> str | None:
+    """Возвращает следующий прокси из пула по кругу (или ``None`` — напрямую)."""
+    global _proxy_index
+    proxies = load_proxies()
+    proxy = proxies[_proxy_index % len(proxies)]
+    _proxy_index += 1
+    return proxy
+
 
 class NsdCouponService:
     """Оркестрация мониторинга невыплаченных купонов.
@@ -134,9 +147,8 @@ class NsdCouponService:
         for coupon in due:
             by_isin[coupon.isin].append(coupon)
 
-        proxies = load_proxies()
         marked = 0
-        async with NsdClient(proxies[0]) as client:
+        async with NsdClient(_pick_proxy()) as client:
             for isin, coupons in by_isin.items():
                 date_from = min(c.coupon_date for c in coupons) - timedelta(
                     days=PUBLISH_LOOKBACK_DAYS
@@ -239,10 +251,9 @@ class NsdCouponService:
             for plan in relevant:
                 by_isin[plan.isin].append(plan)
 
-            proxies = load_proxies()
             sem = asyncio.Semaphore(SCAN_CONCURRENCY)
             scanned: list[ScannedCoupon] = []
-            async with NsdClient(proxies[0]) as client:
+            async with NsdClient(_pick_proxy()) as client:
                 isins = list(by_isin)
                 # Первый ISIN — последовательно: проходим антибот и кэшируем cookie.
                 scanned.extend(await self._scan_isin(client, isins[0], by_isin, today, sem))

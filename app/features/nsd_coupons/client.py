@@ -76,18 +76,20 @@ class NsdClient:
         proxy: str | None = None,
         *,
         headless: bool = True,
-        nav_timeout_ms: int = 60_000,
-        challenge_timeout_ms: int = 25_000,
+        nav_timeout_ms: int = 25_000,
+        challenge_timeout_ms: int = 20_000,
         settle_ms: int = 1_500,
+        attempts: int = 2,
     ) -> None:
         """Инициализирует клиент.
 
         Args:
             proxy: URL прокси или ``None`` (прямое соединение).
             headless: Запускать браузер без интерфейса.
-            nav_timeout_ms: Таймаут навигации, мс.
+            nav_timeout_ms: Таймаут навигации, мс (короткий — чтобы не висеть).
             challenge_timeout_ms: Сколько ждать прохождения антибота, мс.
             settle_ms: Доп. пауза после прохождения челленджа, мс.
+            attempts: Число попыток открыть страницу при таймауте/сбое.
 
         """
         self._proxy = proxy
@@ -95,6 +97,7 @@ class NsdClient:
         self._nav_timeout_ms = nav_timeout_ms
         self._challenge_timeout_ms = challenge_timeout_ms
         self._settle_ms = settle_ms
+        self._attempts = max(1, attempts)
         self._playwright = None
         self._browser: Browser | None = None
         self._context: BrowserContext | None = None
@@ -138,20 +141,32 @@ class NsdClient:
         if self._context is None:
             raise NsdAccessError("клиент не инициализирован (используйте async with)")
 
-        page = await self._context.new_page()
-        try:
-            await page.goto(url, wait_until="domcontentloaded", timeout=self._nav_timeout_ms)
+        last_error: Exception | None = None
+        for attempt in range(1, self._attempts + 1):
+            page = await self._context.new_page()
             try:
+                await page.goto(
+                    url, wait_until="domcontentloaded", timeout=self._nav_timeout_ms
+                )
                 await page.wait_for_function(
                     f"document.title && document.title !== {_CHALLENGE_TITLE!r}",
                     timeout=self._challenge_timeout_ms,
                 )
+                await page.wait_for_timeout(self._settle_ms)
+                return await page.content()
             except Exception as e:  # noqa: BLE001 — playwright TimeoutError и пр.
-                raise NsdAccessError(f"антибот НРД не пройден: {url}") from e
-            await page.wait_for_timeout(self._settle_ms)
-            return await page.content()
-        finally:
-            await page.close()
+                last_error = e
+                logger.warning(
+                    "НРД: попытка %d/%d не удалась (%s): %s",
+                    attempt,
+                    self._attempts,
+                    url,
+                    type(e).__name__,
+                )
+            finally:
+                await page.close()
+
+        raise NsdAccessError(f"страница НРД не открыта: {url}") from last_error
 
     async def search_by_isin(
         self,
