@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from features.issuers.models import Issuer
 from features.issuers.repository import IssuerRepository
-from features.ratings.portfolio import get_portfolio_bond_identifiers
 from features.users.repository import BotUserRepository
 
 from .events import BlockingOrder, MatchedBond, ResolvedBlock, UserBlockAlert
+from .portfolio import get_portfolio_bond_identifiers
 
 
 async def collect_holdings(subscribers: list[int]) -> dict[int, set[str]]:
