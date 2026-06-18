@@ -78,6 +78,11 @@ async def test_upsert_pending_skips_duplicates() -> None:
     assert added_again == 1
 
 
+async def test_upsert_pending_dedups_within_single_batch() -> None:
+    added = await NsdCouponTrackingRepository.upsert_pending([_plan(1), _plan(1)])
+    assert added == 1
+
+
 async def test_list_pending_due_filters_by_date() -> None:
     await NsdCouponTrackingRepository.upsert_pending(
         [

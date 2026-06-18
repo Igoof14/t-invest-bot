@@ -135,15 +135,25 @@ class NsdCouponTrackingRepository:
 
         added = 0
         async with session_scope() as session:
+            # Одним запросом тянем уже отслеживаемые пары (isin, coupon_number)
+            # по затронутым ISIN (фильтр по индексированному столбцу), чтобы
+            # не делать SELECT на каждый купон.
+            isins = {plan.isin for plan in plans}
+            result = await session.execute(
+                select(
+                    NsdCouponTracking.isin, NsdCouponTracking.coupon_number
+                ).where(NsdCouponTracking.isin.in_(isins))
+            )
+            known: set[tuple[str, int]] = {
+                (isin, number) for isin, number in result.all()
+            }
+
             for plan in plans:
-                result = await session.execute(
-                    select(NsdCouponTracking.id).where(
-                        NsdCouponTracking.isin == plan.isin,
-                        NsdCouponTracking.coupon_number == plan.coupon_number,
-                    )
-                )
-                if result.scalar_one_or_none() is not None:
+                key = (plan.isin, plan.coupon_number)
+                if key in known:
                     continue
+                # Учитываем дубликаты внутри самого батча.
+                known.add(key)
                 session.add(
                     NsdCouponTracking(
                         isin=plan.isin,
