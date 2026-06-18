@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from asyncio import sleep
 from datetime import UTC, datetime, timedelta
 
 from core.clients.t_invest.common_func import to_float
@@ -76,17 +77,14 @@ async def collect_coupon_plans(
                 coupons = await client.instruments.get_bond_coupons(
                     figi=figi, from_=now, to=horizon
                 )
+                await sleep(0.2)
                 plans.extend(
                     CouponPlan(
                         isin=bond.isin,
                         figi=figi,
                         coupon_number=coupon.coupon_number,
                         coupon_date=coupon.coupon_date.date(),
-                        amount=(
-                            to_float(coupon.pay_one_bond)
-                            if coupon.pay_one_bond
-                            else None
-                        ),
+                        amount=(to_float(coupon.pay_one_bond) if coupon.pay_one_bond else None),
                         bond_name=bond.name,
                         issuer_name=None,
                     )
