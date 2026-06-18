@@ -1,9 +1,12 @@
 """Дополнительные функции для работы с T-Invest API."""
 
+import logging
+
 from t_tech.invest import AsyncClient
 
+logger = logging.getLogger(__name__)
 
-@staticmethod
+
 async def check_token(token: str) -> bool:
     """Проверяет, что токен действителен.
 
@@ -19,6 +22,7 @@ async def check_token(token: str) -> bool:
             await client.users.get_info()
         return True
     except Exception:
+        logger.warning("Проверка токена T-Invest не удалась", exc_info=True)
         return False
 
 

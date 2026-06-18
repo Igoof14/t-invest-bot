@@ -1,7 +1,6 @@
 """Модель пользователя."""
 
 from datetime import datetime
-from typing import Optional
 
 from core.database import Base
 from sqlalchemy import BigInteger, Boolean, DateTime, Integer, String, Text, func
@@ -54,9 +53,3 @@ class TinvestUser(Base):
     qualified_for_work_with: Mapped[str | None] = mapped_column(Text, nullable=True)
     tariff: Mapped[str | None] = mapped_column(String(255), nullable=True)
     risk_level_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
-
-    # Метаданные
-    # is_active: Mapped[bool] = mapped_column(default=True)
-    # is_bot: Mapped[bool] = mapped_column(default=False)
-    # created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    # last_activity: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

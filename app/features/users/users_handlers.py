@@ -30,23 +30,37 @@ callback_values = {
 }
 
 
+async def prompt_for_token(message: Message, state: FSMContext) -> None:
+    """Показывает экран ввода токена и переводит FSM в ожидание токена.
+
+    Общий шаг для кнопки «Добавить токен» в настройках и финального CTA
+    онбординг-воронки.
+
+    Args:
+        message: Сообщение, в чат которого отправить инструкцию.
+        state: FSM-контекст пользователя.
+
+    """
+    await message.answer(
+        "*Токен доступа*\n\n"
+        "Отправьте ваш *Read-only* токен сообщением.\n\n"
+        "*Read-only* — токен с правом только на чтение данных. "
+        "Он не даёт возможности совершать сделки или переводить средства, "
+        "поэтому безопасен для использования в боте.\n\n"
+        "[Как получить токен](https://developer.tbank.ru/invest/intro/intro/token)",
+        parse_mode="Markdown",
+        disable_web_page_preview=True,
+    )
+    await state.set_state(TokenStates.waiting_for_token)
+
+
 @router.callback_query(F.data.in_(callback_values))
 async def handle_settings(callback: CallbackQuery, state: FSMContext) -> None:
     """Обработчик для настроект."""
     try:
         if callback.data == SettingsCallbackData.ADD_TOKEN.value:
-            if callback.message:
-                await callback.message.answer(
-                    "*Токен доступа*\n\n"
-                    "Отправьте ваш *Read-only* токен сообщением.\n\n"
-                    "*Read-only* — токен с правом только на чтение данных. "
-                    "Он не даёт возможности совершать сделки или переводить средства, "
-                    "поэтому безопасен для использования в боте.\n\n"
-                    "[Как получить токен](https://developer.tbank.ru/invest/intro/intro/token)",
-                    parse_mode="Markdown",
-                    disable_web_page_preview=True,
-                )
-                await state.set_state(TokenStates.waiting_for_token)
+            if isinstance(callback.message, Message):
+                await prompt_for_token(callback.message, state)
             await callback.answer()
 
         elif callback.data == SettingsCallbackData.RM_TOKEN.value:

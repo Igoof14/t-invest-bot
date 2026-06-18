@@ -1,0 +1,1363 @@
+<!DOCTYPE html><html lang="ru"><head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Новости ЦКИ</title>
+
+    <meta name="csrf-param" content="_csrf">
+<meta name="csrf-token" content="bXucwbazJP8Mni6q9pazu3Rv7bO1B06bGv_KVVgxJR0-Ld-r5oJsmV_WV8zG7sP-NxWY_NhkLa17hqAyFFx1dA==">
+
+        <noscript><div><img src='https://mc.yandex.ru/watch/44895304' style='position:absolute; left:-9999px;' alt='' /></div></noscript>
+    <meta name="description" content="Сообщения о ценных бумагах и событиях по организации">
+<link href="/css/jquery-ui.min.css" rel="stylesheet">
+<link href="/css/bootstrap.min.css?1207" rel="stylesheet">
+<link href="/css/style.css?1208" rel="stylesheet">
+<link href="/css/style_v2.css?1207" rel="stylesheet">
+<link href="/css/style_bs.css?0511" rel="stylesheet">
+<link href="/css/products.css?1207" rel="stylesheet">
+<script async="" src="https://mc.yandex.ru/metrika/tag.js"></script><script src="/js/jquery-3.7.1.min.js"></script>
+<script src="/js/jquery-ui.min.js"></script>
+<script src="/js/bootstrap.min.js"></script>
+<script>
+	(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)}; m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)}) (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym"); ym(44895304, "init", { clickmap:true, trackLinks:true, accurateTrackBounce:true, webvisor:true }); 
+
+</script></head>
+<body class="modal-open">
+	
+    <div class="container head">
+        <nav class="navbar navbar-default" role="navigation">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse" aria-expanded="false">
+        <span class="sr-only">Menu</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a href="/ru" class="logo navbar-brand"></a>
+    </div>
+    <div class="collapse navbar-collapse" id="navbar-collapse">
+		<div class="addnav" style="white-space: normal;">
+    <a class="btn btn-light btn-to-primary" href="#" id="butMod" style="color: #fff !important;background-color: #eb3426;border-radius: 10px; border: 1px solid transparent !important;">Стать клиентом</a>    
+<div class="modal fade" id="request_form" tabindex="-1" role="dialog" aria-labelledby="authModalLabel" aria-hidden="true" style="text-align: justify;">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content" style="overflow:hidden">
+            <div class="modal-header" id="request-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true" style="color: #F0F0F0; font-size: 30px; ">╳</span>
+                </button>
+                <p class="modal-title" id="title-request">Что бы вы хотели сделать?</p>
+            </div>
+            <div class="modal-body" id="request-body">
+                <div class="form_win" id="action_form" style="display: flex">
+                    <button class="request_button" name="consult"><img src="/img/consult_access_form/consultation.png">
+                        <p class="request_p"> Получить консультацию</p></button>
+                    <button class="request_button" name="access"><img src="/img/consult_access_form/access.png">
+                        <p class="request_p">Получить доступ к информационным услугам НРД</p></button>
+                </div>
+                <div class="form_win" id="access_form" style="display: none">
+                    <div id="access_request_form">
+                        <button class="request_button" name="trial"><img src="/img/consult_access_form/trial.png">
+                            <p class="request_p"> Тестовый доступ</p></button>
+                        <button class="request_button" name="data"><img src="/img/consult_access_form/data.png">
+                            <p class="request_p">Боевой доступ</p></button>
+                    </div>
+                </div>
+                <div class="form_win" id="data_access_form" style="display: none">
+                    <div id="data_access_request_form">
+                        <div class="data_p">
+                            <b>Клиентская поддержка</b>
+                            Телефон: +7 495 956-27-90
+                            E-mail: manager@nsd.ru<br>
+                            <b>Общие вопросы по информационным услугам НРД</b>
+                            E-mail: datasales@nsd.ru                        </div>
+                    </div>
+                </div>
+                <div class="form_win" id="trial_access_form" style="display: none">
+                    <div id="trial_access_request_form">
+                        <p class="trial_p"> Тестовый доступ к какому продукту вас интересует?</p>
+                        <div class="but_trial">
+                            <button type="button" class="trial_button" id="API-NSD" name="oth_product" value="API NSD" form="TestOtherProductForm">API NSD
+                            </button>
+                            <button type="button" class="trial_button" id="OTC-DVP" name="oth_product" value="OTC DVP" form="TestOtherProductForm">Ценовые данные OTC</button>
+                            <button type="button" class="trial_button" id="MAILINGS" name="oth_product" value="MAILINGS" form="TestOtherProductForm">Мои рассылки</button>
+                            <button type="button" class="trial_button" id="DISC" name="oth_product" value="DISC" form="TestOtherProductForm">ДИСК НРД</button>
+                            <button type="button" class="trial_button" id="TTL" name="oth_product" value="TTL" form="TestOtherProductForm">TTL
+                            </button>
+                            <button type="button" class="trial_button" id="GETNEWS" name="oth_product" value="GETNEWS" form="TestOtherProductForm">Getnews</button>
+                            <button type="button" class="trial_button" id="valuation" name="vc_product" value="valuation">Ценовой центр</button>
+                            <button type="button" class="trial_button" id="Share-of-non-residents-in-OFZ" value="Доля нерезидентов в ОФЗ" name="oth_product" form="TestOtherProductForm">Доля нерезидентов в ОФЗ</button>
+                            <button type="button" class="trial_button" id="EOD" name="oth_product" value="EOD" form="TestOtherProductForm">Итоги торгов</button>
+                            <button type="button" class="trial_button" id="REPO" name="oth_product" value="REPO" form="TestOtherProductForm">Сделки РЕПО</button>
+                            <button type="button" class="trial_button" id="Rates" name="oth_product" value="Rates" form="TestOtherProductForm">Индикативные ставки</button>
+                            <button type="button" class="trial_button" id="Pifs" name="oth_product" value="Pifs" form="TestOtherProductForm">Агрегатор ПИФ</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form_win" id="consult_form" style="display: none">
+                    <form id="ConsultForm" action="/ru/products/consult" method="post">
+<input type="hidden" name="_csrf" value="bXucwbazJP8Mni6q9pazu3Rv7bO1B06bGv_KVVgxJR0-Ld-r5oJsmV_WV8zG7sP-NxWY_NhkLa17hqAyFFx1dA==">
+<div class="row">
+    <div class="col-sm-12">
+        <div class="ta_form_field_wrapper_consult">
+            <span class="red-star_consult" style="float: right; color: red;">*</span>
+            <div class="form-group field-consultform-name required">
+
+<input type="text" id="consultform-name" class="form-control valid_change_field" name="ConsultForm[name]" placeholder="Ф.И.О." aria-required="true">
+
+<div class="help-block"></div>
+</div>        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-6">
+        <div class="ta_form_field_wrapper_consult">
+            <span class="red-star_consult" style="float: right; color: red;">*</span>
+            <div class="form-group field-consultform-phone required">
+
+<input type="text" id="consultform-phone" class="form-control valid_change_field" name="ConsultForm[phone]" placeholder="Телефон: 89001234567" aria-required="true">
+
+<div class="help-block"></div>
+</div>        </div>
+    </div>
+    <div class="col-sm-6">
+        <div class="ta_form_field_wrapper_consult">
+            <span class="red-star_consult" style="float: right; color: red;">*</span>
+            <div class="form-group field-consultform-email required">
+
+<input type="text" id="consultform-email" class="form-control valid_change_field" name="ConsultForm[email]" placeholder="E-mail" aria-required="true">
+
+<div class="help-block"></div>
+</div>        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12">
+        <div class="ta_form_field_wrapper_consult">
+            <div class="form-group field-consultform-company">
+
+<input type="text" id="consultform-company" class="form-control valid_change_field" name="ConsultForm[company]" placeholder="Компания">
+
+<div class="help-block"></div>
+</div>        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12">
+        <div class="ta_form_field_wrapper_test_access">
+            <div class="form-group field-consultform-position">
+
+<input type="text" id="consultform-position" class="form-control valid_change_field" name="ConsultForm[position]" placeholder="Должность">
+
+<div class="help-block"></div>
+</div>        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12">
+        <div class="ta_form_field_wrapper_consult">
+            <div class="form-group field-consultform-question">
+
+<textarea id="consultform-question" class="form-control valid_change_field" name="ConsultForm[question]" rows="3" placeholder="Ваш вопрос" style="width: 100%;height: auto;background: #EFF2F4;"></textarea>
+
+<div class="help-block"></div>
+</div>        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="red-star-wrapper" style="margin-bottom: 50px">
+        <div class="col-sm-12">
+            <span class="red-star_consult" style="color: red;">*</span> <span class="red-star-label_consult"> — поля обязательные для заполнения</span>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12">
+        <input type="checkbox" id="ConsultFormscales" name="ConsultForm[scales]" oninvalid="check(this);" required="">
+        <label for="scales" class="for-scales" id="consult_form"><a href="#" style="border-bottom: 1px dashed #9DA9B0;color:#9DA9B0;margin-left: 10px ">Я согласен на обработку персональных данных</a></label>
+    </div>
+</div>
+<div class="form-group field-consultform-captcha required">
+
+<div style="display: flex;flex-wrap: nowrap;justify-content: space-around; align-items: center"><img id="ConsultForm-captcha-image" src="/ru/products/captcha?v=6a3153269ef854.08085662" alt=""> <b>= </b>
+    <input type="text" id="consultform-captcha" class="form-control valid_change_field" name="ConsultForm[captcha]" aria-required="true"> <div>Введите результат <br> выражения с картинки</div></div><br><a href="#" id="ConsultForm-captcha-refresh-link">Обновить изображение</a>
+
+<div class="help-block"></div>
+</div>
+<div class="jumbo-2-button-wrapper_consult" style="text-align: center">
+    <button type="submit" class="btn btn-primary" style="padding: 10px 20px!important;">Отправить заявку</button>
+</div>
+</form><script type="text/javascript">
+    function check(input) {
+        if (input.checked !== true) {
+            input.setCustomValidity('Чтобы продолжить, установите этот флажок');
+        } else {
+            input.setCustomValidity('');
+        }
+    }
+
+    $('#ConsultForm').on("submit",function(e){
+        $(this).on('beforeValidate',function(event, messages, errorAttributes){
+            $(".preloader").css('display', 'block');
+            $(this).css('opacity', '0.6');
+        });
+
+        $(this).on('afterValidate',function(event, messages, errorAttributes){
+            $(".preloader").css('display', 'none');
+            $(this).css('opacity', '1');
+        });
+    });
+
+    $('#ConsultForm').on('beforeSubmit', function (event) {
+        event.preventDefault();
+        $(this).find('input[type=submit], button[type=submit]').prop('disabled', false);
+        var data = $('#ConsultForm').serializeArray();
+        data.push({name: 'submit', value: 1});
+        var url = langSuf + '/products/consult';
+        $.ajax({
+            // url: '/ru/valuation-center',
+            url: url,
+            type: 'post',
+            dataType: 'json',
+            data: data,
+            beforeSend: function(){
+                $(".preloader").css('display', 'block');
+                $('#ConsultForm').css('opacity', '0.6');
+            },
+            success: function (data) {
+                if (data.success === true) {
+                    $('.form_win ').css('display', 'none');
+                    $('#successful_appeal_request_form').css('display', 'block');
+                } else {
+                    failFormSend();
+                }
+            },
+            error: function () {
+                failFormSend();
+            },
+            complete: function(){
+                $(".preloader").css('display', 'none');
+                $('#ConsultForm').css('opacity', '1');
+            }
+        });
+
+        return false;
+    });
+</script>
+<style>
+    .ta_form_field_wrapper input {
+        border-radius: unset;
+    }
+</style>
+                </div>
+                <div class="form_win" id="othProduct_trial_form" style="display: none">
+                    <form id="TestOtherProductForm" action="/ru/products/testaccess" method="post">
+<input type="hidden" name="_csrf" value="bXucwbazJP8Mni6q9pazu3Rv7bO1B06bGv_KVVgxJR0-Ld-r5oJsmV_WV8zG7sP-NxWY_NhkLa17hqAyFFx1dA==">
+<div class="row">
+    <div class="col-sm-12">
+        <div class="ta_form_field_wrapper_test_access">
+            <span class="red-star_test_access" style="float: right; color: red;">*</span>
+            <div class="form-group field-testaccessform-name required">
+
+<input type="text" id="testaccessform-name" class="form-control valid_change_field" name="TestAccessForm[name]" placeholder="Ф.И.О." aria-required="true">
+
+<div class="help-block"></div>
+</div>        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-6">
+        <div class="ta_form_field_wrapper_test_access">
+            <span class="red-star_test_access" style="float: right; color: red;">*</span>
+            <div class="form-group field-testaccessform-phone required">
+
+<input type="text" id="testaccessform-phone" class="form-control valid_change_field" name="TestAccessForm[phone]" placeholder="Телефон: 89001234567" aria-required="true">
+
+<div class="help-block"></div>
+</div>        </div>
+    </div>
+    <div class="col-sm-6">
+        <div class="ta_form_field_wrapper_test_access">
+            <span class="red-star_test_access" style="float: right; color: red;">*</span>
+            <div class="form-group field-testaccessform-email required">
+
+<input type="text" id="testaccessform-email" class="form-control valid_change_field" name="TestAccessForm[email]" placeholder="E-mail" aria-required="true">
+
+<div class="help-block"></div>
+</div>        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12">
+        <div class="ta_form_field_wrapper_test_access">
+            <span class="red-star_test_access" style="float: right; color: red;">*</span>
+            <div class="form-group field-testaccessform-company required">
+
+<input type="text" id="testaccessform-company" class="form-control valid_change_field" name="TestAccessForm[company]" placeholder="Компания" aria-required="true">
+
+<div class="help-block"></div>
+</div>        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12">
+        <div class="ta_form_field_wrapper_test_access">
+            <span class="red-star_test_access" style="float: right; color: red;">*</span>
+            <div class="form-group field-testaccessform-position required">
+
+<input type="text" id="testaccessform-position" class="form-control valid_change_field" name="TestAccessForm[position]" placeholder="Должность" aria-required="true">
+
+<div class="help-block"></div>
+</div>        </div>
+    </div>
+</div>
+<div class="form-group field-testaccessform-des required">
+
+<input type="hidden" id="testaccessform-des" class="form-control" name="TestAccessForm[des]">
+
+<div class="help-block"></div>
+</div><div class="row">
+    <div class="red-star-wrapper" style="margin-bottom: 50px">
+        <div class="col-sm-12">
+            <span class="red-star_test_access" style="color: red;">*</span> <span class="red-star-label_test_access"> — поля обязательные для заполнения</span>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12">
+        <input type="checkbox" id="TestOtherProductFormscales" name="TestAccessForm[scales]" oninvalid="check(this);" required="">
+        <label for="scales" class="for-scales" id="othProduct_trial_form"><a href="#" style="border-bottom: 1px dashed #9DA9B0;color:#9DA9B0;margin-left: 10px ">Я согласен на обработку персональных данных</a></label>
+    </div>
+</div>
+<div class="form-group field-testaccessform-captcha required">
+
+<div style="display: flex;flex-wrap: nowrap;justify-content: space-around; align-items: center"><img id="TestOtherProductForm-captcha-image" src="/ru/products/captcha?v=6a3153269ffa73.25003807" alt=""> <b>= </b>
+    <input type="text" id="testaccessform-captcha" class="form-control valid_change_field" name="TestAccessForm[captcha]" aria-required="true"> <div>Введите результат <br> выражения с картинки</div></div><br><a href="#" id="TestOtherProductForm-captcha-refresh-link">Обновить изображение</a>
+
+<div class="help-block"></div>
+</div><div class="jumbo-2-button-wrapper_test_access" style="text-align: center">
+    <button type="submit" class="btn btn-primary" style="padding: 10px 20px!important;">Отправить заявку</button>
+</div>
+</form><script type="text/javascript">
+    function check(input) {
+        if (input.checked !== true) {
+            input.setCustomValidity('Чтобы продолжить, установите этот флажок');
+        } else {
+            input.setCustomValidity('');
+        }
+    }
+
+
+    $('#TestOtherProductForm').on("submit",function(e){
+        $(this).on('beforeValidate',function(event, messages, errorAttributes){
+            $(".preloader").css('display', 'block');
+            $(this).css('opacity', '0.6');
+        });
+
+        $(this).on('afterValidate',function(event, messages, errorAttributes){
+            $(".preloader").css('display', 'none');
+            $(this).css('opacity', '1');
+        });
+    });
+
+    $('#TestOtherProductForm').on('beforeSubmit', function (event, messages, errorAttributes) {
+        event.preventDefault();
+        $(this).find('input[type=submit], button[type=submit]').prop('disabled', false)
+        var data = $(event.target).serializeArray();
+        data.push({name: 'submit', value: 1});
+        var url = langSuf + '/products/testaccess';
+        $.ajax({
+            url: url,
+            type: 'post',
+            dataType: 'json',
+            data: data,
+            beforeSend: function(){
+                $(".preloader").css('display', 'block');
+                $(event.target).css('opacity', '0.6');
+            },
+            success: function (data) {
+                if (data.success === true) {
+                    $('.form_win ').css('display', 'none');
+                    $('#successful_appeal_request_form').css('display', 'block');
+                } else {
+                    failFormSend();
+                }
+            },
+            error: function () {
+                failFormSend();
+            },
+            complete: function(){
+                $(".preloader").css('display', 'none');
+                $(event.target).css('opacity', '1');
+            }
+        });
+
+        return false;
+    });
+</script>
+<style>
+    .ta_form_field_wrapper input {
+        border-radius: unset;
+    }
+</style>                </div>
+                <div class="form_win" id="vcProduct_trial_form" style="display: none">
+                    <form id="TestValProductForm" action="/ru/products/testaccessval" method="post">
+<input type="hidden" name="_csrf" value="bXucwbazJP8Mni6q9pazu3Rv7bO1B06bGv_KVVgxJR0-Ld-r5oJsmV_WV8zG7sP-NxWY_NhkLa17hqAyFFx1dA=="><div class="row">
+    <div class="col-sm-12">
+        <div class="ta_form_field_wrapper_test_access">
+            <span class="red-star_test_access" style="float: right; color: red;">*</span>
+            <div class="form-group field-testaccessform-name required">
+
+<input type="text" id="testaccessform-name" class="form-control valid_change_field" name="TestAccessForm[name]" placeholder="Ф.И.О." aria-required="true">
+
+<div class="help-block"></div>
+</div>        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-6">
+        <div class="ta_form_field_wrapper_test_access">
+            <span class="red-star_test_access" style="float: right; color: red;">*</span>
+            <div class="form-group field-testaccessform-phone required">
+
+<input type="text" id="testaccessform-phone" class="form-control valid_change_field" name="TestAccessForm[phone]" placeholder="Телефон: 89001234567" aria-required="true">
+
+<div class="help-block"></div>
+</div>        </div>
+    </div>
+    <div class="col-sm-6">
+        <div class="ta_form_field_wrapper_test_access">
+            <span class="red-star_test_access" style="float: right; color: red;">*</span>
+            <div class="form-group field-testaccessform-email required">
+
+<input type="text" id="testaccessform-email" class="form-control valid_change_field" name="TestAccessForm[email]" placeholder="E-mail" aria-required="true">
+
+<div class="help-block"></div>
+</div>        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12">
+        <div class="ta_form_field_wrapper_test_access">
+            <span class="red-star_test_access" style="float: right; color: red;">*</span>
+            <div class="form-group field-testaccessform-company required">
+
+<input type="text" id="testaccessform-company" class="form-control valid_change_field" name="TestAccessForm[company]" placeholder="Компания" aria-required="true">
+
+<div class="help-block"></div>
+</div>        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12">
+        <div class="ta_form_field_wrapper_test_access">
+            <span class="red-star_test_access" style="float: right; color: red;">*</span>
+            <div class="form-group field-testaccessform-position required">
+
+<input type="text" id="testaccessform-position" class="form-control valid_change_field" name="TestAccessForm[position]" placeholder="Должность" aria-required="true">
+
+<div class="help-block"></div>
+</div>        </div>
+    </div>
+</div>
+<div class="form-group field-testaccessform-des-val required">
+
+<input type="hidden" id="testaccessform-des-val" class="form-control" name="TestAccessForm[des]">
+
+<div class="help-block"></div>
+</div><div class="row">
+    <div class="col-sm-12">
+        <div class="ta_form_field_wrapper_test_access">
+            <label for="method" style="width: 100%">Методика<span class="red-star_test_access" style="float: right; color: red;">*</span></label>
+            <div class="custom-select-vc" style="margin-bottom: 15px;">
+                <select name="TestAccessForm[method]">
+                    <option value="0">Все методики</option>
+                    <option value="1">Рублевые облигации</option>
+                    <option value="2">Ипотечные облигации</option>
+                    <option value="3">Еврооблигации Правительства РФ</option>
+                    <option value="4">Облигации с плавающим купоном</option>
+                    <option value="6">Корпоративные евробонды</option>
+                    <option value="7">Облигации без международных рейтингов</option>
+                    <option value="8">Субординированные облигации</option>
+                    <option value="9">Структурные облигации</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12">
+        <div class="ta_form_field_wrapper_test_access">
+            <label for="method" style="width: 100%">Тип доступа<span class="red-star_test_access" style="float: right; color: red;">*</span></label>
+            <div class="custom-select-vc">
+                <select name="TestAccessForm[accessType]">
+                    <option value="1">Просмотр и скачивание</option>
+                    <option value="2">Скачивание</option>
+                    <option value="3">Просмотр</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="red-star-wrapper" style="margin-bottom: 50px">
+        <div class="col-sm-12">
+            <span class="red-star_test_access" style="color: red;">*</span> <span class="red-star-label_test_access"> — поля обязательные для заполнения</span>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12">
+        <input type="checkbox" id="TestValProductFormscales" name="TestAccessForm[scales]" oninvalid="check(this);" required="">
+        <label for="scales" class="for-scales" id="vcProduct_trial_form"><a href="#" style="border-bottom: 1px dashed #9DA9B0;color:#9DA9B0;margin-left: 10px ">Я согласен на обработку персональных данных</a></label>
+    </div>
+</div>
+<div class="form-group field-testaccessform-captcha required">
+
+<div style="display: flex;flex-wrap: nowrap;justify-content: space-around; align-items: center"><img id="TestValProductForm-captcha-image" src="/ru/products/captcha?v=6a315326a09494.75700926" alt=""> <b>= </b>
+    <input type="text" id="testaccessform-captcha" class="form-control valid_change_field" name="TestAccessForm[captcha]" aria-required="true"> <div>Введите результат <br> выражения с картинки</div></div><br><a href="#" id="TestValProductForm-captcha-refresh-link">Обновить изображение</a>
+
+<div class="help-block"></div>
+</div><div class="jumbo-2-button-wrapper_test_access" style="text-align: center">
+    <button type="submit" class="btn btn-primary" style="padding: 10px 20px!important;">Отправить заявку</button>
+</div>
+</form><script type="text/javascript">
+    function check(input) {
+        if (input.checked !== true) {
+            input.setCustomValidity('Чтобы продолжить, установите этот флажок');
+        } else {
+            input.setCustomValidity('');
+        }
+    }
+
+    document.getElementById('butMod').addEventListener('click', function() {
+        const refreshLinkIds = [
+            'ConsultForm-captcha-refresh-link',
+            'TestOtherProductForm-captcha-refresh-link',
+            'TestValProductForm-captcha-refresh-link'
+        ];
+        refreshLinkIds.forEach(id => {
+            const element = document.getElementById(id);            
+                if(element) {
+                    element.click();                
+                }
+        });
+    });
+
+    $('#TestValProductForm').on("submit",function(e){
+        $(this).on('beforeValidate',function(event, messages, errorAttributes){
+            $(".preloader").css('display', 'block');
+            $(this).css('opacity', '0.6');
+        });
+
+        $(this).on('afterValidate',function(event, messages, errorAttributes){
+            $(".preloader").css('display', 'none');
+            $(this).css('opacity', '1');
+        });
+    });
+
+    $('#TestValProductForm').on('beforeSubmit', function (event) {
+        event.preventDefault();
+        $(this).find('input[type=submit], button[type=submit]').prop('disabled', true);
+        var data = $('#TestValProductForm').serializeArray();
+        data.push({name: 'submit', value: 1});
+        var url = langSuf + '/products/testaccessval';
+        $.ajax({
+            url: url,
+            type: 'post',
+            dataType: 'json',
+            data: data,
+            beforeSend: function(){
+                $(".preloader").css('display', 'block');
+                $('#TestValProductForm').css('opacity', '0.6');
+            },
+            success: function (data) {
+                if (data.success === true) {
+                    $('.form_win ').css('display', 'none');
+                    $('#successful_appeal_request_form').css('display', 'block');
+                } else {
+                    failFormSend();
+                }
+            },
+            error: function () {
+                failFormSend();
+            },
+            complete: function(){
+                $(".preloader").css('display', 'none');
+                $('#TestValProductForm').css('opacity', '1');
+            }
+        });
+
+        return false;
+    });
+</script>
+<style>
+    .ta_form_field_wrapper input {
+        border-radius: unset;
+    }
+</style>
+                </div>
+                <div class="form_win" id="personal_data_form" style="display: none">
+                    <h4 style="text-align: center">Согласие на обработку данных</h4>
+                    <p style="text-indent: 20px;">Заполняя настоящую форму и отправляя ее нажатием кнопки «Отправить заявку» подтверждаю, что ознакомлен с <a href="/files/docs/personal_information.pdf" target="_blank">Политикой обработки персональных данных в НКО АО НРД</a> и даю согласие Небанковской кредитной организации акционерному обществу «Национальный расчетный депозитарий», адрес места нахождения: г. Москва, ул. Спартаковская, д. 12 (далее — Оператор) на обработку своих персональных данных в соответствии с указанной политикой. Также,  в соответствии с пунктом 4 статьи 9 Федерального закона от 27.07.2006 N 152-ФЗ «О персональных данных», даю согласие Оператору на обработку (с использованием средств автоматизации), в том числе сбор, запись, систематизацию, накопление, хранение, уточнение (обновление, изменение), извлечение, использование, передачу, включая трансграничную передачу, обезличивание, блокирование, удаление, уничтожение следующих персональных данных: фамилия, имя, отчество, адрес электронной почты, место работы, должность, телефонный номер, в целях получения информационных рассылок, сообщений, проведения опросов, анкетирования, консультаций по телефону.
+</p><p style="text-indent: 20px;">Настоящее согласие действует со дня выражения моего согласия с условиями оказания услуг и до момента отписки от предоставляемых услуг, также согласие может быть отозвано мною в любое время в течение всего срока действия согласия путем направления Оператору в письменном виде уведомления об отзыве согласия в произвольной форме.</p>                    <div style="text-align: center;">
+                        <button type="submit" class="btn-close-personal-data btn btn-primary" style="padding: 10px 20px!important;">Закрыть</button>
+                    </div>
+                </div>
+                <div class="form_win" id="successful_appeal_request_form" style="display: none">
+                    <p class="data_p">
+                        <b>Спасибо за обращение, мы свяжемся с Вами в ближайшее время.</b>
+                    </p>
+                </div>
+                <div class="preloader" style="display: none; z-index: 999;">
+                    <div class="container-load">
+                        <div class="loader11">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<style>
+    .but_trial {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-around;
+        padding: 20px;
+    }
+
+    .trial_p {
+        margin-top: 15px;
+        color: black;
+        font-size: 18px;
+        white-space: pre-wrap;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .trial_button {
+        font-weight: bolder;
+        background-color: darkgray;
+        border-radius: 10px;
+        border: 2px solid #e5e5e5;;
+        height: 50px;
+        width: 210px;
+        margin-top: 1rem;
+    }
+
+    .modal.fade.in {
+        padding-right: 0px !important;
+        z-index: 1000000;
+    }
+
+    .modal-open {
+        padding-right: 0px !important;
+    }
+
+    .loader11 {
+        width: 20%;
+        height: 15%;
+        position: absolute;
+        margin: 30% 40%;
+    }
+
+    .loader11 span {
+        display: block;
+        width: 5px;
+        height: 10px;
+        background: #e43632;
+        position: absolute;
+        bottom: 0;
+        animation: loading-11 2.25s infinite ease-in-out
+    }
+
+    .loader11 span:nth-child(2) {
+        left: 11px;
+        animation-delay: .2s
+    }
+
+    .loader11 span:nth-child(3) {
+        left: 22px;
+        animation-delay: .4s
+    }
+
+    .loader11 span:nth-child(4) {
+        left: 33px;
+        animation-delay: .6s
+    }
+
+    .loader11 span:nth-child(5) {
+        left: 44px;
+        animation-delay: .8s
+    }
+
+    .loader11 span:nth-child(6) {
+        left: 55px;
+        animation-delay: 1s
+    }
+
+    .loader11 span:nth-child(7) {
+        left: 66px;
+        animation-delay: 1.2s
+    }
+
+    .loader11 span:nth-child(8) {
+        left: 77px;
+        animation-delay: 1.4s
+    }
+
+    .loader11 span:nth-child(9) {
+        left: 88px;
+        animation-delay: 1.6s
+    }
+
+    @-webkit-keyframes loading-11 {
+        0% {
+            height: 10px;
+            transform: translateY(0);
+            background: #ff4d80
+        }
+        25% {
+            height: 60px;
+            transform: translateY(15px);
+            background: #3423a6
+        }
+        50% {
+            height: 10px;
+            transform: translateY(-10px);
+            background: #e29013
+        }
+        100% {
+            height: 10px;
+            transform: translateY(0);
+            background: #e50926
+        }
+    }
+
+    @keyframes loading-11 {
+        0% {
+            height: 10px;
+            transform: translateY(0);
+            background: #ff4d80
+        }
+        25% {
+            height: 60px;
+            transform: translateY(15px);
+            background: #3423a6
+        }
+        50% {
+            height: 10px;
+            transform: translateY(-10px);
+            background: #e29013
+        }
+        100% {
+            height: 10px;
+            transform: translateY(0);
+            background: #e50926
+        }
+    }
+
+    .container-load {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .preloader {
+        display: block;
+        z-index: 999;
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    #access_request_form {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-around;
+        padding: 20px;
+    }
+
+    #request-header {
+        text-align: center;
+        font-size: 18px;
+        color: #fff !important;
+        background: #eb3426;
+    }
+
+    .request_button {
+        background-color: #FFFFFF;
+        border-radius: 10px;
+        border: 2px solid #e5e5e5;;
+        height: 225px;
+        width: 225px;
+    }
+
+    #action_form {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-around;
+        padding: 20px;
+    }
+
+    .request_p {
+        margin-top: 15px;
+        color: black;
+        font-size: 18px;
+        white-space: pre-wrap;
+        font-weight: bold;
+    }
+
+    .data_p {
+        margin: 10px auto 30px auto;
+        text-align: center;
+        font-size: 18px;
+        white-space: pre-line;
+    }
+
+    .help-block {
+        white-space: pre-line;
+    }
+
+    #personal_data_form {
+        color: black;
+        font-size: 16px;
+        white-space: pre-line;
+    }
+</style>
+<script>
+    var AjaxChatCsrfData = ({
+        data: {"_csrf":"bXucwbazJP8Mni6q9pazu3Rv7bO1B06bGv_KVVgxJR0-Ld-r5oJsmV_WV8zG7sP-NxWY_NhkLa17hqAyFFx1dA=="}    });
+    $.ajaxSetup(AjaxChatCsrfData);
+
+    jQuery(document).ready(function ($) {
+        $('.request_button').click(function () {
+            var idAction = this.name;
+            switch (idAction) {
+                case 'consult':
+                    $('.form_win ').css('display', 'none');
+                    $('#consult_form').css('display', 'block');
+                    $('.modal-title').text('Получить консультацию');
+                    break;
+                case 'access':
+                    $('.form_win ').css('display', 'none');
+                    $('#access_form').css('display', 'block');
+                    $('.modal-title').text('Какой доступ вы желаете получить?');
+                    break;
+                case 'data':
+                    $('.form_win ').css('display', 'none');
+                    $('#data_access_form').css('display', 'block');
+                    $('.modal-title').text('Боевой доступ');
+                    break;
+                case 'trial':
+                    $('.form_win ').css('display', 'none');
+                    $('#trial_access_form').css('display', 'block');
+                    $('.modal-title').text('Тестовый доступ');
+                    break;
+            }
+        });
+        $('.trial_button').click(function (e) {
+            $('.form_win ').css('display', 'none');
+            $('.modal-title').text(this.innerHTML);
+            document.getElementById('title-request').title = this.value;
+
+            if (e.target.form) {
+
+                $('#request_form').one('hide.bs.modal', {form: e.target.form}, function (ev) {
+                    ev.data.form.id = ev.data.form.id.replace(new RegExp('-' + e.target.id + '$'), '');
+                });
+
+                e.target.form.id += '-' + e.target.id;
+            }
+
+            switch (this.name) {
+                case 'oth_product':
+                    document.getElementById('testaccessform-des').value = document.getElementById("title-request").title;
+                    $('#othProduct_trial_form').css('display', 'block');
+                    break;
+                case 'vc_product':
+                    document.getElementById('testaccessform-des-val').value = document.getElementById("title-request").title;
+                    $('#vcProduct_trial_form').css('display', 'block');
+                    break;
+            }
+        });
+        var idForm;
+        $('.for-scales').click(function () {
+            idForm = this.id;
+            $('.form_win ').css('display', 'none');
+            $('#personal_data_form').css('display', 'block');
+        });
+        $('.btn-close-personal-data').click(function () {
+            $('.form_win ').css('display', 'none');
+            $('#' + idForm).css('display', 'block');
+        });
+
+    });
+
+    $('#request_form').on('hidden.bs.modal', function (e) {
+        $('.form_win ').css('display', 'none');
+        $('#action_form').css('display', 'flex');
+        $('.modal-title').text('Что бы вы хотели сделать?');
+        document.getElementById("ConsultForm").reset();
+        document.getElementById("TestOtherProductForm").reset();
+        document.getElementById("TestValProductForm").reset();
+    });
+</script>        <a class="btn btn-light btn-to-primary" href="/ru/login?url=https%3A%2F%2Fnsddata.ru%2Fru%2Fnews%3Ftext%3DRU000A105P23" role="button">Вход</a>
+    	<a class="btn btn-light btn-to-primary" href="/ru/faq" role="button">Вопросы и ответы</a>
+    <a class="btn btn-light btn-to-primary" href="/ru/documents" role="button">Документы</a>
+    <a class="btn btn-light btn-to-primary" id="btn-lang" href="https://nsddata.ru/en/news?text=RU000A105P23" role="button">En</a>
+</div>
+<script>
+    jQuery(document).ready(function ($) {
+        $('#butMod').click(function () {
+            $('#request_form').modal('toggle');
+            $('.modal-dialog').css('z-index','1000000000')
+            return false;
+        });
+    });
+</script>
+<style>
+    .modal-backdrop.fade.in{
+        z-index: 2;
+    }
+    .navbar-collapse.collapse.in{
+        z-index: 1;
+    }
+</style>        <ul class="nav navbar-nav">
+		                	                        <li>
+            	<a href="/ru/products/2">API NSD</a>
+            </li>
+                    		                	                        <li class="dropdown">
+                <a href="/ru/products/disc">ДИСК НРД</a>
+                <span class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><span class="caret"></span></span>
+                <ul class="dropdown-menu">
+                                                                              <li>
+						<a href="/ru/disc/org">Организации</a>
+                    </li>
+                                                                              <li>
+						<a href="/ru/disc/sec">Ценные бумаги</a>
+                    </li>
+                                                                              <li>
+						<a href="/ru/disc/ca">Календарь корпоративных действий</a>
+                    </li>
+                                                                              <li>
+						<a href="/ru/disc/ce">Календарь событий по организациям</a>
+                    </li>
+                                                                              <li>
+						<a href="/ru/disc/news">Сообщения</a>
+                    </li>
+                                                                              <li>
+						<a href="/ru/disc/news/sec">Сообщения по&nbsp;ценным бумагам</a>
+                    </li>
+                                                                              <li>
+						<a href="/ru/disc/news/org">Сообщения о&nbsp;событиях по организации</a>
+                    </li>
+                                                                              <li>
+						<a href="/ru/disc/news/ls">Сообщения о&nbsp;действиях с лицевыми счетами НРД</a>
+                    </li>
+                                                                              <li>
+						<a href="/ru/disc/docs">Эмиссионные документы</a>
+                    </li>
+                                  </ul>
+            </li>
+                    		                	                        <li class="dropdown">
+                <a href="/ru/products/valuation-center#about">Ценовой Центр</a>
+                <span class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><span class="caret"></span></span>
+                <ul class="dropdown-menu">
+                                                                              <li>
+						<a href="/ru/products/valuation-center#about">О сервисе</a>
+                    </li>
+                                                                              <li>
+						<a href="/ru/products/valuation-center#methods">Данные</a>
+                    </li>
+                                                                              <li>
+						<a href="/ru/products/valuation-center#education">Обучение</a>
+                    </li>
+                                                                              <li>
+						<a href="/ru/products/valuation-center#documents">Документы и методики</a>
+                    </li>
+                                  </ul>
+            </li>
+                    		                	                        <li class="active">
+            	<a href="/ru/newslists">Новостные ленты</a>
+            </li>
+                    		                	                        <li>
+            	<a href="/ru/refbooks">Справочники</a>
+            </li>
+                    		                	                        <li class="dropdown">
+                <a href="/ru/addservices">Доп. сервисы</a>
+                <span class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><span class="caret"></span></span>
+                <ul class="dropdown-menu">
+                                                                              <li>
+						<a href="/ru/products/28">Рассылка информации депонентам НРД</a>
+                    </li>
+                                                                              <li>
+						<a href="/ru/products/32">Эмиссионная библиотека</a>
+                    </li>
+                                                                              <li>
+						<a href="/ru/intsec-report">ISIN/CFI</a>
+                    </li>
+                                                                              <li>
+						<a href="/ru/lk/mailing">Мои рассылки</a>
+                    </li>
+                                                                              <li>
+						<a href="/ru/structure-report">Отчет о структуре владения ценными бумагами</a>
+                    </li>
+                                                                              <li>
+						<a href="/ru/dannye-po-kursam-fx-i-dragocennym-metallam">Данные по курсам FX и драгоценным металлам</a>
+                    </li>
+                                                                              <li>
+						<a href="/ru/products/pifs">Агрегатор ПИФ НРД</a>
+                    </li>
+                                  </ul>
+            </li>
+                    		        </ul>
+    </div><!-- /.navbar-collapse -->
+  </div><!-- /.container-fluid -->
+</nav>    </div>
+		<div class="container content">
+    	
+        <style>
+            .breadcrumb > li + li:before {
+                color: black;
+                content: ">";
+            }
+        </style>
+        <ul class="breadcrumb" style="
+    font-family: Montserrat,'Open Sans',sans-serif;
+    font-size: 1.5rem;
+    font-weight: 400;
+    background-color: inherit;
+    margin-bottom: 0px;"><li><i><a href="/">Главная</a></i></li>
+<li><i><a href="/ru/newslists">Новостные ленты</a></i></li>
+<li class="active">Новости ЦКИ</li>
+</ul>
+        
+<script type="text/javascript">
+    $(function () {
+        $('[data-toggle="popover"]').popover()
+    })
+</script>
+
+<h1>Новости ЦКИ</h1>
+
+
+<div class="panel panel-default search_form">
+    <form name="search_form" class="panel-body" role="form">
+        <input type="text" name="text" class="form-control" placeholder="искать по сообщениям" value="RU000A105P23">
+        <div class="checkbox">
+			<label><input type="checkbox" name="in_title_only">только в заголовках</label>
+        </div>
+        <div class="form-group">
+            <label for="datepicker" class="control-label">Период с</label>
+            <input type="text" id="datepicker" name="from" class="form-control form-control-date hasDatepicker" placeholder="дд.мм.гггг" value="09.06.2026" readonly="readonly">
+            <label for="datepicker1" class="control-label">по</label>
+            <input type="text" id="datepicker1" name="to" class="form-control form-control-date hasDatepicker" placeholder="дд.мм.гггг" value="16.06.2026" readonly="readonly">
+        </div>
+        <input type="submit" class="btn btn-primary" value="Поиск">
+        <input type="button" class="btn btn-default reset_search_form" value="Сбросить фильтры">
+    </form>
+</div><div class="promo-banner">
+    <span class="_text_banner">Новостная лента «Новости ЦКИ» также доступна по API</span>
+    <a class="inline-flex items-center justify-center relative button-banner" href="products/getnews/33" target="_self" style="pointer-events:auto;text-decoration: none;">
+        <span class="text-button-banner">Оформить подписку</span></a>
+</div>
+<div class="news_list">
+            <div class="row news_list__item">
+        <div class="col-sm-2 col-md-1 news_list__item__date">
+            16.06.2026        </div>
+        <div class="col-sm-10 col-md-11 news_list__item__header">
+            <a class="news_list__item__header__title" href="/ru/news/view/1409937" target="_blank">
+                (INTR) (Выплата процентного дохода) О получении головным депозитарием, осуществляющим обязательное централизованное хранение ценных бумаг/централизованный учет прав на ценные бумаги, подлежащих передаче выплат по облигациям эмитента (Государственная компания "Автодор", 7717151380, RU000A105P23, 4-01-00011-T-005P) (капитализированный доход)</a>
+				 <a href="/ru/disc/news?mes_id=15089448892" target="_blank">ДИСК</a>        </div>
+    </div>
+        <div class="row news_list__item">
+        <div class="col-sm-2 col-md-1 news_list__item__date">
+            16.06.2026        </div>
+        <div class="col-sm-10 col-md-11 news_list__item__header">
+            <a class="news_list__item__header__title" href="/ru/news/view/1409769" target="_blank">
+                (INTR) (Выплата купонного дохода) О получении головным депозитарием, осуществляющим обязательное централизованное хранение ценных бумаг/централизованный учет прав на ценные бумаги, подлежащих передаче выплат по облигациям эмитента (Государственная компания "Автодор", 7717151380, RU000A105P23, 4-01-00011-T-005P)</a>
+				 <a href="/ru/disc/news?mes_id=15084593356" target="_blank">ДИСК</a>        </div>
+    </div>
+        <div class="row news_list__item">
+        <div class="col-sm-2 col-md-1 news_list__item__date">
+            16.06.2026        </div>
+        <div class="col-sm-10 col-md-11 news_list__item__header">
+            <a class="news_list__item__header__title" href="/ru/news/view/1409768" target="_blank">
+                (PRED) (Частичное погашение без уменьшения номинала) О получении головным депозитарием, осуществляющим обязательное централизованное хранение ценных бумаг/централизованный учет прав на ценные бумаги, подлежащих передаче выплат по облигациям эмитента (Государственная компания "Автодор", 7717151380, RU000A105P23, 4-01-00011-T-005P)</a>
+				 <a href="/ru/disc/news?mes_id=15084590386" target="_blank">ДИСК</a>        </div>
+    </div>
+        <div class="row news_list__item">
+        <div class="col-sm-2 col-md-1 news_list__item__date">
+            15.06.2026        </div>
+        <div class="col-sm-10 col-md-11 news_list__item__header">
+            <a class="news_list__item__header__title" href="/ru/news/view/1409076" target="_blank">
+                (INTR) (Выплата процентного дохода) О получении головным депозитарием, осуществляющим обязательное централизованное хранение ценных бумаг/централизованный учет прав на ценные бумаги, подлежащих передаче выплат по облигациям эмитента (Государственная компания "Автодор", 7717151380, RU000A105P23, 4-01-00011-T-005P)</a>
+				 <a href="/ru/disc/news?mes_id=15070093990" target="_blank">ДИСК</a>        </div>
+    </div>
+        </div>
+<div class="row">
+    <div class="fixed-footer">
+        <br>
+        Информация предоставляется исключительно в ознакомительных целях в соответствии с <a href="/ru/user-agreement-news">Пользовательским соглашением</a>.    </div>
+</div>
+
+<div class="btn-print"><span onclick="window.print()">Печать страницы</span></div>
+<div class="modal in" id="news_terms" tabindex="-1" role="dialog" aria-labelledby="termsModalLabel" aria-hidden="true" style="display: block; padding-left: 0px;">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Соглашение об использовании сайта (пользовательское соглашение)</h3>
+      </div>
+      <div class="modal-body">
+				
+        <h3>Общие положения</h3>
+        <p>С данным пользовательским соглашением (далее – Соглашение) необходимо ознакомиться каждому, кто намерен использовать информацию, размещаемую Небанковской кредитной организацией акционерным обществом «Национальный расчетный депозитарий» (далее – Центральный депозитарий) на своём официальном сайте <a href="https://www.nsddata.ru">www.nsddata.ru</a> (далее – Сайт) в разделе «Новости ЦКИ» (далее – Информация). </p>
+        <p>Пользователем Сайта может являться любое лицо, заинтересованное в получении Информации (далее – Пользователь). </p>
+        <p>Переходя к разделу Сайта «Новости ЦКИ» Пользователь тем самым подтверждает, что он ознакомлен с Соглашением, полностью принимает все его положения, а также заключает Соглашение путем присоединения к нему. </p>
+        <p>Заключая настоящее Соглашение, Пользователь дает согласие на обработку своих персональных данных, за исключением действий по их распространению третьим лицам. Центральный депозитарий обязуется предпринимать все необходимые меры для защиты персональных данных Пользователя от неправомерного доступа, изменения, раскрытия или уничтожения. </p>
+        <h3>Предоставление доступа к Информации</h3>	
+        <p>В разделе Сайта «Новости ЦКИ» Центральный депозитарий размещает информацию (с возможностью ее копирования и передачи), связанную с осуществлением прав по ценным бумагам, полученную им от эмитентов ценных бумаг или лиц, обязанных по ценным бумагам. Также в данном разделе Сайта приводится иная информация, полученная из открытых источников, в том числе публикуемая эмитентами ценных бумаг. Информация размещается в виде новостной ленты, которая обновляется по рабочим дням Центрального депозитария в режиме on-line с 9:00 до 18:00. </p>
+        <p>Сайт Центрального депозитария <a href="https://www.nsddata.ru">www.nsddata.ru</a> доступен для Пользователя без ограничения по времени. При невозможности осуществления доступа на Сайт Пользователь уведомляет об этом Центральный депозитарий посредством направления письма в свободной форме на адрес электронной почты <a href="mailto:soed@nsd.ru" target="_blank">soed@nsd.ru</a>. </p>
+        <p>Пользователь не вправе осуществлять <b>любой автоматизированный сбор данных</b> Информации в формате информационных сообщений, размещенных на Сайте в разделе «Новости ЦКИ». </p>
+        <p>Пользователь не вправе использовать полученную Информацию для подготовки информационных продуктов, распространяемых им на платной основе, а также распространять содержащиеся в информационных сообщениях данные на платной основе.
+        </p><p>Пользователь, желающий получить дополнительно рассылку новостей, в праве оформить <a href="https://nsddata.ru/ru/products/getnews/33#about">подписку</a>, следуя указаниям на домашней странице Сайта.</p>
+        <h3>Ограничение ответственности</h3>
+        <p>Центральный депозитарий несет ответственность в соответствии с законодательством Российской Федерации за искажение информации, полученной от эмитента и/или лица, обязанного по ценным бумагам. </p>
+        <p>Пользователь несет ответственность за несоблюдение условий настоящего Соглашения, правил и инструкций, размещенных на Сайте. </p>
+        <p>Пользователь несет ответственность перед третьими лицами за свои действия, связанные с использованием Информации, полученной на Сайте, в том числе, если такие действия приведут к нарушению прав и законных интересов третьих лиц, а также за соблюдение законодательства при использовании Сайта. </p>
+        <p>Центральный депозитарий не несет ответственности: за результат и/или полезность использования Информации; за прямой или косвенный ущерб, причиненный Пользователю в период предоставления доступа к Информации, в том числе, понесенный в результате ошибок, пропусков, перерывов в работе, удаления файлов, изменения функций, дефектов, задержек в работе при передаче данных и подобных событий, случившихся не по вине Центрального депозитария; за упущенную Пользователем выгоду; за качество работы сети Интернет при доступе к Сайту. </p>
+        <p>Центральный депозитарий не предоставляет никаких гарантий или условий в отношении соответствия Информации конкретным целям Пользователя. </p>		
+        <h3>Разрешение спорных ситуаций</h3>
+        <p>Центральный депозитарий вправе проводить аудит использования и распространения любым лицом Информации, размещаемой в разделе Сайта «Новости ЦКИ». При обнаружении фактов несанкционированного использования или распространения Информации Пользователем Центральный депозитарий оставляет за собой право на обращение за судебной защитой своих прав, в том числе с исками о возмещении убытков и защите деловой репутации. </p>
+        <p>При этом предполагается, что все разногласия между сторонами Соглашения будут решаться с помощью переговоров. Если разногласие не удалось решить в ходе переговоров, вопрос подлежит разрешению в суде г. Москвы согласно правилам подведомственности и подсудности. </p>
+        <h3>Заключительные положения</h3>
+        <p>Права на Сайт и размещённую на нем Информацию принадлежат Центральному депозитарию в соответствии с требованиями с законодательства Российской Федерации. </p>
+		<p>Центральный депозитарий вправе в одностороннем порядке изменять структуру страниц сайта, состав и объем размещаемой Информации. </p>
+        <p>При этом Центральный депозитарий обязуется своевременно доводить до сведения Пользователя любые изменения порядка размещения и/или доступа к Информации посредством публикации соответствующего уведомления на Сайте. </p>
+        <p>Пользователь обязуется не предпринимать каких-либо действий, которые могут привести к перебоям функционирования Сайта, в том числе действий, которые связаны с повышенной нагрузкой на Сайт. </p>
+        <p>Вопросы, не урегулированные настоящим Соглашением, подлежат разрешению в соответствии с законодательством Российской Федерации. </p>
+        <p><b><em>Редакция Пользовательского соглашения от  10.03.2026 года.</em>
+		      </b></p></div><b>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary center-block" data-dismiss="modal" onclick="Cookies.set('news_rules_confirmed', 1, {expires: 100000});">Я согласен с условиями</button>
+      </div>
+    </b></div><b>
+  </b></div><b>
+</b></div><b>
+<script>
+$('#news_terms').modal({
+	backdrop:"static",
+	keyboard:false
+});
+</script><script>
+    let datepickerOptions = {
+        firstDay: 1,
+        changeMonth: true,
+        changeYear: true,
+        dateFormat: 'dd.mm.yy',
+        onSelect: function (date) {
+            cleanPeriodSelect();
+        }
+    };
+
+    if (document.documentElement.lang == 'ru') {
+        datepickerOptions.monthNamesShort = ["Янв", "Фев", "Мар", "Апр", "Май", "Июнь", "Июль", "Авг", "Сен", "Окт", "Ноя", "Дек"];
+        datepickerOptions.dayNamesMin = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+    }
+    $("#datepicker, #datepicker1, #datepicker2, #datepicker3, #datepicker4, #datepicker5").datepicker(datepickerOptions)
+        .attr('readonly', true);
+</script>
+<style>
+    .promo-banner {
+        background-image: url("/img/promo_banner.png");
+        display: flex;
+        margin: 24px 0;
+        align-items: center;
+        justify-content: space-between;
+        border-radius: 24px;
+        padding: 15px;
+        background-color: #edf2ff;
+        gap: 24px;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+
+    ._text_banner {
+        font-size: 24px;
+        font-weight: 600;
+        line-height: 32px;
+    }
+
+    .button-banner {
+        background-color: #ff0508;
+        border-radius: 20px;
+        padding: 15px 10px;
+        min-width: 220px;
+        color: white;
+        text-align: center;
+    }
+
+    .text-button-banner {
+        font-family: "Favorit Pro", Roboto;
+        font-size: 18px;
+        color: white;
+    }
+
+    @media (max-width: 500px) {
+        .promo-banner {
+            flex-direction: column;
+        }
+    }
+</style>    </b></div><div class="modal-backdrop in"></div><div id="ui-datepicker-div" class="ui-datepicker ui-widget ui-widget-content ui-helper-clearfix ui-corner-all"></div><b>
+    <style>
+    .popup-cookies._open { transform: translateY(0); opacity: 1; transition: transform .3s 1s,-webkit-transform .3s 1s; z-index: 999;}
+    .popup-cookies {
+        padding: 24px 32px;
+        box-shadow: 0 16px 32px 0 rgb(31 34 41 / 8%);
+        border: 1px solid #c4c7cc;
+        border-radius: 6px;
+        position: fixed;
+        bottom: 0;
+        box-sizing: border-box;
+        width:100%;
+        background-color: #fff;
+        z-index: 999;
+        display: block;
+        will-change: transform,opacity;
+    }
+    .popup-wrapper { max-width: 800px; margin: 0 auto; }
+    .btn._medium._blue {
+        float: right;
+        background-color: #fff;
+        border: 1px solid #ccc;
+        padding: 10px 30px;
+        border-radius: 5px;
+        margin-left: 20px;
+        margin-top: 10px;
+    }
+    .btn._medium._blue:hover { background-color: #edf0f2; }
+</style>
+
+<div class="popup-cookies _open" data-popup-cookies="" style="display: block;">
+    <div class="popup-wrapper">
+        <button class="btn _medium _blue " data-popup-cookies-btn="" id="popup_cookies_btn">Принять</button>
+        <div class="popup-cookies_title">
+                        НКО АО НРД обрабатывает файлы сookie с целью персонализации сервисов и повышения удобства пользования сайтом <a href="https://www.nsddata.ru/">www.nsddata.ru</a>.
+            Нажимая кнопку «Принять»,
+            вы даете <a href="/files/docs/cookie_agreement_ru.pdf" target="_blank">согласие</a> на обработку ваших файлов cookie.
+            Вы можете запретить обработку сookie, изменив настройки браузера.
+                    </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        function setCookie(cname, cvalue, exdays) {
+            const d = new Date();
+            d.setTime(d.getTime() + (exdays*24*60*60*1000));
+            let expires = "expires="+ d.toUTCString();
+            document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+        }
+
+        function getCookie(cname) {
+            let name = cname + "=";
+            let decodedCookie = decodeURIComponent(document.cookie);
+            let ca = decodedCookie.split(';');
+
+            for(let i = 0; i <ca.length; i++) {
+                let c = ca[i];
+
+                while (c.charAt(0) == ' ') {
+                    c = c.substring(1);
+                }
+
+                if (c.indexOf(name) == 0) {
+                    return c.substring(name.length, c.length);
+                }
+            }
+
+            return "";
+        }
+
+        var isCookieAgreement = getCookie('agreement');
+
+        if (isCookieAgreement == '') {
+            $('.popup-cookies._open').css('display', 'block');
+        }
+
+        $('#popup_cookies_btn').click(function() {
+            setCookie('agreement', '1', 365);
+            $('.popup-cookies._open').css('display', 'none');
+        });
+    });
+</script>
+    <div class="container foot">
+        <div class="row">
+		<div class="col-xs-4 foot__links">
+            <a href="/ru/documents">Документы</a><br>
+        <a href="/ru/legal-information">Юридическая информация</a><br>
+    <a href="/ru/contacts">Контакты</a><br>
+            <a href="/ru/faq">Вопросы и ответы</a><br>
+            © 1996 – 2026 НКО АО НРД</div>
+<div class="col-xs-4 foot__links">
+            <a href="https://www.nsd.ru/about/raskrytie-informatsii/" target="_blank">Раскрытие информации</a><br>
+        <a target="_blank" href="https://www.isin.ru/ru/">ISIN-коды</a><br>
+        <a target="_blank" href="https://www.lei-code.ru/ru/">LEI-коды</a><br>
+        <a target="_blank" href="https://www.e-vote.ru/">E-voting – электронное голосование</a><br>
+    </div>
+<div class="col-xs-4">
+            <div class="text-right"><a target="_blank" href="https://www.nsd.ru/subscription/">Подписаться на новости</a></div>
+       
+</div>
+        </div>
+	</div>
+	    
+        
+	    
+<script src="/js/app.js?0602"></script>
+<script src="/js/news.js?1207"></script>
+<script src="/js/cookies.js"></script>
+<script src="/js/valuation/request-form-handler.js?v102"></script>
+<script src="/assets/e0d7e16a/yii.js"></script>
+<script src="/assets/e0d7e16a/yii.validation.js"></script>
+<script src="/assets/e0d7e16a/yii.captcha.js"></script>
+<script src="/assets/e0d7e16a/yii.activeForm.js"></script>
+<script>jQuery(function ($) {
+jQuery('#ConsultForm-captcha-image').yiiCaptcha({"refreshUrl":"\/ru\/products\/captcha?refresh=1","hashKey":"yiiCaptcha\/products\/captcha"});
+jQuery('#ConsultForm').yiiActiveForm([{"id":"consultform-name","name":"name","container":".field-consultform-name","input":"#consultform-name","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.required(value, messages, {"message":"Необходимо заполнить «Ф.И.О.»."});yii.validation.string(value, messages, {"message":"Значение «Ф.И.О.» должно быть строкой.","max":255,"tooLong":"Поле «Ф.И.О.» должно содержать максимум 255 символов.","skipOnEmpty":1});}},{"id":"consultform-phone","name":"phone","container":".field-consultform-phone","input":"#consultform-phone","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.required(value, messages, {"message":"Необходимо заполнить «Телефон»."});yii.validation.string(value, messages, {"message":"Значение «Телефон» должно быть строкой.","min":11,"tooShort":"Поле «Телефон» должно содержать минимум 11 цифр.","skipOnEmpty":1});yii.validation.string(value, messages, {"message":"Значение «Телефон» должно быть строкой.","max":150,"tooLong":"Поле «Телефон» должно содержать максимум 150 символов.","skipOnEmpty":1});yii.validation.number(value, messages, {"pattern":/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/,"message":"Поле «Телефон» должно содержать только цифры.","skipOnEmpty":1});}},{"id":"consultform-email","name":"email","container":".field-consultform-email","input":"#consultform-email","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.required(value, messages, {"message":"Необходимо заполнить «E-mail»."});yii.validation.string(value, messages, {"message":"Значение «E-mail» должно быть строкой.","max":255,"tooLong":"Поле «E-mail» должно содержать максимум 255 символов.","skipOnEmpty":1});yii.validation.email(value, messages, {"pattern":/^[a-zA-Z0-9!#$%&'*+\/=?^_`{|}~-]+(?:\.[a-zA-Z0-9!#$%&'*+\/=?^_`{|}~-]+)*@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/,"fullPattern":/^[^@]*<[a-zA-Z0-9!#$%&'*+\/=?^_`{|}~-]+(?:\.[a-zA-Z0-9!#$%&'*+\/=?^_`{|}~-]+)*@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?>$/,"allowName":false,"message":"Значение «E-mail» не является правильным email адресом.","enableIDN":false,"skipOnEmpty":1});}},{"id":"consultform-company","name":"company","container":".field-consultform-company","input":"#consultform-company","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.string(value, messages, {"message":"Значение «Организация» должно быть строкой.","max":255,"tooLong":"Поле «Организация» должно содержать максимум 255 символов.","skipOnEmpty":1});}},{"id":"consultform-position","name":"position","container":".field-consultform-position","input":"#consultform-position","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.string(value, messages, {"message":"Значение «Должность» должно быть строкой.","max":255,"tooLong":"Поле «Должность» должно содержать максимум 255 символов.","skipOnEmpty":1});}},{"id":"consultform-question","name":"question","container":".field-consultform-question","input":"#consultform-question","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.string(value, messages, {"message":"Значение «Вопрос» должно быть строкой.","max":2500,"tooLong":"Поле «Вопрос» должно содержать максимум 2 500 символов.","skipOnEmpty":1});}},{"id":"consultform-captcha","name":"captcha","container":".field-consultform-captcha","input":"#consultform-captcha","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.required(value, messages, {"message":"Необходимо заполнить «Captcha»."});yii.validation.captcha(value, messages, {"hash":111,"hashKey":"yiiCaptcha/products/captcha","caseSensitive":false,"message":"Неправильный проверочный код."});}}], []);
+
+	$('#ConsultForm-captcha-refresh-link').on('click', function(e){
+		e.preventDefault();
+		$('#ConsultForm-captcha-image').yiiCaptcha('refresh');
+	})
+jQuery('#TestOtherProductForm-captcha-image').yiiCaptcha({"refreshUrl":"\/ru\/products\/captcha?refresh=1","hashKey":"yiiCaptcha\/products\/captcha"});
+jQuery('#TestOtherProductForm').yiiActiveForm([{"id":"testaccessform-name","name":"name","container":".field-testaccessform-name","input":"#testaccessform-name","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.required(value, messages, {"message":"Необходимо заполнить «Ф.И.О.»."});yii.validation.string(value, messages, {"message":"Значение «Ф.И.О.» должно быть строкой.","max":255,"tooLong":"Поле «Ф.И.О.» должно содержать максимум 255 символов.","skipOnEmpty":1});}},{"id":"testaccessform-phone","name":"phone","container":".field-testaccessform-phone","input":"#testaccessform-phone","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.required(value, messages, {"message":"Необходимо заполнить «Телефон»."});yii.validation.string(value, messages, {"message":"Значение «Телефон» должно быть строкой.","min":11,"tooShort":"Поле «Телефон» должно содержать минимум 11 цифр.","skipOnEmpty":1});yii.validation.string(value, messages, {"message":"Значение «Телефон» должно быть строкой.","max":150,"tooLong":"Поле «Телефон» должно содержать максимум 150 символов.","skipOnEmpty":1});yii.validation.number(value, messages, {"pattern":/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/,"message":"Поле «Телефон» должно содержать только цифры.","skipOnEmpty":1});}},{"id":"testaccessform-email","name":"email","container":".field-testaccessform-email","input":"#testaccessform-email","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.required(value, messages, {"message":"Необходимо заполнить «E-mail»."});yii.validation.string(value, messages, {"message":"Значение «E-mail» должно быть строкой.","max":255,"tooLong":"Поле «E-mail» должно содержать максимум 255 символов.","skipOnEmpty":1});yii.validation.email(value, messages, {"pattern":/^[a-zA-Z0-9!#$%&'*+\/=?^_`{|}~-]+(?:\.[a-zA-Z0-9!#$%&'*+\/=?^_`{|}~-]+)*@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/,"fullPattern":/^[^@]*<[a-zA-Z0-9!#$%&'*+\/=?^_`{|}~-]+(?:\.[a-zA-Z0-9!#$%&'*+\/=?^_`{|}~-]+)*@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?>$/,"allowName":false,"message":"Значение «E-mail» не является правильным email адресом.","enableIDN":false,"skipOnEmpty":1});}},{"id":"testaccessform-company","name":"company","container":".field-testaccessform-company","input":"#testaccessform-company","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.required(value, messages, {"message":"Необходимо заполнить «Организация»."});yii.validation.string(value, messages, {"message":"Значение «Организация» должно быть строкой.","max":255,"tooLong":"Поле «Организация» должно содержать максимум 255 символов.","skipOnEmpty":1});}},{"id":"testaccessform-position","name":"position","container":".field-testaccessform-position","input":"#testaccessform-position","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.required(value, messages, {"message":"Необходимо заполнить «Должность»."});yii.validation.string(value, messages, {"message":"Значение «Должность» должно быть строкой.","max":255,"tooLong":"Поле «Должность» должно содержать максимум 255 символов.","skipOnEmpty":1});}},{"id":"testaccessform-des","name":"des","container":".field-testaccessform-des","input":"#testaccessform-des","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.required(value, messages, {"message":"Необходимо заполнить «Продукт»."});yii.validation.string(value, messages, {"message":"Значение «Продукт» должно быть строкой.","max":255,"tooLong":"Поле «Продукт» должно содержать максимум 255 символов.","skipOnEmpty":1});}},{"id":"testaccessform-captcha","name":"captcha","container":".field-testaccessform-captcha","input":"#testaccessform-captcha","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.required(value, messages, {"message":"Необходимо заполнить «Captcha»."});yii.validation.captcha(value, messages, {"hash":111,"hashKey":"yiiCaptcha/products/captcha","caseSensitive":false,"message":"Неправильный проверочный код."});}}], []);
+
+	$('#TestOtherProductForm-captcha-refresh-link').on('click', function(e){
+		e.preventDefault();
+		$('#TestOtherProductForm-captcha-image').yiiCaptcha('refresh');
+	})
+jQuery('#TestValProductForm-captcha-image').yiiCaptcha({"refreshUrl":"\/ru\/products\/captcha?refresh=1","hashKey":"yiiCaptcha\/products\/captcha"});
+jQuery('#TestValProductForm').yiiActiveForm([{"id":"testaccessform-name","name":"name","container":".field-testaccessform-name","input":"#testaccessform-name","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.required(value, messages, {"message":"Необходимо заполнить «Ф.И.О.»."});yii.validation.string(value, messages, {"message":"Значение «Ф.И.О.» должно быть строкой.","max":255,"tooLong":"Поле «Ф.И.О.» должно содержать максимум 255 символов.","skipOnEmpty":1});}},{"id":"testaccessform-phone","name":"phone","container":".field-testaccessform-phone","input":"#testaccessform-phone","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.required(value, messages, {"message":"Необходимо заполнить «Телефон»."});yii.validation.string(value, messages, {"message":"Значение «Телефон» должно быть строкой.","min":11,"tooShort":"Поле «Телефон» должно содержать минимум 11 цифр.","skipOnEmpty":1});yii.validation.string(value, messages, {"message":"Значение «Телефон» должно быть строкой.","max":150,"tooLong":"Поле «Телефон» должно содержать максимум 150 символов.","skipOnEmpty":1});yii.validation.number(value, messages, {"pattern":/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/,"message":"Поле «Телефон» должно содержать только цифры.","skipOnEmpty":1});}},{"id":"testaccessform-email","name":"email","container":".field-testaccessform-email","input":"#testaccessform-email","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.required(value, messages, {"message":"Необходимо заполнить «E-mail»."});yii.validation.string(value, messages, {"message":"Значение «E-mail» должно быть строкой.","max":255,"tooLong":"Поле «E-mail» должно содержать максимум 255 символов.","skipOnEmpty":1});yii.validation.email(value, messages, {"pattern":/^[a-zA-Z0-9!#$%&'*+\/=?^_`{|}~-]+(?:\.[a-zA-Z0-9!#$%&'*+\/=?^_`{|}~-]+)*@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/,"fullPattern":/^[^@]*<[a-zA-Z0-9!#$%&'*+\/=?^_`{|}~-]+(?:\.[a-zA-Z0-9!#$%&'*+\/=?^_`{|}~-]+)*@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?>$/,"allowName":false,"message":"Значение «E-mail» не является правильным email адресом.","enableIDN":false,"skipOnEmpty":1});}},{"id":"testaccessform-company","name":"company","container":".field-testaccessform-company","input":"#testaccessform-company","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.required(value, messages, {"message":"Необходимо заполнить «Организация»."});yii.validation.string(value, messages, {"message":"Значение «Организация» должно быть строкой.","max":255,"tooLong":"Поле «Организация» должно содержать максимум 255 символов.","skipOnEmpty":1});}},{"id":"testaccessform-position","name":"position","container":".field-testaccessform-position","input":"#testaccessform-position","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.required(value, messages, {"message":"Необходимо заполнить «Должность»."});yii.validation.string(value, messages, {"message":"Значение «Должность» должно быть строкой.","max":255,"tooLong":"Поле «Должность» должно содержать максимум 255 символов.","skipOnEmpty":1});}},{"id":"testaccessform-des","name":"des","container":".field-testaccessform-des-val","input":"#testaccessform-des-val","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.required(value, messages, {"message":"Необходимо заполнить «Продукт»."});yii.validation.string(value, messages, {"message":"Значение «Продукт» должно быть строкой.","max":255,"tooLong":"Поле «Продукт» должно содержать максимум 255 символов.","skipOnEmpty":1});}},{"id":"testaccessform-captcha","name":"captcha","container":".field-testaccessform-captcha","input":"#testaccessform-captcha","enableAjaxValidation":true,"validate":function (attribute, value, messages, deferred, $form) {yii.validation.required(value, messages, {"message":"Необходимо заполнить «Captcha»."});yii.validation.captcha(value, messages, {"hash":111,"hashKey":"yiiCaptcha/products/captcha","caseSensitive":false,"message":"Неправильный проверочный код."});}}], []);
+
+	$('#TestValProductForm-captcha-refresh-link').on('click', function(e){
+		e.preventDefault();
+		$('#TestValProductForm-captcha-image').yiiCaptcha('refresh');
+	})
+});</script>
+
+</b></body></html>

@@ -11,6 +11,9 @@ COPY pyproject.toml uv.lock ./
 # Устанавливаем зависимости
 RUN uv sync --frozen --no-dev
 
+# Браузер и системные библиотеки для Playwright (скрейпинг ленты НРД).
+RUN uv run playwright install --with-deps chromium
+
 # Копируем код приложения
 COPY app/ ./app/
 

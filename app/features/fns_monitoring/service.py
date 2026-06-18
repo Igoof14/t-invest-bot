@@ -13,12 +13,12 @@ import logging
 from aiogram import Bot
 from features.issuers.models import Issuer
 from features.issuers.repository import IssuerRepository
-from features.ratings.portfolio import get_portfolio_bond_identifiers
 from features.users.repository import BotUserRepository
 
 from .client import run
 from .events import UserBlockAlert, UserScanReport, parse_rows
 from .pipeline import build_issuer_bond_index
+from .portfolio import get_portfolio_bond_identifiers
 from .proxy_pool import load_proxies
 
 logger = logging.getLogger(__name__)
