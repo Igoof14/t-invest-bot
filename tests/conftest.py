@@ -64,6 +64,7 @@ async def patch_session_scope(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[
         "features.ratings.repository.session_scope",
         "features.fns_monitoring.repository.session_scope",
         "features.nsd_coupons.repository.session_scope",
+        "features.users.repository.session_scope",
     ):
         monkeypatch.setattr(target, _test_session_scope)
 
