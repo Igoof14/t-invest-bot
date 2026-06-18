@@ -43,6 +43,11 @@ GRACE_DAYS = 0
 # Параллельность опроса НРД в разовой проверке (страницы одного браузера).
 SCAN_CONCURRENCY = 4
 
+# Глобальный (на процесс) ограничитель тяжёлых сканов: ручной скан и фоновые
+# отчёты не пересекаются, чтобы не плодить браузеры и не упираться в RPS T-Invest.
+# Модульный, т.к. ручной хендлер создаёт отдельный экземпляр сервиса.
+_SCAN_SEMAPHORE = asyncio.Semaphore(1)
+
 
 class NsdCouponService:
     """Оркестрация мониторинга невыплаченных купонов.
@@ -62,6 +67,10 @@ class NsdCouponService:
         self._notifier = NsdCouponNotifier(bot)
         # ISIN -> множество telegram_id подписчиков, держащих бумагу.
         self._holders_by_isin: dict[str, set[int]] = {}
+        # Фоновые задачи рассылки отчётов (держим ссылки от сборщика мусора).
+        self._report_tasks: set[asyncio.Task[None]] = set()
+        # Пользователи, чей отчёт сейчас формируется (защита от дублей).
+        self._report_in_flight: set[int] = set()
 
     async def sync_calendar(self) -> int:
         """Загружает купонный календарь подписчиков и обновляет трекинг.
@@ -215,31 +224,33 @@ class NsdCouponService:
         if not token:
             return CouponScanReport(no_token=True)
 
-        plans = await collect_coupon_plans(
-            telegram_id,
-            date_from=datetime.combine(yesterday, time.min, tzinfo=_MSK),
-            date_to=datetime.combine(today, time.max, tzinfo=_MSK),
-        )
-        relevant = [p for p in plans if p.coupon_date in (yesterday, today)]
-        if not relevant:
-            return CouponScanReport()
-
-        by_isin: dict[str, list[CouponPlan]] = defaultdict(list)
-        for plan in relevant:
-            by_isin[plan.isin].append(plan)
-
-        proxies = load_proxies()
-        sem = asyncio.Semaphore(SCAN_CONCURRENCY)
-        scanned: list[ScannedCoupon] = []
-        async with NsdClient(proxies[0]) as client:
-            isins = list(by_isin)
-            # Первый ISIN — последовательно: проходим антибот и кэшируем cookie.
-            scanned.extend(await self._scan_isin(client, isins[0], by_isin, today, sem))
-            rest = await asyncio.gather(
-                *(self._scan_isin(client, isin, by_isin, today, sem) for isin in isins[1:])
+        # Сериализуем тяжёлую часть (T-Invest + Playwright) на весь процесс.
+        async with _SCAN_SEMAPHORE:
+            plans = await collect_coupon_plans(
+                telegram_id,
+                date_from=datetime.combine(yesterday, time.min, tzinfo=_MSK),
+                date_to=datetime.combine(today, time.max, tzinfo=_MSK),
             )
-            for chunk in rest:
-                scanned.extend(chunk)
+            relevant = [p for p in plans if p.coupon_date in (yesterday, today)]
+            if not relevant:
+                return CouponScanReport()
+
+            by_isin: dict[str, list[CouponPlan]] = defaultdict(list)
+            for plan in relevant:
+                by_isin[plan.isin].append(plan)
+
+            proxies = load_proxies()
+            sem = asyncio.Semaphore(SCAN_CONCURRENCY)
+            scanned: list[ScannedCoupon] = []
+            async with NsdClient(proxies[0]) as client:
+                isins = list(by_isin)
+                # Первый ISIN — последовательно: проходим антибот и кэшируем cookie.
+                scanned.extend(await self._scan_isin(client, isins[0], by_isin, today, sem))
+                rest = await asyncio.gather(
+                    *(self._scan_isin(client, isin, by_isin, today, sem) for isin in isins[1:])
+                )
+                for chunk in rest:
+                    scanned.extend(chunk)
 
         return CouponScanReport(coupons=scanned)
 
@@ -357,28 +368,40 @@ class NsdCouponService:
         users = await NsdCouponAlertSettingsRepository.list_users_with_report_at(
             now.hour, now.minute
         )
-        if not users:
-            return 0
-
-        sent = 0
+        today = now.date()
+        dispatched = 0
         for telegram_id in users:
-            try:
-                report = await self.scan_user(telegram_id, today=now.date())
-            except Exception as e:  # noqa: BLE001 — сбой одного не валит рассылку
-                logger.error("Отчёт по купонам для %s не собран: %s", telegram_id, e)
+            if telegram_id in self._report_in_flight:
                 continue
-            if report.no_token or not report.coupons:
-                continue
-            try:
-                await self._bot.send_message(
-                    telegram_id,
-                    format_scan_report(report),
-                    parse_mode="HTML",
-                    disable_web_page_preview=True,
-                )
-                sent += 1
-            except Exception as e:  # noqa: BLE001 — Telegram мог заблокировать бота
-                logger.error("Отправка отчёта %s не удалась: %s", telegram_id, e)
+            self._report_in_flight.add(telegram_id)
+            task = asyncio.create_task(self._send_report_to(telegram_id, today))
+            self._report_tasks.add(task)
+            task.add_done_callback(self._report_tasks.discard)
+            dispatched += 1
 
-        logger.info("Ежедневные отчёты НРД: получателей=%d, отправлено=%d", len(users), sent)
-        return sent
+        if dispatched:
+            logger.info("Ежедневные отчёты НРД: запущено задач=%d", dispatched)
+        return dispatched
+
+    async def _send_report_to(self, telegram_id: int, today: date) -> None:
+        """Формирует и отправляет ежедневный отчёт одному пользователю.
+
+        Запускается фоновой задачей. Скан сериализуется глобальным семафором,
+        поэтому отчёты разных пользователей не пересекаются. Пропускает отправку,
+        если нет токена или за вчера/сегодня нет купонов.
+        """
+        try:
+            report = await self.scan_user(telegram_id, today=today)
+            if report.no_token or not report.coupons:
+                return
+            await self._bot.send_message(
+                telegram_id,
+                format_scan_report(report),
+                parse_mode="HTML",
+                disable_web_page_preview=True,
+            )
+            logger.info("Ежедневный отчёт по купонам отправлен %s", telegram_id)
+        except Exception as e:  # noqa: BLE001 — сбой одного не валит остальных
+            logger.error("Отчёт по купонам для %s не отправлен: %s", telegram_id, e)
+        finally:
+            self._report_in_flight.discard(telegram_id)

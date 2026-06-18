@@ -9,6 +9,8 @@ from datetime import UTC, datetime, timedelta
 from core.clients.t_invest.common_func import to_float
 from features.users.repository import BotUserRepository
 from t_tech.invest import AsyncClient
+from t_tech.invest.async_services import AsyncServices
+from t_tech.invest.schemas import Bond
 
 from .schemas import CouponPlan
 
@@ -16,11 +18,32 @@ logger = logging.getLogger(__name__)
 
 # Горизонт загрузки плановых купонов вперёд.
 HORIZON_DAYS = 60
+# TTL кэша каталога облигаций (он одинаков для всех пользователей).
+_BONDS_TTL = timedelta(hours=1)
+
+_bonds_cache: dict[str, Bond] = {}
+_bonds_cached_at: datetime | None = None
 
 
 def _is_ru_isin(isin: str | None) -> bool:
     """Возвращает, относится ли ISIN к периметру НРД (рублёвые ``RU*``)."""
     return bool(isin) and isin.startswith("RU")
+
+
+async def _get_bonds_cache(client: AsyncServices) -> dict[str, Bond]:
+    """Возвращает кэш ``{figi: Bond}`` каталога облигаций (с TTL).
+
+    Каталог одинаков для всех пользователей, поэтому кэшируется на уровне модуля —
+    это убирает самый тяжёлый повторяемый вызов ``instruments.bonds()``.
+    """
+    global _bonds_cache, _bonds_cached_at
+    now = datetime.now(UTC)
+    if _bonds_cache and _bonds_cached_at and now - _bonds_cached_at < _BONDS_TTL:
+        return _bonds_cache
+    all_bonds = await client.instruments.bonds()
+    _bonds_cache = {bond.figi: bond for bond in all_bonds.instruments}
+    _bonds_cached_at = now
+    return _bonds_cache
 
 
 async def collect_coupon_plans(
@@ -54,8 +77,7 @@ async def collect_coupon_plans(
     plans: list[CouponPlan] = []
 
     async with AsyncClient(token) as client:
-        all_bonds = await client.instruments.bonds()
-        bonds_cache = {bond.figi: bond for bond in all_bonds.instruments}
+        bonds_cache = await _get_bonds_cache(client)
 
         accounts = await client.users.get_accounts()
         seen_figi: set[str] = set()

@@ -10,6 +10,13 @@ from features.nsd_coupons import t_invest
 from features.nsd_coupons.t_invest import collect_coupon_plans
 
 
+@pytest.fixture(autouse=True)
+def _reset_bonds_cache() -> None:
+    """Сбрасывает модульный кэш каталога облигаций перед каждым тестом."""
+    t_invest._bonds_cache = {}
+    t_invest._bonds_cached_at = None
+
+
 def _bond(figi: str, isin: str, name: str) -> MagicMock:
     bond = MagicMock()
     bond.figi = figi
@@ -39,7 +46,7 @@ def _patch_client(
     bonds: list[MagicMock],
     positions: list[MagicMock],
     coupons: list[MagicMock],
-) -> None:
+) -> MagicMock:
     client = MagicMock()
     client.instruments.bonds = AsyncMock(return_value=MagicMock(instruments=bonds))
     client.users.get_accounts = AsyncMock(
@@ -60,6 +67,7 @@ def _patch_client(
         "get_token_by_telegram_id",
         AsyncMock(return_value="token"),
     )
+    return client
 
 
 async def test_collect_skips_non_ru_and_non_bond(
@@ -98,3 +106,18 @@ async def test_collect_returns_empty_without_token(
         AsyncMock(return_value=None),
     )
     assert await collect_coupon_plans(101) == []
+
+
+async def test_bonds_catalog_is_cached(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _patch_client(
+        monkeypatch,
+        bonds=[_bond("FG1", "RU000A105P23", "Автодор")],
+        positions=[_position("bond", "FG1")],
+        coupons=[_coupon(1, datetime(2026, 6, 19), 5)],
+    )
+
+    await collect_coupon_plans(101)
+    await collect_coupon_plans(101)
+
+    # Каталог инструментов тянется один раз и переиспользуется из кэша.
+    assert client.instruments.bonds.await_count == 1
