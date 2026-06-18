@@ -145,9 +145,7 @@ class NsdClient:
         for attempt in range(1, self._attempts + 1):
             page = await self._context.new_page()
             try:
-                await page.goto(
-                    url, wait_until="domcontentloaded", timeout=self._nav_timeout_ms
-                )
+                await page.goto(url, wait_until="domcontentloaded", timeout=self._nav_timeout_ms)
                 await page.wait_for_function(
                     f"document.title && document.title !== {_CHALLENGE_TITLE!r}",
                     timeout=self._challenge_timeout_ms,
