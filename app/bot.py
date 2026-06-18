@@ -9,6 +9,7 @@ from core.config import config
 from core.database import db_manager
 from core.enums import ReportType
 from features.base import base_handlers
+from features.broadcast import router as broadcast_router
 from features.coupons import coupon_handlers
 from features.fns_monitoring import router as fns_router
 from features.fns_monitoring.menu import SECTION as fns_section
@@ -22,6 +23,7 @@ from features.nsd_coupons.menu import SECTION as nsd_coupons_section
 from features.offer_warning import OfferAlertService
 from features.offer_warning import handlers as offer_warning_handlers
 from features.offer_warning.menu import SECTION as offer_section
+from features.onboarding import router as onboarding_router
 from features.price_monitoring import PriceAlertService, price_alert_handlers
 from features.price_monitoring.menu import SECTION as price_section
 from features.ratings import router as ratings_router
@@ -53,6 +55,8 @@ async def main():
 
     dp.include_routers(
         base_handlers.router,
+        broadcast_router,
+        onboarding_router,
         price_alert_handlers.router,
         offer_warning_handlers.router,
         coupon_handlers.router,
@@ -64,6 +68,7 @@ async def main():
     )
 
     await BotUtils.set_commands(bot)
+    await BotUtils.set_descriptions(bot)
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
 
     scheduler.add_job(

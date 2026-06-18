@@ -15,6 +15,7 @@ from core.clients.t_invest.bonds import (
 from core.enums import MainKeyboardButtonTexts, Messages
 from features.coupons.keyboards import create_coupons_keyboard
 from features.menu import render_hub
+from features.onboarding import start_onboarding
 from features.users.keyboards import create_settings_keyboard
 from features.users.repository import BotUserRepository
 
@@ -79,10 +80,12 @@ async def start_handler(message: Message) -> None:
         )
         if user_has_token:
             await message.answer(Messages.ALREADY_KNOWN.value, reply_markup=main_keyboard)
-        elif is_new_user:
-            await message.answer(Messages.WELCOME.value, reply_markup=new_user_keyboard)
         else:
-            await message.answer(Messages.NOT_TOKEN.value, reply_markup=new_user_keyboard)
+            # Пользователь без токена (новый или вернувшийся) — ведём по воронке.
+            # Короткое сообщение закрепляет reply-клавиатуру (Настройки/Помощь),
+            # которой не может быть у инлайн-экранов воронки.
+            await message.answer("Добро пожаловать 👋", reply_markup=new_user_keyboard)
+            await start_onboarding(message)
 
         logger.info(f"Всего пользователей: {await BotUserRepository.get_user_count()}")
 

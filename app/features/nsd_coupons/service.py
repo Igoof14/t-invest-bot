@@ -37,7 +37,7 @@ PAYMENT_LOOKAHEAD_DAYS = 3
 # Насколько назад от даты купона искать публикацию в ленте НРД.
 # Эмитенты публикуют «О получении … выплат» заранее (наблюдали за неделю и более),
 # поэтому окно широкое.
-PUBLISH_LOOKBACK_DAYS = 35
+PUBLISH_LOOKBACK_DAYS = 10
 # Отсрочка перед алертом после плановой даты (рабочих/календарных дней).
 GRACE_DAYS = 0
 # Параллельность опроса НРД в разовой проверке (страницы одного браузера).
@@ -56,6 +56,7 @@ class NsdCouponService:
 
         Args:
             bot: Экземпляр бота для отправки уведомлений.
+
         """
         self._bot = bot
         self._notifier = NsdCouponNotifier(bot)
@@ -70,10 +71,9 @@ class NsdCouponService:
 
         Returns:
             Число добавленных в трекинг купонов.
+
         """
-        subscribers = (
-            await NsdCouponAlertSettingsRepository.list_users_with_alerts_enabled()
-        )
+        subscribers = await NsdCouponAlertSettingsRepository.list_users_with_alerts_enabled()
         if not subscribers:
             self._holders_by_isin = {}
             return 0
@@ -112,6 +112,7 @@ class NsdCouponService:
 
         Returns:
             Число купонов, помеченных выплаченными.
+
         """
         today = today or datetime.now(UTC).date()
         due = await NsdCouponTrackingRepository.list_pending_due(
@@ -157,9 +158,7 @@ class NsdCouponService:
                         if card.nsd_received_date
                         else None
                     )
-                    await NsdCouponTrackingRepository.mark_paid(
-                        coupon.id, news_id, received_at
-                    )
+                    await NsdCouponTrackingRepository.mark_paid(coupon.id, news_id, received_at)
                     marked += 1
 
         logger.info("Проверка выплат НРД: проверено=%d, выплачено=%d", len(due), marked)
@@ -181,13 +180,12 @@ class NsdCouponService:
 
         Returns:
             Пара (news_id, детали карточки) при совпадении, иначе ``None``.
+
         """
         for item in intr_items:
             if item.news_id not in card_cache:
                 try:
-                    card_cache[item.news_id] = parse_card(
-                        await client.fetch_card(item.news_id)
-                    )
+                    card_cache[item.news_id] = parse_card(await client.fetch_card(item.news_id))
                 except Exception as e:  # noqa: BLE001
                     logger.error("Карточка НРД %s не получена: %s", item.news_id, e)
                     continue
@@ -196,9 +194,7 @@ class NsdCouponService:
                 return item.news_id, card
         return None
 
-    async def scan_user(
-        self, telegram_id: int, today: date | None = None
-    ) -> CouponScanReport:
+    async def scan_user(self, telegram_id: int, today: date | None = None) -> CouponScanReport:
         """Разово проверяет купоны пользователя за вчера и сегодня по ленте НРД.
 
         Read-only: берёт купоны портфеля за период, опрашивает НРД по каждому ISIN
@@ -210,6 +206,7 @@ class NsdCouponService:
 
         Returns:
             Отчёт ``CouponScanReport`` для показа пользователю.
+
         """
         today = today or datetime.now(_MSK).date()
         yesterday = today - timedelta(days=1)
@@ -257,9 +254,7 @@ class NsdCouponService:
         """Проверяет выплаты по одному ISIN; возвращает результаты по его купонам."""
         coupons = by_isin[isin]
         async with sem:
-            date_from = min(c.coupon_date for c in coupons) - timedelta(
-                days=PUBLISH_LOOKBACK_DAYS
-            )
+            date_from = min(c.coupon_date for c in coupons) - timedelta(days=PUBLISH_LOOKBACK_DAYS)
             try:
                 html = await client.search_by_isin(
                     isin, date_from=date_from, date_to=today + timedelta(days=1)
@@ -267,8 +262,7 @@ class NsdCouponService:
             except Exception as e:  # noqa: BLE001 — сбой по бумаге не валит весь скан
                 logger.error("Скан НРД по %s не удался: %s", isin, e)
                 return [
-                    ScannedCoupon(isin, c.bond_name, c.coupon_date, paid=False)
-                    for c in coupons
+                    ScannedCoupon(isin, c.bond_name, c.coupon_date, paid=False) for c in coupons
                 ]
 
             intr_items = [
@@ -285,9 +279,7 @@ class NsdCouponService:
             card_cache: dict[int, NsdCardDetails] = {}
             results: list[ScannedCoupon] = []
             for coupon in coupons:
-                match = await self._find_payment(
-                    client, intr_items, coupon.coupon_date, card_cache
-                )
+                match = await self._find_payment(client, intr_items, coupon.coupon_date, card_cache)
                 logger.info(
                     "НРД %s купон %s: %s",
                     isin,
@@ -313,6 +305,7 @@ class NsdCouponService:
 
         Returns:
             Число купонов, по которым разосланы уведомления.
+
         """
         today = today or datetime.now(UTC).date()
         deadline = today - timedelta(days=GRACE_DAYS)
@@ -343,9 +336,7 @@ class NsdCouponService:
                 )
             await NsdCouponTrackingRepository.mark_alerted(coupon.id)
 
-        logger.info(
-            "Дедлайн-проверка НРД: просрочено=%d, уведомлений=%d", len(overdue), alerted
-        )
+        logger.info("Дедлайн-проверка НРД: просрочено=%d, уведомлений=%d", len(overdue), alerted)
         return alerted
 
     async def send_daily_reports(self, now: datetime | None = None) -> int:
@@ -360,6 +351,7 @@ class NsdCouponService:
 
         Returns:
             Число отправленных отчётов.
+
         """
         now = now or datetime.now(_MSK)
         users = await NsdCouponAlertSettingsRepository.list_users_with_report_at(
@@ -388,7 +380,5 @@ class NsdCouponService:
             except Exception as e:  # noqa: BLE001 — Telegram мог заблокировать бота
                 logger.error("Отправка отчёта %s не удалась: %s", telegram_id, e)
 
-        logger.info(
-            "Ежедневные отчёты НРД: получателей=%d, отправлено=%d", len(users), sent
-        )
+        logger.info("Ежедневные отчёты НРД: получателей=%d, отправлено=%d", len(users), sent)
         return sent

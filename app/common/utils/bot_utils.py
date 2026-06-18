@@ -19,6 +19,7 @@ def pluralize_days(n: int) -> str:
 
     Examples:
         1 → день, 2 → дня, 5 → дней, 11 → дней, 21 → день
+
     """
     if 11 <= n % 100 <= 19:
         return "дней"
@@ -50,3 +51,36 @@ class BotUtils:
             logger.info("Команды бота успешно установлены")
         except Exception as e:
             logger.error(f"Ошибка при установке команд бота: {e}")
+
+    @staticmethod
+    async def set_descriptions(bot: Bot) -> None:
+        """Устанавливает описание бота для экрана до нажатия «Старт».
+
+        ``description`` показывается на пустом экране чата с кнопкой «Старт»,
+        ``short_description`` — в профиле бота и превью.
+
+        Args:
+            bot: Экземпляр бота.
+
+        """
+        description = (
+            "Bondelo следит за вашим облигационным портфелем и предупреждает "
+            "о проблемах раньше, чем они ударят по деньгам:\n\n"
+            "• Аномальные движения цен.\n"
+            "• Задержки купонов (сверка с НРД).\n"
+            "• Изменения рейтингов.\n"
+            "• Блокировки счетов эмитентов ФНС.\n"
+            "• Напоминания об офертах и погашениях.\n"
+            "• Отчёты по купонному доходу.\n\n"
+            "Подключение — Read-only токен T-Invest. Нажмите «Старт» 👇"
+        )
+        short_description = (
+            "Следит за облигациями: цены, купоны, рейтинги, оферты, "
+            "блокировки эмитентов. Сигналы о проблемах раньше всех."
+        )
+        try:
+            await bot.set_my_description(description=description)
+            await bot.set_my_short_description(short_description=short_description)
+            logger.info("Описание бота успешно установлено")
+        except Exception as e:
+            logger.error(f"Ошибка при установке описания бота: {e}")

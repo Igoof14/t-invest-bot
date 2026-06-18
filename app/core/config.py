@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     bot_token: SecretStr
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/tinvest"
 
+    # Telegram ID администратора — единственный, кому доступна рассылка
+    # /broadcast. Если не задан, рассылка отключена для всех.
+    admin_id: int | None = None
+
     # Сервисный T-Invest токен для фоновых задач (синхронизация реестра эмитентов).
     t_invest_token: SecretStr | None = None
 
