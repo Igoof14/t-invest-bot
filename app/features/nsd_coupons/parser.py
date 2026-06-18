@@ -119,9 +119,7 @@ def parse_listing(html: str) -> list[NsdNewsItem]:
         title = link.get_text(" ", strip=True)
         type_match = _TYPE_RE.search(title)
         date_node = row.select_one("div.news_list__item__date")
-        published_at = (
-            _parse_short_date(date_node.get_text(strip=True)) if date_node else None
-        )
+        published_at = _parse_short_date(date_node.get_text(strip=True)) if date_node else None
         issuer_name, inn, isin = _extract_from_title(title)
         items.append(
             NsdNewsItem(
@@ -199,15 +197,12 @@ def parse_card(html: str) -> NsdCardDetails:
     type_value = _value_beside(soup, "Код типа корпоративного действия")
     # Плановую дату берём из устойчивой пары «Дата КД (план.)» (есть во всех
     # раскладках); запасной вариант — колоночная «Дата выплаты плановая».
-    planned = _value_beside(soup, "Дата КД (план.)") or _value_below(
-        soup, "Дата выплаты плановая"
-    )
+    planned = _value_beside(soup, "Дата КД (план.)") or _value_below(soup, "Дата выплаты плановая")
     received = _value_below(soup, "Дата поступления в НРД денежных средств")
     # Сумму ищем под разными метками у разных эмитентов.
-    amount = (
-        _value_below(soup, "Размер денежных средств, подлежащих выплате на 1 ц.б.")
-        or _value_beside(soup, "Размер купонного дохода")
-    )
+    amount = _value_below(
+        soup, "Размер денежных средств, подлежащих выплате на 1 ц.б."
+    ) or _value_beside(soup, "Размер купонного дохода")
     return NsdCardDetails(
         news_type=type_value,
         planned_pay_date=_parse_long_date(planned) if planned else None,

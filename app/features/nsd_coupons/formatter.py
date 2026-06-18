@@ -70,10 +70,7 @@ def format_scan_report(report: CouponScanReport) -> str:
 
     """
     if report.no_token:
-        return (
-            "⚠️ Не найден токен T-Invest. Добавьте его в настройках, "
-            "чтобы проверить ваши купоны."
-        )
+        return "⚠️ Не найден токен T-Invest. Добавьте его в настройках, чтобы проверить ваши купоны."
     if not report.coupons:
         return "За вчера и сегодня выплат по вашим облигациям не запланировано."
 
@@ -88,8 +85,7 @@ def format_scan_report(report: CouponScanReport) -> str:
         items = by_date[day]
         paid = sum(1 for c in items if c.paid)
         lines.append(
-            f"{_day_label(day, today)} ({day.strftime('%d.%m')}): "
-            f"выплачено {paid} из {len(items)}"
+            f"{_day_label(day, today)} ({day.strftime('%d.%m')}): выплачено {paid} из {len(items)}"
         )
         unpaid.extend(c for c in items if not c.paid)
 

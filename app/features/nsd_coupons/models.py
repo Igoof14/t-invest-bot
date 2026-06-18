@@ -27,18 +27,14 @@ class NsdCouponAlertSettings(Base):
     __tablename__ = "nsd_coupon_alert_settings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    telegram_id: Mapped[int] = mapped_column(
-        BigInteger, unique=True, nullable=False, index=True
-    )
+    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False, index=True)
 
     alerts_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Время ежедневного отчёта по МСК; ``None`` — отчёт выключен.
     report_time: Mapped[time | None] = mapped_column(Time, nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), onupdate=func.now(), nullable=True
     )
@@ -61,9 +57,7 @@ class NsdCouponTracking(Base):
 
     __tablename__ = "nsd_coupon_tracking"
     __table_args__ = (
-        UniqueConstraint(
-            "isin", "coupon_number", name="uq_nsd_coupon_tracking_isin_number"
-        ),
+        UniqueConstraint("isin", "coupon_number", name="uq_nsd_coupon_tracking_isin_number"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -83,12 +77,8 @@ class NsdCouponTracking(Base):
     first_seen_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    paid_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    alerted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     def __repr__(self) -> str:
         """Представление модели."""
