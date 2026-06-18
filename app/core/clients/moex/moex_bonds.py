@@ -262,24 +262,3 @@ class MoexClient:
                 issuers[secid] = result
 
         return issuers
-
-
-# from pprint import pprint
-
-
-# async def main():
-#     isins = ["RU000A10B2J9", "RU000A106EM8", "RU000A10BGY3", "RU000A105RV3"]
-
-#     async with MoexClient(
-#         concurrency_limit=5,
-#     ) as client:
-#         offers = await client.get_many_next_bond_offers(isins)
-
-#         for isin, offer in offers.items():
-#             print()
-#             pprint(offer)
-
-#         print(offers)
-
-
-# asyncio.run(main())
