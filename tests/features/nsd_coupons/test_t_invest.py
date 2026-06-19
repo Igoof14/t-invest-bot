@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -11,10 +11,11 @@ from features.nsd_coupons.t_invest import collect_coupon_plans
 
 
 @pytest.fixture(autouse=True)
-def _reset_bonds_cache() -> None:
-    """Сбрасывает модульный кэш каталога облигаций перед каждым тестом."""
+def _reset_caches() -> None:
+    """Сбрасывает модульные кэши каталога и купонов перед каждым тестом."""
     t_invest._bonds_cache = {}
     t_invest._bonds_cached_at = None
+    t_invest._coupons_cache = {}
 
 
 def _bond(figi: str, isin: str, name: str) -> MagicMock:
@@ -84,7 +85,7 @@ async def test_collect_skips_non_ru_and_non_bond(
             _position("share", "FG9"),  # не облигация → пропуск
             _position("bond", "FG2"),  # не RU ISIN → пропуск
         ],
-        coupons=[_coupon(1, datetime(2026, 6, 19), 5)],
+        coupons=[_coupon(1, datetime.now(UTC) + timedelta(days=5), 5)],
     )
 
     plans = await collect_coupon_plans(101)
@@ -113,7 +114,7 @@ async def test_bonds_catalog_is_cached(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch,
         bonds=[_bond("FG1", "RU000A105P23", "Автодор")],
         positions=[_position("bond", "FG1")],
-        coupons=[_coupon(1, datetime(2026, 6, 19), 5)],
+        coupons=[_coupon(1, datetime.now(UTC) + timedelta(days=5), 5)],
     )
 
     await collect_coupon_plans(101)
