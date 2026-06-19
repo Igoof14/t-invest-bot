@@ -273,47 +273,76 @@ class NsdCouponService:
         today: date,
         sem: asyncio.Semaphore,
     ) -> list[ScannedCoupon]:
-        """Проверяет выплаты по одному ISIN; возвращает результаты по его купонам."""
+        """Проверяет выплаты по одному ISIN; возвращает результаты по его купонам.
+
+        Если основной прокси не отдал страницу (таймаут/блок), повторяет ISIN
+        через новый клиент на другом прокси из пула — чтобы не помечать выплату
+        ложно «не найденной» из-за троттлинга одного IP.
+        """
         coupons = by_isin[isin]
         async with sem:
-            date_from = min(c.coupon_date for c in coupons) - timedelta(days=PUBLISH_LOOKBACK_DAYS)
-            try:
-                html = await client.search_by_isin(
-                    isin, date_from=date_from, date_to=today + timedelta(days=1)
-                )
-            except Exception as e:  # noqa: BLE001 — сбой по бумаге не валит весь скан
-                logger.error("Скан НРД по %s не удался: %s", isin, e)
-                return [
-                    ScannedCoupon(isin, c.bond_name, c.coupon_date, paid=False) for c in coupons
-                ]
+            results = await self._scan_isin_once(client, isin, coupons, today)
+            if results is not None:
+                return results
 
-            intr_items = [
-                item
-                for item in parse_listing(html)
-                if item.news_type == "INTR" and item.isin == isin
+            logger.warning("НРД %s: повтор на другом прокси", isin)
+            async with NsdClient(_pick_proxy()) as fallback:
+                results = await self._scan_isin_once(fallback, isin, coupons, today)
+            if results is not None:
+                return results
+
+            logger.error("Скан НРД по %s не удался (все прокси)", isin)
+            return [
+                ScannedCoupon(isin, c.bond_name, c.coupon_date, paid=False) for c in coupons
             ]
-            logger.info(
-                "НРД скан %s: новостей найдено, INTR=%d (купонов к проверке: %d)",
-                isin,
-                len(intr_items),
-                len(coupons),
+
+    async def _scan_isin_once(
+        self,
+        client: NsdClient,
+        isin: str,
+        coupons: list[CouponPlan],
+        today: date,
+    ) -> list[ScannedCoupon] | None:
+        """Один проход по ISIN через данный клиент.
+
+        Returns:
+            Результаты по купонам, либо ``None`` — если страница НРД не открылась
+            (тогда вызывающий повторит на другом прокси).
+        """
+        date_from = min(c.coupon_date for c in coupons) - timedelta(days=PUBLISH_LOOKBACK_DAYS)
+        try:
+            html = await client.search_by_isin(
+                isin, date_from=date_from, date_to=today + timedelta(days=1)
             )
-            card_cache: dict[int, NsdCardDetails] = {}
-            results: list[ScannedCoupon] = []
-            for coupon in coupons:
-                match = await self._find_payment(client, intr_items, coupon.coupon_date, card_cache)
-                logger.info(
-                    "НРД %s купон %s: %s",
-                    isin,
-                    coupon.coupon_date,
-                    "выплата подтверждена" if match else "выплата не найдена",
-                )
-                results.append(
-                    ScannedCoupon(
-                        isin, coupon.bond_name, coupon.coupon_date, paid=match is not None
-                    )
-                )
-            return results
+        except Exception as e:  # noqa: BLE001 — сигнал вызывающему повторить
+            logger.warning("НРД поиск по %s не удался: %s", isin, e)
+            return None
+
+        intr_items = [
+            item
+            for item in parse_listing(html)
+            if item.news_type == "INTR" and item.isin == isin
+        ]
+        logger.info(
+            "НРД скан %s: новостей найдено, INTR=%d (купонов к проверке: %d)",
+            isin,
+            len(intr_items),
+            len(coupons),
+        )
+        card_cache: dict[int, NsdCardDetails] = {}
+        results: list[ScannedCoupon] = []
+        for coupon in coupons:
+            match = await self._find_payment(client, intr_items, coupon.coupon_date, card_cache)
+            logger.info(
+                "НРД %s купон %s: %s",
+                isin,
+                coupon.coupon_date,
+                "выплата подтверждена" if match else "выплата не найдена",
+            )
+            results.append(
+                ScannedCoupon(isin, coupon.bond_name, coupon.coupon_date, paid=match is not None)
+            )
+        return results
 
     async def check_deadlines(self, today: date | None = None) -> int:
         """Уведомляет о купонах, не подтверждённых выплатой к дедлайну.
