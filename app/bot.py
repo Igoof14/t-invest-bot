@@ -50,7 +50,7 @@ async def main():
     register_section(price_section)
     register_section(offer_section)
     register_section(ratings_section)
-    register_section(fns_section)
+    # register_section(fns_section)
     register_section(nsd_coupons_section)
 
     dp.include_routers(
@@ -110,20 +110,20 @@ async def main():
     )
 
     # Проверка обновлений рейтингов каждые 10 минут днём (08:00–22:50 МСК).
-    scheduler.add_job(
-        NraRatingAlertService.check_rating_updates,
-        CronTrigger(hour="8-22", minute="*/10", timezone="Europe/Moscow"),
-        kwargs={"bot": bot},
-        max_instances=1,
-        coalesce=True,
-    )
-    scheduler.add_job(
-        NkrRatingAlertService.check_rating_updates,
-        CronTrigger(hour="8-22", minute="*/10", timezone="Europe/Moscow"),
-        kwargs={"bot": bot},
-        max_instances=1,
-        coalesce=True,
-    )
+    # scheduler.add_job(
+    #     NraRatingAlertService.check_rating_updates,
+    #     CronTrigger(hour="8-22", minute="*/10", timezone="Europe/Moscow"),
+    #     kwargs={"bot": bot},
+    #     max_instances=1,
+    #     coalesce=True,
+    # )
+    # scheduler.add_job(
+    #     NkrRatingAlertService.check_rating_updates,
+    #     CronTrigger(hour="8-22", minute="*/10", timezone="Europe/Moscow"),
+    #     kwargs={"bot": bot},
+    #     max_instances=1,
+    #     coalesce=True,
+    # )
 
     scheduler.start()
 
@@ -136,9 +136,9 @@ async def main():
     # Непрерывный мониторинг блокировок ФНС (пул воркеров по прокси, окно 08:00–20:00 МСК).
     # Запуск в фоне, чтобы сборка набора не блокировала старт polling. Держим ссылки,
     # иначе сканер и его воркер-задачи может собрать GC.
-    fns_scanner = FnsScanner(bot)
-    _BACKGROUND.append(fns_scanner)
-    _BACKGROUND.append(asyncio.create_task(fns_scanner.start()))
+    # fns_scanner = FnsScanner(bot)
+    # _BACKGROUND.append(fns_scanner)
+    # _BACKGROUND.append(asyncio.create_task(fns_scanner.start()))
 
     # Контроль выплаты купонов: календарь T-Invest × лента НРД.
     # Сервис живёт всё время процесса (держит карту держателей по ISIN).
