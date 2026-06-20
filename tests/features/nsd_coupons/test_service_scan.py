@@ -11,6 +11,9 @@ from features.nsd_coupons import service as service_module
 from features.nsd_coupons.schemas import CouponPlan
 from features.nsd_coupons.service import NsdCouponService
 
+# scan_user читает статусы из БД (DB-first) — нужна in-memory БД.
+pytestmark = pytest.mark.usefixtures("patch_session_scope")
+
 _FIXTURES = Path(__file__).parent / "fixtures"
 _LISTING = (_FIXTURES / "search_listing.html").read_text(encoding="utf-8")
 _CARD = (_FIXTURES / "card_intr.html").read_text(encoding="utf-8")
@@ -43,6 +46,37 @@ def _plan(coupon_number: int, coupon_date: date) -> CouponPlan:
         coupon_date=coupon_date,
         bond_name="Автодор",
     )
+
+
+async def test_scan_user_uses_db_status_without_nsd(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from features.nsd_coupons.repository import NsdCouponTrackingRepository
+
+    # Купон уже помечен выплаченным в трекинге фоновым процессом.
+    await NsdCouponTrackingRepository.upsert_pending([_plan(99, date(2026, 6, 19))])
+    [record] = await NsdCouponTrackingRepository.list_pending_due(date(2026, 6, 19))
+    await NsdCouponTrackingRepository.mark_paid(record.id, news_id=1)
+
+    class _Boom:
+        def __init__(self, *a: object, **k: object) -> None:
+            raise AssertionError("НРД не должен вызываться — статус есть в БД")
+
+    monkeypatch.setattr(service_module, "NsdClient", _Boom)
+    monkeypatch.setattr(
+        service_module.BotUserRepository,
+        "get_token_by_telegram_id",
+        AsyncMock(return_value="token"),
+    )
+
+    async def fake_collect(telegram_id: int, *a: object, **k: object) -> list[CouponPlan]:
+        return [_plan(99, date(2026, 6, 19))]
+
+    monkeypatch.setattr(service_module, "collect_coupon_plans", fake_collect)
+
+    report = await NsdCouponService(MagicMock()).scan_user(101, today=date(2026, 6, 19))
+
+    assert [(c.isin, c.paid) for c in report.coupons] == [("RU000A105P23", True)]
 
 
 async def test_scan_user_reports_paid_and_unpaid(

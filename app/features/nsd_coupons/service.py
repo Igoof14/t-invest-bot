@@ -62,6 +62,12 @@ def _pick_proxy() -> str | None:
     return proxy
 
 
+# Circuit breaker: если НРД полностью недоступен, ставим живые проверки на паузу,
+# чтобы ручной скан/отчёт не висели минутами (статус берётся из БД).
+_NSD_COOLDOWN = timedelta(minutes=5)
+_nsd_down_until: datetime | None = None
+
+
 class NsdCouponService:
     """Оркестрация мониторинга невыплаченных купонов.
 
@@ -247,23 +253,77 @@ class NsdCouponService:
             if not relevant:
                 return CouponScanReport()
 
-            by_isin: dict[str, list[CouponPlan]] = defaultdict(list)
-            for plan in relevant:
-                by_isin[plan.isin].append(plan)
-
-            sem = asyncio.Semaphore(SCAN_CONCURRENCY)
+            # DB-first: статус известных купонов берём из трекинга (его ведёт
+            # фоновый check_payments); в НРД ходим только за неподтверждёнными.
+            statuses = await NsdCouponTrackingRepository.get_statuses(
+                [(p.isin, p.coupon_number) for p in relevant]
+            )
             scanned: list[ScannedCoupon] = []
-            async with NsdClient(_pick_proxy()) as client:
-                isins = list(by_isin)
-                # Первый ISIN — последовательно: проходим антибот и кэшируем cookie.
-                scanned.extend(await self._scan_isin(client, isins[0], by_isin, today, sem))
-                rest = await asyncio.gather(
-                    *(self._scan_isin(client, isin, by_isin, today, sem) for isin in isins[1:])
-                )
-                for chunk in rest:
-                    scanned.extend(chunk)
+            to_check: list[CouponPlan] = []
+            for plan in relevant:
+                if statuses.get((plan.isin, plan.coupon_number)) == "paid":
+                    scanned.append(
+                        ScannedCoupon(plan.isin, plan.bond_name, plan.coupon_date, paid=True)
+                    )
+                else:
+                    to_check.append(plan)
+
+            if to_check:
+                scanned.extend(await self._live_check(to_check, today))
 
         return CouponScanReport(coupons=scanned)
+
+    async def _live_check(
+        self, plans: list[CouponPlan], today: date
+    ) -> list[ScannedCoupon]:
+        """Живая проверка по НРД купонов, не подтверждённых в БД.
+
+        Защита от зависаний: если НРД недавно был полностью недоступен
+        (circuit breaker активен), живую проверку пропускаем и помечаем купоны
+        неподтверждёнными — без многоминутных таймаутов.
+        """
+        global _nsd_down_until
+        now = datetime.now(UTC)
+        if _nsd_down_until and now < _nsd_down_until:
+            logger.warning(
+                "НРД на паузе (circuit breaker), без живой проверки: %d купон(ов)",
+                len(plans),
+            )
+            return [
+                ScannedCoupon(p.isin, p.bond_name, p.coupon_date, paid=False)
+                for p in plans
+            ]
+
+        by_isin: dict[str, list[CouponPlan]] = defaultdict(list)
+        for plan in plans:
+            by_isin[plan.isin].append(plan)
+        isins = list(by_isin)
+
+        sem = asyncio.Semaphore(SCAN_CONCURRENCY)
+        async with NsdClient(_pick_proxy()) as client:
+            # Первый ISIN — последовательно: проходим антибот и кэшируем cookie.
+            first = await self._scan_isin(client, isins[0], by_isin, today, sem)
+            rest = await asyncio.gather(
+                *(self._scan_isin(client, isin, by_isin, today, sem) for isin in isins[1:])
+            )
+        chunks = [first, *rest]
+
+        scanned: list[ScannedCoupon] = []
+        failures = 0
+        for isin, chunk in zip(isins, chunks):
+            if chunk is None:  # НРД недоступен по этому ISIN (все прокси)
+                failures += 1
+                scanned.extend(
+                    ScannedCoupon(c.isin, c.bond_name, c.coupon_date, paid=False)
+                    for c in by_isin[isin]
+                )
+            else:
+                scanned.extend(chunk)
+
+        if failures and failures == len(isins):
+            _nsd_down_until = now + _NSD_COOLDOWN
+            logger.error("НРД недоступен — пауза живых проверок до %s", _nsd_down_until)
+        return scanned
 
     async def _scan_isin(
         self,
@@ -272,12 +332,16 @@ class NsdCouponService:
         by_isin: dict[str, list[CouponPlan]],
         today: date,
         sem: asyncio.Semaphore,
-    ) -> list[ScannedCoupon]:
+    ) -> list[ScannedCoupon] | None:
         """Проверяет выплаты по одному ISIN; возвращает результаты по его купонам.
 
         Если основной прокси не отдал страницу (таймаут/блок), повторяет ISIN
         через новый клиент на другом прокси из пула — чтобы не помечать выплату
         ложно «не найденной» из-за троттлинга одного IP.
+
+        Returns:
+            Результаты по купонам, либо ``None`` — если НРД недоступен по всем
+            прокси (вызывающий учтёт это для circuit breaker).
         """
         coupons = by_isin[isin]
         async with sem:
@@ -292,9 +356,7 @@ class NsdCouponService:
                 return results
 
             logger.error("Скан НРД по %s не удался (все прокси)", isin)
-            return [
-                ScannedCoupon(isin, c.bond_name, c.coupon_date, paid=False) for c in coupons
-            ]
+            return None
 
     async def _scan_isin_once(
         self,

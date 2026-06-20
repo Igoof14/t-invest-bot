@@ -194,6 +194,40 @@ class NsdCouponTrackingRepository:
             return records
 
     @classmethod
+    async def get_statuses(
+        cls, pairs: list[tuple[str, int]]
+    ) -> dict[tuple[str, int], str]:
+        """Возвращает статусы трекинга для пар ``(isin, coupon_number)``.
+
+        Используется для DB-first проверки: статус известных купонов берётся из БД
+        (их уже пометил фоновый ``check_payments``), и живой запрос к НРД нужен
+        только для отсутствующих/неподтверждённых.
+
+        Args:
+            pairs: Пары (ISIN, номер купона).
+
+        Returns:
+            Словарь только по найденным парам → статус (``pending``/``paid``/...).
+        """
+        if not pairs:
+            return {}
+        wanted = set(pairs)
+        isins = {isin for isin, _ in pairs}
+        async with session_scope() as session:
+            result = await session.execute(
+                select(
+                    NsdCouponTracking.isin,
+                    NsdCouponTracking.coupon_number,
+                    NsdCouponTracking.status,
+                ).where(NsdCouponTracking.isin.in_(isins))
+            )
+            return {
+                (isin, number): status
+                for isin, number, status in result.all()
+                if (isin, number) in wanted
+            }
+
+    @classmethod
     async def mark_paid(
         cls, coupon_id: int, news_id: int | None, received_at: datetime | None = None
     ) -> None:
