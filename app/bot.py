@@ -14,7 +14,6 @@ from features.coupons import coupon_handlers
 from features.fns_monitoring import router as fns_router
 from features.fns_monitoring.menu import SECTION as fns_section
 from features.fns_monitoring.scanner import FnsScanner
-from features.issuers import IssuerSyncService
 from features.menu import register_section
 from features.menu import router as menu_router
 from features.offer_warning import OfferAlertService
@@ -98,12 +97,6 @@ async def main():
         kwargs={"bot": bot, "scheduler": scheduler},
     )
 
-    # Еженедельная синхронизация реестра эмитентов (каталог меняется медленно).
-    scheduler.add_job(
-        IssuerSyncService.sync_all_issuers,
-        CronTrigger(day_of_week="sun", hour=5, minute=0, timezone="Europe/Moscow"),
-    )
-
     # Проверка обновлений рейтингов каждые 10 минут днём (08:00–22:50 МСК).
     scheduler.add_job(
         NraRatingAlertService.check_rating_updates,
@@ -124,9 +117,6 @@ async def main():
 
     # Восстанавливаем DateTrigger-джобы после возможного рестарта
     await OfferAlertService.schedule_daily_jobs(bot, scheduler)
-
-    # Разовый синк реестра эмитентов на старте (в фоне, не блокирует polling).
-    scheduler.add_job(IssuerSyncService.sync_all_issuers)
 
     # Непрерывный мониторинг блокировок ФНС (пул воркеров по прокси, окно 08:00–20:00 МСК).
     # Запуск в фоне, чтобы сборка набора не блокировала старт polling. Держим ссылки,
