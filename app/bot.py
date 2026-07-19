@@ -17,9 +17,6 @@ from features.fns_monitoring.scanner import FnsScanner
 from features.issuers import IssuerSyncService
 from features.menu import register_section
 from features.menu import router as menu_router
-from features.nsd_coupons import NsdCouponService
-from features.nsd_coupons import router as nsd_coupons_router
-from features.nsd_coupons.menu import SECTION as nsd_coupons_section
 from features.offer_warning import OfferAlertService
 from features.offer_warning import handlers as offer_warning_handlers
 from features.offer_warning.menu import SECTION as offer_section
@@ -51,7 +48,6 @@ async def main():
     register_section(offer_section)
     register_section(ratings_section)
     # register_section(fns_section)
-    register_section(nsd_coupons_section)
 
     dp.include_routers(
         base_handlers.router,
@@ -63,7 +59,6 @@ async def main():
         users_handlers.router,
         ratings_router,
         fns_router,
-        nsd_coupons_router,
         menu_router,
     )
 
@@ -136,43 +131,10 @@ async def main():
     # Непрерывный мониторинг блокировок ФНС (пул воркеров по прокси, окно 08:00–20:00 МСК).
     # Запуск в фоне, чтобы сборка набора не блокировала старт polling. Держим ссылки,
     # иначе сканер и его воркер-задачи может собрать GC.
-    fns_scanner = FnsScanner(bot)
-    _BACKGROUND.append(fns_scanner)
-    _BACKGROUND.append(asyncio.create_task(fns_scanner.start()))
-
-    # Контроль выплаты купонов: календарь T-Invest × лента НРД.
-    # Сервис живёт всё время процесса (держит карту держателей по ISIN).
-    nsd_coupon_service = NsdCouponService(bot)
-    _BACKGROUND.append(nsd_coupon_service)
-    # Ежедневный синк купонного календаря подписчиков (06:30 МСК) + разово на старте.
-    scheduler.add_job(
-        nsd_coupon_service.sync_calendar,
-        CronTrigger(hour=6, minute=30, timezone="Europe/Moscow"),
-        max_instances=1,
-        coalesce=True,
-    )
-    scheduler.add_job(nsd_coupon_service.sync_calendar)
-    # Сверка выплат с лентой НРД каждые 30 мин днём (09:00–22:00 МСК).
-    scheduler.add_job(
-        nsd_coupon_service.check_payments,
-        CronTrigger(hour="9-22", minute="*/30", timezone="Europe/Moscow"),
-        max_instances=1,
-        coalesce=True,
-    )
-    # Дедлайн-проверка непоступивших купонов (22:30 МСК, после дневных сверок).
-    scheduler.add_job(
-        nsd_coupon_service.check_deadlines,
-        CronTrigger(hour=22, minute=30, timezone="Europe/Moscow"),
-        max_instances=1,
-        coalesce=True,
-    )
-    # Ежедневный отчёт по купонам в выбранное пользователем время (минутный тик МСК).
-    scheduler.add_job(
-        nsd_coupon_service.send_daily_reports,
-        CronTrigger(minute="*", timezone="Europe/Moscow"),
-        max_instances=1,
-        coalesce=True,
-    )
+    #
+    # fns_scanner = FnsScanner(bot)
+    # _BACKGROUND.append(fns_scanner)
+    # _BACKGROUND.append(asyncio.create_task(fns_scanner.start()))
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
