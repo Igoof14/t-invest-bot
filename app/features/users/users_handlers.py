@@ -1,11 +1,13 @@
 """Обработчик для настроект."""
 
+import asyncio
 import logging
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
+from core.clients.bonds_sync.client import sync_user_bonds
 from core.clients.t_invest.common_func import check_token
 from features.base.keyboards import create_main_keyboard, create_new_user_keyboard
 from features.users.repository import BotUserRepository
@@ -15,6 +17,21 @@ from .enums import SettingsCallbackData
 logger = logging.getLogger(__name__)
 router = Router()
 waiting_for_token: set[int] = set()
+
+# Удержание фоновых задач синхронизации облигаций от сборки GC до завершения.
+_SYNC_TASKS: set[asyncio.Task[bool]] = set()
+
+
+def _schedule_bonds_sync(telegram_id: int) -> None:
+    """Запускает синхронизацию облигаций пользователя в фоне, не блокируя ответ.
+
+    Args:
+        telegram_id: Telegram ID пользователя, для которого запускается синк.
+
+    """
+    task = asyncio.create_task(sync_user_bonds(telegram_id))
+    _SYNC_TASKS.add(task)
+    task.add_done_callback(_SYNC_TASKS.discard)
 
 
 class TokenStates(StatesGroup):
@@ -90,6 +107,7 @@ async def handle_token_message(message: Message, state: FSMContext) -> None:
         logger.info(f"Токен пользователя {telegram_id} валиден")
         success = await BotUserRepository.add_token(telegram_id=telegram_id, token=token)
         if success:
+            _schedule_bonds_sync(telegram_id)
             main_keyboard = create_main_keyboard()
             await message.answer("Токен успешно сохранён!", reply_markup=main_keyboard)
             await state.clear()
