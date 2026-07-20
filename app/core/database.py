@@ -52,7 +52,6 @@ class DatabaseManager:
                 FnsAlertSettings,
                 FnsBlockingRecord,
             )
-            from features.issuers.models import Issuer, IssuerBond
             from features.offer_warning.models import OfferAlertSettings
             from features.price_monitoring.models import (
                 BondLastPrice,
@@ -64,8 +63,6 @@ class DatabaseManager:
             from features.users.models import TinvestUser, User
 
             __all__ = [
-                Issuer,
-                IssuerBond,
                 OfferAlertSettings,
                 BondLastPrice,
                 BondPriceHistory,

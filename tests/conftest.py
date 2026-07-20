@@ -60,7 +60,6 @@ async def patch_session_scope(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[
     # Патчим session_scope во всех репозиториях, использующих in-memory БД.
     for target in (
         "features.offer_warning.repository.session_scope",
-        "features.issuers.repository.session_scope",
         "features.ratings.repository.session_scope",
         "features.fns_monitoring.repository.session_scope",
         "features.nsd_coupons.repository.session_scope",

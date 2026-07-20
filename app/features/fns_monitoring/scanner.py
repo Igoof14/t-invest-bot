@@ -14,8 +14,6 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from aiogram import Bot
-from features.issuers.models import Issuer
-from features.issuers.repository import IssuerRepository
 
 from .client import run
 from .events import parse_rows
@@ -63,9 +61,7 @@ def seconds_until_open(now: datetime) -> float:
     return (candidate - now).total_seconds()
 
 
-def should_skip_revisit(
-    inn: str, now: datetime, last_checked: dict[str, datetime]
-) -> bool:
+def should_skip_revisit(inn: str, now: datetime, last_checked: dict[str, datetime]) -> bool:
     """Возвращает, проверялся ли ИНН недавно (раньше ``MIN_REVISIT_SECONDS``)."""
     previous = last_checked.get(inn)
     if previous is None:
@@ -189,8 +185,7 @@ class FnsScanner:
 
         if not had_history:
             logger.info(
-                f"ИНН {inn}: первичная фиксация ({len(orders)} блокировок), "
-                "без уведомления"
+                f"ИНН {inn}: первичная фиксация ({len(orders)} блокировок), без уведомления"
             )
             return
 

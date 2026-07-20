@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from features.issuers.models import Issuer
-from features.issuers.repository import IssuerRepository
 from features.users.repository import BotUserRepository
 
 from .events import BlockingOrder, MatchedBond, ResolvedBlock, UserBlockAlert

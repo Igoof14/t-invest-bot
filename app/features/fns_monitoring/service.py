@@ -11,8 +11,6 @@ import asyncio
 import logging
 
 from aiogram import Bot
-from features.issuers.models import Issuer
-from features.issuers.repository import IssuerRepository
 from features.users.repository import BotUserRepository
 
 from .client import run
