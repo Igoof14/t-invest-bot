@@ -46,6 +46,10 @@ class Settings(BaseSettings):
     # URL или формат провайдера ip:port:user:pass.
     nsd_proxies: str | None = None
 
+    # Базовый URL Cloud Run сервиса синхронизации облигаций пользователя
+    # (авторизация через OIDC id-token с metadata server GCE).
+    bonds_sync_url: str | None = None
+
     model_config = SettingsConfigDict(env_file=_ENV_FILE, env_file_encoding="utf-8", extra="ignore")
 
 
