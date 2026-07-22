@@ -24,8 +24,6 @@ from features.price_monitoring import PriceAlertService, price_alert_handlers
 from features.price_monitoring.menu import SECTION as price_section
 from features.ratings import router as ratings_router
 from features.ratings.menu import SECTION as ratings_section
-from features.ratings.rating_nkr import NkrRatingAlertService
-from features.ratings.rating_nra import NraRatingAlertService
 from features.reports import ReportService
 from features.users import users_handlers
 
@@ -46,7 +44,7 @@ async def main():
     register_section(price_section)
     register_section(offer_section)
     register_section(ratings_section)
-    # register_section(fns_section)
+    register_section(fns_section)
 
     dp.include_routers(
         base_handlers.router,
