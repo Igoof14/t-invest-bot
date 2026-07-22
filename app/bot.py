@@ -97,22 +97,6 @@ async def main():
         kwargs={"bot": bot, "scheduler": scheduler},
     )
 
-    # Проверка обновлений рейтингов каждые 10 минут днём (08:00–22:50 МСК).
-    scheduler.add_job(
-        NraRatingAlertService.check_rating_updates,
-        CronTrigger(hour="8-22", minute="*/10", timezone="Europe/Moscow"),
-        kwargs={"bot": bot},
-        max_instances=1,
-        coalesce=True,
-    )
-    scheduler.add_job(
-        NkrRatingAlertService.check_rating_updates,
-        CronTrigger(hour="8-22", minute="*/10", timezone="Europe/Moscow"),
-        kwargs={"bot": bot},
-        max_instances=1,
-        coalesce=True,
-    )
-
     scheduler.start()
 
     # Восстанавливаем DateTrigger-джобы после возможного рестарта

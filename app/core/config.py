@@ -31,21 +31,6 @@ class Settings(BaseSettings):
     # URL или формат провайдера ip:port:user:pass. Размазывает сканирование по IP.
     fns_proxies: str | None = None
 
-    # Прокси для скрейпинга рейтинговых агентств (ratings.ru, ra-national.ru).
-    # Если не задан — обращения идут напрямую.
-    ratings_proxy: str | None = None
-
-    # Пул прокси для рейтингов: список через запятую/перенос строки. Каждый
-    # элемент — URL или формат провайдера ip:port:user:pass.
-    ratings_proxies: str | None = None
-
-    # Прокси для скрейпинга ленты НРД (nsddata.ru). Если не задан — напрямую.
-    nsd_proxy: str | None = None
-
-    # Пул прокси для НРД: список через запятую/перенос строки. Каждый элемент —
-    # URL или формат провайдера ip:port:user:pass.
-    nsd_proxies: str | None = None
-
     # Базовый URL Cloud Run сервиса синхронизации облигаций пользователя
     # (авторизация через OIDC id-token с metadata server GCE).
     bonds_sync_url: str | None = None

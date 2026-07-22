@@ -15,6 +15,7 @@ from zoneinfo import ZoneInfo
 
 from aiogram import Bot
 
+from ..issuers.repository import Issuer, IssuerRepository
 from .client import run
 from .events import parse_rows
 from .notifier import FnsBlockNotifier
