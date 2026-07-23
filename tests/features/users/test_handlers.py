@@ -1,4 +1,4 @@
-"""Тесты обработчика сохранения токена в features.users.users_handlers."""
+"""Тесты обработчика сохранения токена в features.users.handlers."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from features.users import users_handlers
-from features.users.users_handlers import handle_token_message
+from features.users import handlers as users_handlers
+from features.users.handlers import handle_token_message
 
 
 def _message(text: str, chat_id: int = 777) -> MagicMock:

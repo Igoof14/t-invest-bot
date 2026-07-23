@@ -12,7 +12,7 @@ from features.onboarding.handlers import (
 )
 from features.onboarding.schemas import OnboardingNav
 from features.onboarding.texts import STEPS
-from features.users.users_handlers import TokenStates
+from features.users.handlers import TokenStates
 
 
 def _message() -> MagicMock:

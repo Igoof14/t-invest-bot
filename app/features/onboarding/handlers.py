@@ -11,7 +11,6 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
-from features.users.users_handlers import prompt_for_token
 
 from .keyboards import build_step_keyboard
 from .schemas import TOKEN_CALLBACK, OnboardingNav
@@ -57,6 +56,9 @@ async def handle_nav(callback: CallbackQuery, callback_data: OnboardingNav) -> N
 @router.callback_query(F.data == TOKEN_CALLBACK)
 async def handle_token_cta(callback: CallbackQuery, state: FSMContext) -> None:
     """Финальный CTA: открывает ввод токена."""
+    # Отложенный импорт: разрывает цикл base -> onboarding -> users -> base.
+    from features.users.handlers import prompt_for_token
+
     if isinstance(callback.message, Message):
         await prompt_for_token(callback.message, state)
     await callback.answer()

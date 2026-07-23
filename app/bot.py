@@ -8,22 +8,24 @@ from common.utils.bot_utils import BotUtils
 from core.config import config
 from core.database import db_manager
 from core.enums import ReportType
-from features.base import base_handlers
-from features.broadcast import router as broadcast_router
-from features.coupons import coupon_handlers
-from features.fns_monitoring import router as fns_router
+from features import (
+    base,
+    broadcast,
+    coupons,
+    fns_monitoring,
+    offer_warning,
+    onboarding,
+    price_monitoring,
+    ratings,
+    users,
+)
+from features import menu as menu_feature
 from features.fns_monitoring.menu import SECTION as fns_section
 from features.menu import register_section
-from features.menu import router as menu_router
-from features.offer_warning import handlers as offer_warning_handlers
 from features.offer_warning.menu import SECTION as offer_section
-from features.onboarding import router as onboarding_router
-from features.price_monitoring import price_alert_handlers
 from features.price_monitoring.menu import SECTION as price_section
-from features.ratings import router as ratings_router
 from features.ratings.menu import SECTION as ratings_section
 from features.reports import ReportService
-from features.users import users_handlers
 
 logging.basicConfig(level=logging.INFO)
 
@@ -45,16 +47,16 @@ async def main():
     register_section(fns_section)
 
     dp.include_routers(
-        base_handlers.router,
-        broadcast_router,
-        onboarding_router,
-        price_alert_handlers.router,
-        offer_warning_handlers.router,
-        coupon_handlers.router,
-        users_handlers.router,
-        ratings_router,
-        fns_router,
-        menu_router,
+        base.router,
+        broadcast.router,
+        onboarding.router,
+        price_monitoring.router,
+        offer_warning.router,
+        coupons.router,
+        users.router,
+        ratings.router,
+        fns_monitoring.router,
+        menu_feature.router,
     )
 
     await BotUtils.set_commands(bot)
