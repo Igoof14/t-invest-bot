@@ -50,6 +50,7 @@ async def test_changes_send_one_message(client: TestClient, bot: MagicMock) -> N
     bot.send_message.assert_awaited_once()
     message_text = bot.send_message.await_args.args[1]
     assert "Тест-облигация" in message_text
+    assert "RU000A108EF8" in message_text
 
 
 async def test_invalid_payload_dropped_with_200(

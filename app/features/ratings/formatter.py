@@ -34,7 +34,10 @@ def _format_single(change) -> str:
         lines.append(f"  Прогноз: {event.outlook}")
 
     if change.matched_bond_names:
-        bonds = ", ".join(bond.name for bond in change.matched_bond_names)
+        bonds = ", ".join(
+            f"{bond.name} (<code>{bond.isin}</code>)"
+            for bond in change.matched_bond_names
+        )
         lines.append(f"  В вашем портфеле: {bonds}")
 
     return "\n".join(lines)
