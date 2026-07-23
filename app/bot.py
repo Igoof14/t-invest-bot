@@ -13,14 +13,12 @@ from features.broadcast import router as broadcast_router
 from features.coupons import coupon_handlers
 from features.fns_monitoring import router as fns_router
 from features.fns_monitoring.menu import SECTION as fns_section
-from features.fns_monitoring.scanner import FnsScanner
 from features.menu import register_section
 from features.menu import router as menu_router
-from features.offer_warning import OfferAlertService
 from features.offer_warning import handlers as offer_warning_handlers
 from features.offer_warning.menu import SECTION as offer_section
 from features.onboarding import router as onboarding_router
-from features.price_monitoring import PriceAlertService, price_alert_handlers
+from features.price_monitoring import price_alert_handlers
 from features.price_monitoring.menu import SECTION as price_section
 from features.ratings import router as ratings_router
 from features.ratings.menu import SECTION as ratings_section
@@ -75,38 +73,9 @@ async def main():
         kwargs={"bot": bot, "report_type": ReportType.WEEKLY},
     )
 
-    scheduler.add_job(
-        PriceAlertService.check_price_anomalies,
-        CronTrigger(hour="10-20", minute=0, timezone="Europe/Moscow"),
-        kwargs={"bot": bot},
-    )
-
-    # Дневная очистка старых записей цен и алертов (в ночь на 4:00 МСК).
-    scheduler.add_job(
-        PriceAlertService.run_daily_cleanup,
-        CronTrigger(hour=4, minute=0, timezone="Europe/Moscow"),
-        kwargs={"bot": bot},
-    )
-
-    # Ежедневный пересчёт уведомлений об офертах в 06:00 МСК
-    scheduler.add_job(
-        OfferAlertService.schedule_daily_jobs,
-        CronTrigger(hour=6, minute=0, timezone="Europe/Moscow"),
-        kwargs={"bot": bot, "scheduler": scheduler},
-    )
-
     scheduler.start()
 
     # Восстанавливаем DateTrigger-джобы после возможного рестарта
-    await OfferAlertService.schedule_daily_jobs(bot, scheduler)
-
-    # Непрерывный мониторинг блокировок ФНС (пул воркеров по прокси, окно 08:00–20:00 МСК).
-    # Запуск в фоне, чтобы сборка набора не блокировала старт polling. Держим ссылки,
-    # иначе сканер и его воркер-задачи может собрать GC.
-    #
-    # fns_scanner = FnsScanner(bot)
-    # _BACKGROUND.append(fns_scanner)
-    # _BACKGROUND.append(asyncio.create_task(fns_scanner.start()))
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)

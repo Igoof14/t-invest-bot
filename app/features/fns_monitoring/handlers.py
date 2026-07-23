@@ -11,7 +11,6 @@ from .formatter import format_scan_report
 from .menu import render
 from .repository import FnsAlertSettingsRepository
 from .schemas import FnsAlertCallback
-from .service import FnsBlockingMonitorService
 
 logger = logging.getLogger(__name__)
 
@@ -56,13 +55,13 @@ async def handle_scan(callback: CallbackQuery, bot: Bot) -> None:
     _scanning.add(telegram_id)
     try:
         await message.edit_text(
-            "🔄 Проверяю ваших эмитентов в ФНС…\n"
-            "Это может занять до нескольких минут.",
+            "🔄 Проверяю ваших эмитентов в ФНС…\nЭто может занять до нескольких минут.",
             parse_mode="HTML",
         )
 
-        report = await FnsBlockingMonitorService(bot).scan_user(telegram_id)
-        text = format_scan_report(report)
+        # report = await FnsBlockingMonitorService(bot).scan_user(telegram_id)
+        # text = format_scan_report(report)
+        text = "Модуль в ремонте"
         _, markup = await render(telegram_id)
         await message.edit_text(
             text,

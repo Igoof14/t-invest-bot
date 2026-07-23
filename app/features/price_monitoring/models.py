@@ -37,59 +37,6 @@ class PriceAlertSettings(Base):
         return f"<UserAlertSettings(telegram_id={self.telegram_id}, enabled={self.alerts_enabled})>"
 
 
-class BondPriceHistory(Base):
-    """История цен облигаций для сравнения."""
-
-    __tablename__ = "bond_price_history"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
-
-    # Идентификаторы облигации
-    figi: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-    ticker: Mapped[str] = mapped_column(String(32), nullable=False)
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-
-    price: Mapped[float] = mapped_column(Float, nullable=False)
-
-    # Счёт
-    account_name: Mapped[str] = mapped_column(String(255), nullable=True)
-
-    # Время записи
-    recorded_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-
-    def __repr__(self) -> str:
-        """Представление модели."""
-        return f"<BondPriceHistory(figi={self.figi}, price={self.price})>"
-
-
-class BondLastPrice(Base):
-    """Последняя биржевая цена облигации (снимок от T-Invest getLastPrices)."""
-
-    __tablename__ = "bond_last_price"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-
-    figi: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-    instrument_uid: Mapped[str] = mapped_column(String(36), nullable=False)
-
-    price: Mapped[float] = mapped_column(Float, nullable=False)
-
-    last_price_type: Mapped[int] = mapped_column(Integer, nullable=False)
-
-    exchange_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-
-    recorded_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-
-    def __repr__(self) -> str:
-        """Представление модели."""
-        return f"<BondLastPrice(figi={self.figi}, price={self.price})>"
-
-
 class PriceAlertSent(Base):
     """Отправленные алерты (для anti-spam)."""
 

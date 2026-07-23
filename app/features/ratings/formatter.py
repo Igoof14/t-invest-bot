@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from .events import RatingChange
-
 # Иконка по каноничному рейтинговому действию.
 _ACTION_ICONS = {
     "Понижен": "🔻",
@@ -16,7 +14,7 @@ _ACTION_ICONS = {
 }
 
 
-def _format_single(change: RatingChange) -> str:
+def _format_single(change) -> str:
     """Форматирует один блок изменения рейтинга."""
     event = change.event
     icon = _ACTION_ICONS.get(event.rating_action or "", "•")
@@ -42,7 +40,7 @@ def _format_single(change: RatingChange) -> str:
     return "\n".join(lines)
 
 
-def format_rating_alert(agency_name: str, changes: list[RatingChange]) -> str:
+def format_rating_alert(agency_name: str, changes: list) -> str:
     """Формирует HTML-сообщение об изменениях рейтинга по бумагам пользователя.
 
     Args:

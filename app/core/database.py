@@ -54,8 +54,6 @@ class DatabaseManager:
             )
             from features.offer_warning.models import OfferAlertSettings
             from features.price_monitoring.models import (
-                BondLastPrice,
-                BondPriceHistory,
                 PriceAlertSent,
                 PriceAlertSettings,
             )
@@ -64,8 +62,6 @@ class DatabaseManager:
 
             __all__ = [
                 OfferAlertSettings,
-                BondLastPrice,
-                BondPriceHistory,
                 PriceAlertSent,
                 PriceAlertSettings,
                 RatingAlertSettings,

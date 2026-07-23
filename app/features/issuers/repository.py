@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 
-from core.clients.moex.moex_bonds import MoexEmitter
 from core.database import session_scope
 from sqlalchemy import or_, select
 
@@ -15,39 +14,6 @@ logger = logging.getLogger(__name__)
 
 class IssuerRepository:
     """CRUD реестра эмитентов (компания → ИНН) и их облигаций."""
-
-    @classmethod
-    async def upsert_issuer(cls, emitter: MoexEmitter) -> int:
-        """Создаёт или обновляет эмитента по ``emitter_id``.
-
-        Args:
-            emitter: Данные эмитента из MOEX.
-
-        Returns:
-            ``id`` строки эмитента в БД.
-
-        """
-        async with session_scope() as session:
-            result = await session.execute(
-                select(Issuer).where(Issuer.emitter_id == emitter.emitter_id)
-            )
-            issuer = result.scalar_one_or_none()
-
-            if issuer is None:
-                issuer = Issuer(emitter_id=emitter.emitter_id)
-                session.add(issuer)
-
-            issuer.inn = emitter.inn
-            issuer.title = emitter.title
-            issuer.short_title = emitter.short_title
-            issuer.ogrn = emitter.ogrn
-            issuer.okpo = emitter.okpo
-            issuer.legal_address = emitter.legal_address
-            issuer.url = emitter.url
-
-            await session.commit()
-            await session.refresh(issuer)
-            return issuer.id
 
     @classmethod
     async def upsert_bond(
