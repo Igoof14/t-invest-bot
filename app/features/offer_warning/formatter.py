@@ -6,7 +6,8 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from common.utils.bot_utils import pluralize_days
-from core.clients.moex.moex_bonds import MoexBondOffer
+
+from .schemas import BondOffer
 
 _MSK_TZ = ZoneInfo("Europe/Moscow")
 
@@ -15,7 +16,7 @@ def _fmt_date(d) -> str:
     return d.strftime("%d.%m.%Y") if d else "—"
 
 
-def _format_single_offer(offer: MoexBondOffer, days_until: int) -> str:
+def _format_single_offer(offer: BondOffer, days_until: int) -> str:
     moex_link = (
         f"https://www.moex.com/ru/issue.aspx"
         f"?board={offer.primary_boardid}&code={offer.secid}"
@@ -46,7 +47,7 @@ def _format_single_offer(offer: MoexBondOffer, days_until: int) -> str:
     return "\n".join(lines)
 
 
-def format_offer_alerts(offers: list[MoexBondOffer]) -> str:
+def format_offer_alerts(offers: list[BondOffer]) -> str:
     """Формирует HTML-сообщение с перечнем приближающихся оферт.
 
     Args:

@@ -5,9 +5,9 @@ from __future__ import annotations
 import logging
 
 from aiogram import Bot
-from core.clients.moex.moex_bonds import MoexBondOffer
 
 from .formatter import format_offer_alerts
+from .schemas import BondOffer
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class OfferAlertNotifier:
         """
         self._bot = bot
 
-    async def send(self, telegram_id: int, offers: list[MoexBondOffer]) -> bool:
+    async def send(self, telegram_id: int, offers: list[BondOffer]) -> bool:
         """Отправляет одно сообщение со всеми офертами пользователя.
 
         Args:

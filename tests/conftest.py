@@ -8,17 +8,17 @@ from datetime import date
 
 import pytest
 import pytest_asyncio
-from core.clients.moex.moex_bonds import MoexBondOffer
+from features.offer_warning.schemas import BondOffer
 from core.database import Base
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 
 @pytest.fixture
-def offer_factory() -> Callable[..., MoexBondOffer]:
-    """Возвращает фабрику ``MoexBondOffer`` с дефолтами, переопределяемыми по полям."""
+def offer_factory() -> Callable[..., BondOffer]:
+    """Возвращает фабрику ``BondOffer`` с дефолтами, переопределяемыми по полям."""
 
-    def _make(**overrides: object) -> MoexBondOffer:
+    def _make(**overrides: object) -> BondOffer:
         defaults: dict[str, object] = {
             "isin": "RU000A0JX0J2",
             "name": "Тестовая облигация",
@@ -30,7 +30,7 @@ def offer_factory() -> Callable[..., MoexBondOffer]:
             "primary_boardid": "TQCB",
         }
         defaults.update(overrides)
-        return MoexBondOffer(**defaults)  # type: ignore[arg-type]
+        return BondOffer(**defaults)  # type: ignore[arg-type]
 
     return _make
 
