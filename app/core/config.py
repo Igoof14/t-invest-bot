@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8080
 
+    # OIDC-аутентификация запросов Cloud Tasks: ожидаемый audience (публичный
+    # URL API) и email сервисного аккаунта, от имени которого приходят задачи.
+    api_audience: str | None = None
+    tasks_service_account_email: str | None = None
+
     model_config = SettingsConfigDict(env_file=_ENV_FILE, env_file_encoding="utf-8", extra="ignore")
 
 

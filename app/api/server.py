@@ -6,6 +6,9 @@ import logging
 
 from aiogram import Bot
 from aiohttp import web
+from core.config import config
+
+from .middlewares import create_oidc_middleware
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +31,14 @@ def create_app(bot: Bot) -> web.Application:
         Готовое к запуску приложение.
 
     """
-    app = web.Application()
+    app = web.Application(
+        middlewares=[
+            create_oidc_middleware(
+                audience=config.api_audience,
+                service_account_email=config.tasks_service_account_email,
+            )
+        ]
+    )
     app[BOT_KEY] = bot
     app.router.add_get("/health", handle_health)
     return app
