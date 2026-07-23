@@ -3,7 +3,7 @@
 from datetime import datetime
 
 from core.database import Base
-from sqlalchemy import BigInteger, Boolean, DateTime, Float, Integer, String, func
+from sqlalchemy import BigInteger, Boolean, DateTime, Float, Integer, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 
@@ -35,26 +35,3 @@ class PriceAlertSettings(Base):
     def __repr__(self) -> str:
         """Представление модели."""
         return f"<UserAlertSettings(telegram_id={self.telegram_id}, enabled={self.alerts_enabled})>"
-
-
-class PriceAlertSent(Base):
-    """Отправленные алерты (для anti-spam)."""
-
-    __tablename__ = "price_alert_sent"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
-    figi: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-
-    # Тип алерта: 'drop_warning', 'drop_critical', 'rise_warning', 'rise_critical'
-    alert_type: Mapped[str] = mapped_column(String(32), nullable=False)
-
-    # Время отправки
-    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-    # Количество отправленных алертов за день
-    daily_count: Mapped[int] = mapped_column(Integer, default=1)
-
-    def __repr__(self) -> str:
-        """Представление модели."""
-        return f"<PriceAlertSent(figi={self.figi}, type={self.alert_type})>"

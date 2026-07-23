@@ -53,16 +53,12 @@ class DatabaseManager:
                 FnsBlockingRecord,
             )
             from features.offer_warning.models import OfferAlertSettings
-            from features.price_monitoring.models import (
-                PriceAlertSent,
-                PriceAlertSettings,
-            )
+            from features.price_monitoring.models import PriceAlertSettings
             from features.ratings.models import RatingAlertSettings, RatingRelease
             from features.users.models import TinvestUser, User
 
             __all__ = [
                 OfferAlertSettings,
-                PriceAlertSent,
                 PriceAlertSettings,
                 RatingAlertSettings,
                 RatingRelease,
