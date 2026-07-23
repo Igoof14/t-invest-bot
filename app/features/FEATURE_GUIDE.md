@@ -218,8 +218,7 @@ class NewFeatureService:
 
 ## Handlers
 
-Handlers храни в `handlers.py` или в более конкретном имени, если оно уже
-сложилось в проекте (`price_alert_handlers.py`).
+Handlers храни в `handlers.py` — имя единое для всех фич.
 
 Правила:
 
@@ -258,8 +257,63 @@ Handlers храни в `handlers.py` или в более конкретном �
 - принимает `Bot` через конструктор;
 - вызывает `bot.send_message(...)`;
 - выбирает `parse_mode`;
-- логирует результат;
-- при необходимости записывает факт отправки в репозиторий.
+- логирует результат.
+
+Дедупликация и антиспам — ответственность сервисов-продюсеров событий,
+notifier только доставляет сообщения.
+
+## Приём событий по HTTP (`api.py`)
+
+Обработчики данных вынесены в отдельные сервисы. Они присылают готовые
+события через Google Cloud Tasks на HTTP API бота (`app/api/`). Если фича
+получает события — добавь `api.py`:
+
+```python
+routes = web.RouteTableDef()
+
+
+class MyEvent(BaseModel):
+    """Событие для пользователя от внешнего сервиса."""
+
+    telegram_id: int
+    items: list[MyPayload] = Field(min_length=1)
+
+
+@routes.post("/events/my-event")
+async def handle_my_event(request: web.Request) -> web.Response:
+    try:
+        event = MyEvent.model_validate(await request.json())
+    except (ValidationError, ValueError) as e:
+        logger.error("Невалидный payload my-event: %s", e)
+        return web.json_response({"status": "dropped", "reason": "invalid payload"})
+
+    notifier = MyNotifier(request.app[BOT_KEY])
+    sent = await notifier.send(event.telegram_id, event.items)
+
+    if not sent:
+        return web.json_response({"status": "error"}, status=503)
+    return web.json_response({"status": "sent"})
+```
+
+Правила:
+
+- Endpoint тонкий, как Telegram-handler: валидация pydantic-схемой →
+  вызов notifier → статус. Никакой бизнес-логики.
+- `routes` фичи подключаются в `app/api/server.py` через `app.add_routes(...)`.
+- Экземпляр бота бери из `request.app[BOT_KEY]` (`api.keys`).
+- Пути защищённых endpoint'ов начинаются с `/events/` — на них действует
+  OIDC-аутентификация Cloud Tasks (см. `api/middlewares.py`).
+
+Семантика ответов (Cloud Tasks ретраит любой не-2xx):
+
+| Ситуация | Ответ |
+|---|---|
+| Уведомление отправлено | `200 {"status": "sent"}` |
+| Невалидный payload (ретрай бессмысленен) | `200 {"status": "dropped"}` + лог |
+| Временная ошибка (Telegram/сеть) | `503` — Cloud Tasks сделает ретрай |
+
+Тесты `test_api.py`: собери минимальное приложение с роутами фичи и мок-ботом
+в `app[BOT_KEY]`, проверь happy path, невалидный payload и ошибку отправки.
 
 ## Фоновые задачи
 
@@ -295,7 +349,7 @@ __all__ = ["NewFeatureService"]
 
 1. Модели импортированы в `DatabaseManager.create_tables()`.
 2. Router импортирован и подключен в `app/bot.py`.
-3. Scheduler job добавлен в `app/bot.py`, если фича фоновая.
+3. HTTP-роуты подключены в `app/api/server.py`, если фича получает события.
 4. Публичный сервис экспортирован из `__init__.py`, если нужен снаружи.
 5. Тесты добавлены в `tests/features/<feature_name>/`.
 6. Внешний I/O в тестах замокан.
