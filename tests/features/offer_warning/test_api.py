@@ -1,0 +1,79 @@
+"""Тесты HTTP endpoint'а /events/offer-warning."""
+
+from collections.abc import AsyncIterator
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest_asyncio
+from aiohttp import web
+from aiohttp.test_utils import TestClient, TestServer
+from api.keys import BOT_KEY
+from features.offer_warning.api import routes
+
+
+def _offer_payload(**overrides: object) -> dict:
+    payload = {
+        "isin": "RU000A0JX0J2",
+        "name": "Тестовая облигация",
+        "offerdate": "2026-08-15",
+        "facevalue": 1000.0,
+        "faceunit": "rub",
+        "secid": "TEST01",
+        "primary_boardid": "TQCB",
+    }
+    payload.update(overrides)
+    return payload
+
+
+@pytest_asyncio.fixture
+async def bot() -> MagicMock:
+    """Мок бота с асинхронным send_message."""
+    bot = MagicMock()
+    bot.send_message = AsyncMock()
+    return bot
+
+
+@pytest_asyncio.fixture
+async def client(bot: MagicMock) -> AsyncIterator[TestClient]:
+    """HTTP-клиент к приложению только с роутами offer_warning."""
+    app = web.Application()
+    app[BOT_KEY] = bot
+    app.add_routes(routes)
+    async with TestClient(TestServer(app)) as client:
+        yield client
+
+
+async def test_offers_send_one_message(client: TestClient, bot: MagicMock) -> None:
+    """Событие с офертами — одно сообщение пользователю."""
+    body = {"telegram_id": 42, "offers": [_offer_payload()]}
+    response = await client.post("/events/offer-warning", json=body)
+    assert response.status == 200
+    assert await response.json() == {"status": "sent"}
+    bot.send_message.assert_awaited_once()
+    assert bot.send_message.await_args.args[0] == 42
+
+
+async def test_invalid_payload_dropped_with_200(
+    client: TestClient, bot: MagicMock
+) -> None:
+    """Невалидный payload подтверждается 200 без отправки."""
+    response = await client.post("/events/offer-warning", json={"telegram_id": 42})
+    assert response.status == 200
+    assert (await response.json())["status"] == "dropped"
+    bot.send_message.assert_not_awaited()
+
+
+async def test_empty_offers_dropped(client: TestClient, bot: MagicMock) -> None:
+    """Пустой список оферт — невалидный payload."""
+    response = await client.post(
+        "/events/offer-warning", json={"telegram_id": 42, "offers": []}
+    )
+    assert (await response.json())["status"] == "dropped"
+    bot.send_message.assert_not_awaited()
+
+
+async def test_send_failure_returns_503(client: TestClient, bot: MagicMock) -> None:
+    """Ошибка отправки в Telegram — 503, Cloud Tasks сделает ретрай."""
+    bot.send_message.side_effect = RuntimeError("telegram down")
+    body = {"telegram_id": 42, "offers": [_offer_payload()]}
+    response = await client.post("/events/offer-warning", json=body)
+    assert response.status == 503

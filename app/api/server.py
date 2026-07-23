@@ -7,6 +7,7 @@ import logging
 from aiogram import Bot
 from aiohttp import web
 from core.config import config
+from features.offer_warning import api as offer_warning_api
 from features.price_monitoring import api as price_monitoring_api
 
 from .keys import BOT_KEY
@@ -43,6 +44,7 @@ def create_app(bot: Bot) -> web.Application:
     app[BOT_KEY] = bot
     app.router.add_get("/health", handle_health)
     app.add_routes(price_monitoring_api.routes)
+    app.add_routes(offer_warning_api.routes)
     return app
 
 
