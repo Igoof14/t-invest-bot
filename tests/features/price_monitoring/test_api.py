@@ -12,14 +12,12 @@ from features.price_monitoring.api import routes
 
 def _anomaly_payload(**overrides: object) -> dict:
     payload = {
-        "figi": "BBG000000001",
-        "ticker": "RU000A0JX0J2",
+        "isin": "RU000A108EF8",
         "name": "Тестовая облигация",
-        "old_price": 100.0,
-        "new_price": 95.0,
-        "change_percent": -5.0,
+        "price_pct": 94.3,
+        "prev_close_pct": 99.5,
+        "change_pct": -5.2,
         "alert_type": "drop_critical",
-        "account_name": "Брокерский счёт",
     }
     payload.update(overrides)
     return payload
@@ -47,7 +45,7 @@ async def test_single_anomaly_sends_one_message(
     client: TestClient, bot: MagicMock
 ) -> None:
     """Одна аномалия — одно обычное сообщение."""
-    body = {"telegram_id": 42, "anomalies": [_anomaly_payload()]}
+    body = {"telegram_id": 42, "alerts": [_anomaly_payload()]}
     response = await client.post("/events/price-alert", json=body)
     assert response.status == 200
     assert await response.json() == {"status": "sent"}
@@ -61,8 +59,8 @@ async def test_many_anomalies_send_aggregated_message(
     """Три и более аномалий — одно сводное сообщение."""
     body = {
         "telegram_id": 42,
-        "anomalies": [
-            _anomaly_payload(figi=f"BBG00000000{i}", ticker=f"T{i}") for i in range(3)
+        "alerts": [
+            _anomaly_payload(isin=f"RU000A10000{i}") for i in range(3)
         ],
     }
     response = await client.post("/events/price-alert", json=body)
@@ -83,7 +81,7 @@ async def test_invalid_payload_dropped_with_200(
 async def test_empty_anomalies_dropped(client: TestClient, bot: MagicMock) -> None:
     """Пустой список аномалий — невалидный payload."""
     response = await client.post(
-        "/events/price-alert", json={"telegram_id": 42, "anomalies": []}
+        "/events/price-alert", json={"telegram_id": 42, "alerts": []}
     )
     assert (await response.json())["status"] == "dropped"
     bot.send_message.assert_not_awaited()
@@ -92,6 +90,6 @@ async def test_empty_anomalies_dropped(client: TestClient, bot: MagicMock) -> No
 async def test_send_failure_returns_503(client: TestClient, bot: MagicMock) -> None:
     """Ошибка отправки в Telegram — 503, Cloud Tasks сделает ретрай."""
     bot.send_message.side_effect = RuntimeError("telegram down")
-    body = {"telegram_id": 42, "anomalies": [_anomaly_payload()]}
+    body = {"telegram_id": 42, "alerts": [_anomaly_payload()]}
     response = await client.post("/events/price-alert", json=body)
     assert response.status == 503

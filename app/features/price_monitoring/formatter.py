@@ -23,13 +23,11 @@ def format_single_alert(anomaly: PriceAnomaly) -> str:
     lines = [
         header,
         "",
-        f"<code>{anomaly.ticker}</code>",
+        f"<code>{anomaly.isin}</code>",
         f"{anomaly.name}",
         "",
-        f"Цена {direction_text} на {abs(anomaly.change_percent):.1f}%",
-        f"   Было: {anomaly.old_price:.2f}  →  Стало: {anomaly.new_price:.2f}",
-        "",
-        f"Счёт: {anomaly.account_name}",
+        f"Цена {direction_text} на {abs(anomaly.change_pct):.1f}%",
+        f"   Было: {anomaly.prev_close_pct:.2f}%  →  Стало: {anomaly.price_pct:.2f}%",
     ]
 
     if anomaly.is_critical:
@@ -87,6 +85,6 @@ def format_aggregated_alert(
 def _format_summary_rows(anomalies: Sequence[PriceAnomaly]) -> list[str]:
     """Форматирует строки сводки для группы аномалий одного уровня."""
     return [
-        f"  {'[-]' if a.is_drop else '[+]'} <code>{a.ticker}</code>: {a.change_percent:+.1f}%"
+        f"  {'[-]' if a.is_drop else '[+]'} <code>{a.isin}</code>: {a.change_pct:+.1f}%"
         for a in anomalies
     ]

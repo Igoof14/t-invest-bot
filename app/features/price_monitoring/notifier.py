@@ -43,7 +43,7 @@ class PriceAlertNotifier:
 
         logger.info(
             f"Отправлен алерт пользователю {telegram_id}: "
-            f"{anomaly.ticker} {anomaly.alert_type.value}"
+            f"{anomaly.isin} {anomaly.alert_type.value}"
         )
         return True
 

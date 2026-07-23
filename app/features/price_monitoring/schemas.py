@@ -2,17 +2,6 @@ from dataclasses import dataclass
 from enum import Enum
 
 
-@dataclass(frozen=True, slots=True)
-class BondPrice:
-    """Снимок цены облигации в портфеле пользователя."""
-
-    figi: str
-    ticker: str
-    name: str
-    price: float
-    account_name: str
-
-
 class AlertSeverity(Enum):
     """Уровень критичности алерта."""
 
@@ -67,16 +56,17 @@ class AlertType(Enum):
 
 @dataclass(frozen=True, slots=True)
 class PriceAnomaly:
-    """Аномальное изменение цены облигации, требующее уведомления."""
+    """Аномальное изменение цены облигации, требующее уведомления.
 
-    figi: str
-    ticker: str
+    Цены — в процентах от номинала (стандартная котировка облигаций).
+    """
+
+    isin: str
     name: str
-    old_price: float
-    new_price: float
-    change_percent: float
+    price_pct: float
+    prev_close_pct: float
+    change_pct: float
     alert_type: AlertType
-    account_name: str
 
     @property
     def severity(self) -> AlertSeverity:

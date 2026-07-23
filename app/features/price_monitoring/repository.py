@@ -6,7 +6,6 @@ from core.database import session_scope
 from sqlalchemy import delete, func, select, update
 
 from .models import PriceAlertSettings
-from .schemas import BondPrice
 
 logger = logging.getLogger(__name__)
 

@@ -20,26 +20,22 @@ routes = web.RouteTableDef()
 class PriceAnomalyPayload(BaseModel):
     """Одна аномалия цены в payload события."""
 
-    figi: str
-    ticker: str
+    isin: str
     name: str
-    old_price: float
-    new_price: float
-    change_percent: float
+    price_pct: float
+    prev_close_pct: float
+    change_pct: float
     alert_type: AlertType
-    account_name: str
 
     def to_domain(self) -> PriceAnomaly:
         """Преобразует payload в доменный объект PriceAnomaly."""
         return PriceAnomaly(
-            figi=self.figi,
-            ticker=self.ticker,
+            isin=self.isin,
             name=self.name,
-            old_price=self.old_price,
-            new_price=self.new_price,
-            change_percent=self.change_percent,
+            price_pct=self.price_pct,
+            prev_close_pct=self.prev_close_pct,
+            change_pct=self.change_pct,
             alert_type=self.alert_type,
-            account_name=self.account_name,
         )
 
 
@@ -47,7 +43,7 @@ class PriceAlertEvent(BaseModel):
     """Событие «аномалии цен для пользователя» от сервиса мониторинга."""
 
     telegram_id: int
-    anomalies: list[PriceAnomalyPayload] = Field(min_length=1)
+    alerts: list[PriceAnomalyPayload] = Field(min_length=1)
 
 
 @routes.post("/events/price-alert")
@@ -64,7 +60,7 @@ async def handle_price_alert(request: web.Request) -> web.Response:
         return web.json_response({"status": "dropped", "reason": "invalid payload"})
 
     notifier = PriceAlertNotifier(request.app[BOT_KEY])
-    anomalies = [a.to_domain() for a in event.anomalies]
+    anomalies = [a.to_domain() for a in event.alerts]
 
     if len(anomalies) >= DEFAULT_POLICY.aggregate_threshold:
         sent = await notifier.send_aggregated(
