@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from aiogram import Bot, Dispatcher
+from api import start_api_server
 from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore
 from apscheduler.triggers.cron import CronTrigger  # type: ignore
 from common.utils.bot_utils import BotUtils
@@ -77,7 +78,9 @@ async def main():
 
     scheduler.start()
 
-    # Восстанавливаем DateTrigger-джобы после возможного рестарта
+    # HTTP API для приёма событий от Cloud Tasks (живёт в том же event loop).
+    api_runner = await start_api_server(bot, config.api_host, config.api_port)
+    _BACKGROUND.append(api_runner)
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)

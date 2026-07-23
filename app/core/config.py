@@ -20,11 +20,12 @@ class Settings(BaseSettings):
     # Сервисный T-Invest токен для фоновых задач (синхронизация реестра эмитентов).
     t_invest_token: SecretStr | None = None
 
-    # API-ключ 2captcha для решения капч ФНС.
-    captcha_api_key: str | None = None
-
     # Базовый URL Cloud Run сервиса синхронизации облигаций пользователя
     bonds_sync_url: str | None = None
+
+    # HTTP API для приёма событий от Cloud Tasks.
+    api_host: str = "0.0.0.0"
+    api_port: int = 8080
 
     model_config = SettingsConfigDict(env_file=_ENV_FILE, env_file_encoding="utf-8", extra="ignore")
 
