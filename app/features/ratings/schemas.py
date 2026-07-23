@@ -21,11 +21,18 @@ class RatingEvent(BaseModel):
     outlook: str | None = None
 
 
+class RatingMatchedBond(BaseModel):
+    """Облигация пользователя, затронутая изменением рейтинга."""
+
+    isin: str
+    name: str
+
+
 class RatingChange(BaseModel):
     """Изменение рейтинга, затрагивающее портфель пользователя."""
 
     event: RatingEvent
-    matched_bond_names: list[str] = Field(default_factory=list)
+    matched_bond_names: list[RatingMatchedBond] = Field(default_factory=list)
 
 
 class RatingAlertCallback(CallbackData, prefix="rating"):

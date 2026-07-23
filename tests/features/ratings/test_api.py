@@ -19,7 +19,7 @@ def _change_payload() -> dict:
             "rating_value": "BB+.ru",
             "outlook": "Негативный",
         },
-        "matched_bond_names": ["Тест-облигация"],
+        "matched_bond_names": [{"isin": "RU000A108EF8", "name": "Тест-облигация"}],
     }
 
 
@@ -43,22 +43,13 @@ async def client(bot: MagicMock) -> AsyncIterator[TestClient]:
 
 async def test_changes_send_one_message(client: TestClient, bot: MagicMock) -> None:
     """Событие с изменениями рейтинга — одно сообщение пользователю."""
-    body = {"telegram_id": 42, "agency": "nkr", "changes": [_change_payload()]}
+    body = {"telegram_id": 42, "alerts": [_change_payload()]}
     response = await client.post("/events/rating-change", json=body)
     assert response.status == 200
     assert await response.json() == {"status": "sent"}
     bot.send_message.assert_awaited_once()
     message_text = bot.send_message.await_args.args[1]
-    assert "НКР" in message_text
-
-
-async def test_unknown_agency_dropped(client: TestClient, bot: MagicMock) -> None:
-    """Неизвестное агентство — невалидный payload, подтверждаем 200."""
-    body = {"telegram_id": 42, "agency": "sp500", "changes": [_change_payload()]}
-    response = await client.post("/events/rating-change", json=body)
-    assert response.status == 200
-    assert (await response.json())["status"] == "dropped"
-    bot.send_message.assert_not_awaited()
+    assert "Тест-облигация" in message_text
 
 
 async def test_invalid_payload_dropped_with_200(
@@ -73,6 +64,6 @@ async def test_invalid_payload_dropped_with_200(
 async def test_send_failure_returns_503(client: TestClient, bot: MagicMock) -> None:
     """Ошибка отправки в Telegram — 503, Cloud Tasks сделает ретрай."""
     bot.send_message.side_effect = RuntimeError("telegram down")
-    body = {"telegram_id": 42, "agency": "nra", "changes": [_change_payload()]}
+    body = {"telegram_id": 42, "alerts": [_change_payload()]}
     response = await client.post("/events/rating-change", json=body)
     assert response.status == 503

@@ -8,7 +8,6 @@ from aiohttp import web
 from api.keys import BOT_KEY
 from pydantic import BaseModel, Field, ValidationError
 
-from .enums import RatingAgency
 from .notifier import RatingAlertNotifier
 from .schemas import RatingChange
 
@@ -21,8 +20,7 @@ class RatingAlertEvent(BaseModel):
     """Событие «изменения рейтингов для пользователя»."""
 
     telegram_id: int
-    agency: RatingAgency
-    changes: list[RatingChange] = Field(min_length=1)
+    alerts: list[RatingChange] = Field(min_length=1)
 
 
 @routes.post("/events/rating-change")
@@ -39,7 +37,7 @@ async def handle_rating_change(request: web.Request) -> web.Response:
         return web.json_response({"status": "dropped", "reason": "invalid payload"})
 
     notifier = RatingAlertNotifier(request.app[BOT_KEY])
-    sent = await notifier.send(event.telegram_id, event.agency, event.changes)
+    sent = await notifier.send(event.telegram_id, event.alerts)
 
     if not sent:
         return web.json_response({"status": "error"}, status=503)

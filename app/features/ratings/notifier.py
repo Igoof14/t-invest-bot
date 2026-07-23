@@ -6,7 +6,6 @@ import logging
 
 from aiogram import Bot
 
-from .enums import RatingAgency
 from .formatter import format_rating_alert
 from .schemas import RatingChange
 
@@ -25,12 +24,7 @@ class RatingAlertNotifier:
         """
         self._bot = bot
 
-    async def send(
-        self,
-        telegram_id: int,
-        agency: RatingAgency,
-        changes: list[RatingChange],
-    ) -> bool:
+    async def send(self, telegram_id: int, changes: list[RatingChange]) -> bool:
         """Отправляет одно сообщение со всеми изменениями рейтингов.
 
         Returns:
@@ -40,7 +34,7 @@ class RatingAlertNotifier:
         if not changes:
             return True
 
-        message = format_rating_alert(agency.display_name, changes)
+        message = format_rating_alert(changes)
 
         try:
             await self._bot.send_message(
@@ -51,7 +45,7 @@ class RatingAlertNotifier:
             )
             logger.info(
                 f"Отправлено уведомление о рейтингах пользователю {telegram_id}: "
-                f"{agency.value}, {len(changes)} изменений"
+                f"{len(changes)} изменений"
             )
             return True
         except Exception as e:

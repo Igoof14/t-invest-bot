@@ -34,24 +34,23 @@ def _format_single(change) -> str:
         lines.append(f"  Прогноз: {event.outlook}")
 
     if change.matched_bond_names:
-        bonds = ", ".join(change.matched_bond_names)
+        bonds = ", ".join(bond.name for bond in change.matched_bond_names)
         lines.append(f"  В вашем портфеле: {bonds}")
 
     return "\n".join(lines)
 
 
-def format_rating_alert(agency_name: str, changes: list) -> str:
+def format_rating_alert(changes: list) -> str:
     """Формирует HTML-сообщение об изменениях рейтинга по бумагам пользователя.
 
     Args:
-        agency_name: Отображаемое имя агентства (например, «НКР»).
         changes: Список изменений, затрагивающих портфель пользователя.
 
     Returns:
         Отформатированное HTML-сообщение.
 
     """
-    header = f"<b>📊 {agency_name}: обновление кредитного рейтинга по вашим облигациям</b>\n"
+    header = "<b>📊 Обновление кредитного рейтинга по вашим облигациям</b>\n"
     blocks: list[str] = [header]
     blocks.extend(_format_single(change) for change in changes)
     return "\n".join(blocks)
