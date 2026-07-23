@@ -6,32 +6,29 @@ from collections.abc import Sequence
 from aiogram import Bot
 
 from .formatter import format_aggregated_alert, format_single_alert
-from .repository import SentAlertRepository
 from .schemas import PriceAnomaly
 
 logger = logging.getLogger(__name__)
 
 
 class PriceAlertNotifier:
-    """Отправляет сообщения и записывает факт отправки в БД."""
+    """Отправляет сообщения об аномалиях цен пользователю.
 
-    def __init__(
-        self,
-        bot: Bot,
-        sent_repo: type[SentAlertRepository] = SentAlertRepository,
-    ):
+    Дедупликация и антиспам выполняются сервисом-продюсером событий —
+    notifier только доставляет сообщения.
+    """
+
+    def __init__(self, bot: Bot):
         """Инициализирует notifier.
 
         Args:
             bot: Экземпляр aiogram-бота.
-            sent_repo: Репозиторий учёта отправленных алертов.
 
         """
         self._bot = bot
-        self._sent_repo = sent_repo
 
     async def send_single(self, telegram_id: int, anomaly: PriceAnomaly) -> bool:
-        """Отправляет одно уведомление и записывает факт отправки.
+        """Отправляет одно уведомление.
 
         Returns:
             True при успешной отправке, False при ошибке.
@@ -44,7 +41,6 @@ class PriceAlertNotifier:
             logger.error(f"Ошибка при отправке алерта пользователю {telegram_id}: {e}")
             return False
 
-        await self._sent_repo.record(telegram_id, anomaly.figi, anomaly.alert_type.value)
         logger.info(
             f"Отправлен алерт пользователю {telegram_id}: "
             f"{anomaly.ticker} {anomaly.alert_type.value}"
@@ -58,7 +54,7 @@ class PriceAlertNotifier:
         *,
         max_per_severity: int,
     ) -> bool:
-        """Отправляет сводное уведомление и фиксирует показанные аномалии.
+        """Отправляет сводное уведомление по нескольким аномалиям.
 
         Returns:
             True при успешной отправке, False при ошибке.
@@ -70,9 +66,6 @@ class PriceAlertNotifier:
         except Exception as e:
             logger.error(f"Ошибка при отправке сводного алерта пользователю {telegram_id}: {e}")
             return False
-
-        for anomaly in shown:
-            await self._sent_repo.record(telegram_id, anomaly.figi, anomaly.alert_type.value)
 
         logger.info(
             f"Отправлен сводный алерт пользователю {telegram_id}: "

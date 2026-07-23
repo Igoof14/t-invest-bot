@@ -7,13 +7,14 @@ import logging
 from aiogram import Bot
 from aiohttp import web
 from core.config import config
+from features.price_monitoring import api as price_monitoring_api
 
+from .keys import BOT_KEY
 from .middlewares import create_oidc_middleware
 
 logger = logging.getLogger(__name__)
 
-# Ключ доступа к экземпляру бота из обработчиков запросов.
-BOT_KEY: web.AppKey[Bot] = web.AppKey("bot", Bot)
+__all__ = ["BOT_KEY", "create_app", "start_api_server"]
 
 
 async def handle_health(request: web.Request) -> web.Response:
@@ -41,6 +42,7 @@ def create_app(bot: Bot) -> web.Application:
     )
     app[BOT_KEY] = bot
     app.router.add_get("/health", handle_health)
+    app.add_routes(price_monitoring_api.routes)
     return app
 
 
