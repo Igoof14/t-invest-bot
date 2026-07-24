@@ -1,14 +1,11 @@
-import asyncio
 import logging
 
 from aiogram import Bot, Dispatcher
-from api import start_api_server
-from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore
-from apscheduler.triggers.cron import CronTrigger  # type: ignore
+from aiohttp import web
+from api import create_app
 from common.utils.bot_utils import BotUtils
 from core.config import config
 from core.database import db_manager
-from core.enums import ReportType
 from features import (
     base,
     broadcast,
@@ -26,21 +23,41 @@ from features.menu import register_section
 from features.offer_warning.menu import SECTION as offer_section
 from features.price_monitoring.menu import SECTION as price_section
 from features.ratings.menu import SECTION as ratings_section
-from features.reports import ReportService
 
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=config.bot_token.get_secret_value())
 dp = Dispatcher()
 
-# Удержание фоновых объектов/задач на время жизни процесса (защита от GC).
-_BACKGROUND: list[object] = []
 
+async def on_startup(bot: Bot) -> None:
+    """Готовит сервис и регистрирует webhook Telegram.
 
-async def main():
-    """Запуск бота."""
+    Args:
+        bot: Экземпляр aiogram-бота (внедряется диспетчером).
+
+    Raises:
+        RuntimeError: Если публичный URL webhook'а не сконфигурирован.
+
+    """
     await db_manager.create_tables()
+    await BotUtils.set_commands(bot)
+    await BotUtils.set_descriptions(bot)
 
+    if config.webhook_url is None:
+        raise RuntimeError("webhook_base_url is not configured")
+
+    secret = config.webhook_secret.get_secret_value() if config.webhook_secret else None
+    await bot.set_webhook(
+        url=config.webhook_url,
+        secret_token=secret,
+        allowed_updates=dp.resolve_used_update_types(),
+        drop_pending_updates=True,
+    )
+
+
+def main() -> None:
+    """Собирает приложение и запускает webhook-сервер."""
     # Регистрируем секции хаба «Уведомления» (порядок = порядок в меню).
     register_section(price_section)
     register_section(offer_section)
@@ -60,31 +77,11 @@ async def main():
         menu_feature.router,
     )
 
-    await BotUtils.set_commands(bot)
-    await BotUtils.set_descriptions(bot)
-    scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
+    dp.startup.register(on_startup)
 
-    scheduler.add_job(
-        ReportService.send_report,
-        CronTrigger(day_of_week="mon-fri", hour=18, minute=10, timezone="Europe/Moscow"),
-        kwargs={"bot": bot, "report_type": ReportType.DAILY},
-    )
-
-    scheduler.add_job(
-        ReportService.send_report,
-        CronTrigger(day_of_week="fri", hour=18, minute=10, second=1, timezone="Europe/Moscow"),
-        kwargs={"bot": bot, "report_type": ReportType.WEEKLY},
-    )
-
-    scheduler.start()
-
-    # HTTP API для приёма событий от Cloud Tasks (живёт в том же event loop).
-    api_runner = await start_api_server(bot, config.api_host, config.api_port)
-    _BACKGROUND.append(api_runner)
-
-    await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+    app = create_app(bot, dp)
+    web.run_app(app, host=config.api_host, port=config.api_port)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

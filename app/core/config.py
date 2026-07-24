@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pydantic import SecretStr
+from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Ищем .env в корне проекта (два уровня вверх от app/core/).
@@ -24,8 +24,12 @@ class Settings(BaseSettings):
     bonds_sync_url: str | None = None
 
     # HTTP API для приёма событий от Cloud Tasks.
+    # Порт берётся из PORT (его задаёт Cloud Run) или API_PORT; иначе 8080.
     api_host: str = "0.0.0.0"
-    api_port: int = 8080
+    api_port: int = Field(
+        default=8080,
+        validation_alias=AliasChoices("PORT", "API_PORT"),
+    )
 
     # OIDC-аутентификация запросов Cloud Tasks: ожидаемый audience (публичный
     # URL API) и email сервисного аккаунта, от имени которого приходят задачи.

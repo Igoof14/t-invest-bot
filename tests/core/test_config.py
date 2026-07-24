@@ -44,3 +44,13 @@ def test_webhook_secret_is_secret() -> None:
     assert settings.webhook_secret is not None
     assert settings.webhook_secret.get_secret_value() == "s3cret"
     assert "s3cret" not in repr(settings.webhook_secret)
+
+
+def test_api_port_defaults_to_8080() -> None:
+    assert _settings().api_port == 8080
+
+
+def test_api_port_reads_cloud_run_port_env(monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.setenv("PORT", "9000")
+
+    assert _settings().api_port == 9000

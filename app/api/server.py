@@ -1,10 +1,9 @@
-"""Сборка и запуск aiohttp-сервера рядом с polling-циклом бота."""
+"""Сборка aiohttp-сервера: webhook Telegram и события внешних сервисов."""
 
 from __future__ import annotations
 
-import logging
-
-from aiogram import Bot
+from aiogram import Bot, Dispatcher
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 from core.config import config
 from features.fns_monitoring import api as fns_monitoring_api
@@ -15,9 +14,7 @@ from features.ratings import api as ratings_api
 from .keys import BOT_KEY
 from .middlewares import create_oidc_middleware
 
-logger = logging.getLogger(__name__)
-
-__all__ = ["BOT_KEY", "create_app", "start_api_server"]
+__all__ = ["BOT_KEY", "create_app"]
 
 
 async def handle_health(request: web.Request) -> web.Response:
@@ -25,11 +22,12 @@ async def handle_health(request: web.Request) -> web.Response:
     return web.json_response({"status": "ok"})
 
 
-def create_app(bot: Bot) -> web.Application:
+def create_app(bot: Bot, dp: Dispatcher) -> web.Application:
     """Создаёт aiohttp-приложение и регистрирует роуты.
 
     Args:
         bot: Экземпляр aiogram-бота для отправки уведомлений.
+        dp: Диспетчер aiogram для обработки webhook-апдейтов Telegram.
 
     Returns:
         Готовое к запуску приложение.
@@ -49,24 +47,10 @@ def create_app(bot: Bot) -> web.Application:
     app.add_routes(offer_warning_api.routes)
     app.add_routes(fns_monitoring_api.routes)
     app.add_routes(ratings_api.routes)
+
+    secret = config.webhook_secret.get_secret_value() if config.webhook_secret else None
+    SimpleRequestHandler(dispatcher=dp, bot=bot, secret_token=secret).register(
+        app, path=config.webhook_path
+    )
+    setup_application(app, dp, bot=bot)
     return app
-
-
-async def start_api_server(bot: Bot, host: str, port: int) -> web.AppRunner:
-    """Запускает HTTP-сервер в текущем event loop.
-
-    Args:
-        bot: Экземпляр aiogram-бота.
-        host: Адрес для прослушивания.
-        port: Порт для прослушивания.
-
-    Returns:
-        Запущенный AppRunner (держать ссылку до остановки процесса).
-
-    """
-    runner = web.AppRunner(create_app(bot))
-    await runner.setup()
-    site = web.TCPSite(runner, host, port)
-    await site.start()
-    logger.info("API-сервер запущен на %s:%d", host, port)
-    return runner

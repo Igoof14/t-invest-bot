@@ -1,13 +1,6 @@
 from enum import Enum
 
 
-class ReportType(Enum):
-    """Enum for report types."""
-
-    DAILY = "daily"
-    WEEKLY = "weekly"
-
-
 class MainKeyboardButtonTexts(Enum):
     """Тексты кнопок для основной клавиатуры."""
 
