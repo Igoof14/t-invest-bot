@@ -32,6 +32,20 @@ class Settings(BaseSettings):
     api_audience: str | None = None
     tasks_service_account_email: str | None = None
 
+    # Webhook Telegram: публичный базовый URL сервиса, путь для приёма апдейтов
+    # и secret token, который Telegram присылает в заголовке
+    # ``X-Telegram-Bot-Api-Secret-Token`` для проверки подлинности запроса.
+    webhook_base_url: str | None = None
+    webhook_path: str = "/webhook"
+    webhook_secret: SecretStr | None = None
+
+    @property
+    def webhook_url(self) -> str | None:
+        """Полный URL webhook'а или ``None``, если базовый URL не задан."""
+        if self.webhook_base_url is None:
+            return None
+        return self.webhook_base_url.rstrip("/") + "/" + self.webhook_path.lstrip("/")
+
     model_config = SettingsConfigDict(env_file=_ENV_FILE, env_file_encoding="utf-8", extra="ignore")
 
 
