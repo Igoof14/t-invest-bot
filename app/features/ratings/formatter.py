@@ -37,7 +37,7 @@ def _format_single(change) -> str:
         bonds = ", ".join(
             f"{bond.name} <code>{bond.isin}</code>" for bond in change.matched_bond_names
         )
-        lines.append(f"  В вашем портфеле:\n {bonds}")
+        lines.append(f"  В вашем портфеле:\n{bonds}")
 
     return "\n".join(lines)
 
@@ -55,4 +55,4 @@ def format_rating_alert(changes: list) -> str:
     header = "<b>📊 Обновление кредитного рейтинга по вашим облигациям</b>\n"
     blocks: list[str] = [header]
     blocks.extend(_format_single(change) for change in changes)
-    return "\n".join(blocks)
+    return "\n\n".join(blocks)
