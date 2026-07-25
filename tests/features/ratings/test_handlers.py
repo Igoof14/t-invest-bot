@@ -36,7 +36,7 @@ async def test_toggle_updates_keyboard_and_answers(monkeypatch: pytest.MonkeyPat
 
     callback.message.edit_text.assert_awaited_once()
     callback.answer.assert_awaited_once()
-    assert "включено" in callback.answer.await_args.args[0]
+    assert "Включено 🔔" in callback.answer.await_args.args[0]
 
 
 async def test_toggle_unknown_agency_answers_error() -> None:

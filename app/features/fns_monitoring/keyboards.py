@@ -13,7 +13,7 @@ def create_fns_alerts_keyboard(enabled: bool) -> InlineKeyboardBuilder:
         enabled: Включены ли уведомления у пользователя.
 
     Returns:
-        Билдер с одной кнопкой ✅/🔕.
+        Билдер с одной кнопкой 🔔/🔕.
 
     """
     builder = InlineKeyboardBuilder()

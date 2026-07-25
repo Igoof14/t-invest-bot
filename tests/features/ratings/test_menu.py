@@ -17,7 +17,7 @@ async def test_status_badge_reflects_enabled(monkeypatch: pytest.MonkeyPatch) ->
         "get_enabled_agencies",
         AsyncMock(return_value={RatingAgency.NRA}),
     )
-    assert await menu.status_badge(111) == "включено"
+    assert await menu.status_badge(111) == "Включено 🔔"
 
 
 async def test_status_badge_when_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -26,7 +26,7 @@ async def test_status_badge_when_disabled(monkeypatch: pytest.MonkeyPatch) -> No
         "get_enabled_agencies",
         AsyncMock(return_value=set()),
     )
-    assert await menu.status_badge(111) == "выключено"
+    assert await menu.status_badge(111) == "Выключено 🔕"
 
 
 async def test_render_includes_back_button(monkeypatch: pytest.MonkeyPatch) -> None:

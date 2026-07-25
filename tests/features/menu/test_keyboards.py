@@ -43,9 +43,9 @@ async def test_build_hub_without_badge() -> None:
     assert texts == ["Plain"]
 
 
-def test_status_text_is_plain_words() -> None:
-    assert status_text(True) == "включено"
-    assert status_text(False) == "выключено"
+def test_status_text_shows_bell_state() -> None:
+    assert status_text(True) == "Включено 🔔"
+    assert status_text(False) == "Выключено 🔕"
 
 
 def test_back_to_hub_button_points_to_hub() -> None:

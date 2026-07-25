@@ -28,12 +28,12 @@ def test_alerts_keyboard_disabled_has_only_toggle() -> None:
     builder = create_offer_alerts_keyboard(False)
     assert _actions(builder) == ["toggle"]
     button = builder.as_markup().inline_keyboard[0][0]
-    assert button.text == "Вкл. уведомления"
+    assert button.text == "Оферты: Выключено 🔕"
 
 
 def test_alerts_keyboard_enabled_toggle_text() -> None:
     button = create_offer_alerts_keyboard(True).as_markup().inline_keyboard[0][0]
-    assert button.text == "Выкл. уведомления"
+    assert button.text == "Оферты: Включено 🔔"
 
 
 def test_setting_keyboard_has_three_actions() -> None:

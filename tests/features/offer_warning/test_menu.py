@@ -25,7 +25,7 @@ async def test_status_badge(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         menu.OfferSettingsRepository, "get_or_create", AsyncMock(return_value=_settings(True))
     )
-    assert await menu.status_badge(111) == "включено"
+    assert await menu.status_badge(111) == "Включено 🔔"
 
 
 async def test_render_has_back_button(monkeypatch: pytest.MonkeyPatch) -> None:

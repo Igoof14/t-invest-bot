@@ -14,7 +14,7 @@ def create_offer_alerts_keyboard(alerts_enabled: bool) -> InlineKeyboardBuilder:
 
     """
     builder = InlineKeyboardBuilder()
-    toggle_text = "Выкл. уведомления" if alerts_enabled else "Вкл. уведомления"
+    toggle_text = "Оферты: Включено 🔔" if alerts_enabled else "Оферты: Выключено 🔕"
     builder.add(
         InlineKeyboardButton(
             text=toggle_text,

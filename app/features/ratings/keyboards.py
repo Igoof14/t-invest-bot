@@ -14,15 +14,15 @@ def create_rating_alerts_keyboard(enabled: set[RatingAgency]) -> InlineKeyboardB
         enabled: Агентства, на которые пользователь уже подписан.
 
     Returns:
-        Билдер с кнопкой ✅/❌ для каждого агентства из ``AVAILABLE_AGENCIES``.
+        Билдер с кнопкой 🔔/🔕 для каждого агентства из ``AVAILABLE_AGENCIES``.
 
     """
     builder = InlineKeyboardBuilder()
     for agency in AVAILABLE_AGENCIES:
-        mark: str = ": Включено 🔔" if agency in enabled else ": Выключено 🔕"
+        mark: str = "Включено 🔔" if agency in enabled else "Выключено 🔕"
         builder.add(
             InlineKeyboardButton(
-                text=f"{agency.display_name} {mark}",
+                text=f"{agency.display_name}: {mark}",
                 callback_data=RatingAlertCallback(action="toggle", agency=agency.value).pack(),
             )
         )

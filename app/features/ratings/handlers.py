@@ -38,7 +38,7 @@ async def handle_toggle_agency(
             await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
 
         await callback.answer(
-            f"{agency.display_name}: " + ("включено" if new_state else "выключено")
+            f"{agency.display_name}: " + ("Включено 🔔" if new_state else "Выключено 🔕")
         )
     except Exception as e:
         logger.error(f"Ошибка при переключении рейтинга {agency.value} для {telegram_id}: {e}")

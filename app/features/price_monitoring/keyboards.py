@@ -16,9 +16,9 @@ def create_price_alerts_keyboard(alerts_enabled: bool) -> InlineKeyboardBuilder:
     builder = InlineKeyboardBuilder()
 
     toggle_text = (
-        PriceAlertButtonTexts.ALERTS_OFF.value
+        PriceAlertButtonTexts.ALERTS_ENABLED.value
         if alerts_enabled
-        else PriceAlertButtonTexts.ALERTS_ON.value
+        else PriceAlertButtonTexts.ALERTS_DISABLED.value
     )
     builder.add(
         InlineKeyboardButton(
