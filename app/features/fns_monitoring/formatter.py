@@ -55,7 +55,7 @@ def _format_single(alert: UserBlockAlert) -> str:
         lines.append(f"  Отрицательное сальдо ЕНС: {_format_money(saldo)} ₽")
     if alert.matched_bonds:
         bonds = ", ".join(_format_bond(b) for b in alert.matched_bonds)
-        lines.append(f"  В вашем портфеле: {bonds}")
+        lines.append(f"  В вашем портфеле:\n {bonds}")
     return "\n".join(lines)
 
 
@@ -69,10 +69,7 @@ def format_fns_alert(alerts: list[UserBlockAlert]) -> str:
         Отформатированное HTML-сообщение.
 
     """
-    header = (
-        "<b>🚫 ФНС: приостановление операций по счетам "
-        "по вашим облигациям</b>\n"
-    )
+    header = "<b>🚫 ФНС: приостановление операций по счетам по вашим облигациям</b>\n"
     blocks: list[str] = [header]
     blocks.extend(_format_single(alert) for alert in alerts)
     return "\n".join(blocks)
@@ -100,13 +97,10 @@ def format_scan_report(report: UserScanReport) -> str:
 
     if not report.blocked:
         return (
-            f"✅ Проверено эмитентов: {report.checked}.\n"
-            "Действующих блокировок счетов не найдено."
+            f"✅ Проверено эмитентов: {report.checked}.\nДействующих блокировок счетов не найдено."
         )
 
-    lines: list[str] = [
-        f"<b>🚫 Найдены блокировки счетов ({len(report.blocked)}):</b>\n"
-    ]
+    lines: list[str] = [f"<b>🚫 Найдены блокировки счетов ({len(report.blocked)}):</b>\n"]
     lines.extend(_format_single(alert) for alert in report.blocked)
     lines.append(f"\nПроверено эмитентов: {report.checked}.")
     return "\n".join(lines)

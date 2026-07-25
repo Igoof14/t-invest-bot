@@ -35,10 +35,9 @@ def _format_single(change) -> str:
 
     if change.matched_bond_names:
         bonds = ", ".join(
-            f"{bond.name} (<code>{bond.isin}</code>)"
-            for bond in change.matched_bond_names
+            f"{bond.name} <code>{bond.isin}</code>" for bond in change.matched_bond_names
         )
-        lines.append(f"  В вашем портфеле: {bonds}")
+        lines.append(f"  В вашем портфеле:\n {bonds}")
 
     return "\n".join(lines)
 
