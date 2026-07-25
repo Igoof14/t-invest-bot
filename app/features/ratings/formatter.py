@@ -52,7 +52,7 @@ def format_rating_alert(changes: list) -> str:
         Отформатированное HTML-сообщение.
 
     """
-    header = "<b>📊 Обновление кредитного рейтинга по вашим облигациям</b>\n"
+    header = "<b>📊 Обновление кредитного рейтинга по вашим облигациям</b>"
     blocks: list[str] = [header]
     blocks.extend(_format_single(change) for change in changes)
     return "\n\n".join(blocks)
