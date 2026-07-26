@@ -105,10 +105,11 @@ def _format_offers(offers: list[OfferItem]) -> str:
         block.append(qty_line)
 
         block.append(f"   Погашение: {_format_date(item.maturity_date)}")
-        block.append(f"   MOEX: <a href='{item.moex_link}'>{item.shortname}</a>")
         if item.accounts:
             block.append(f"   Счета: {_format_accounts(item.accounts)}")
         lines.append("\n".join(block))
+        block.append(f"   MOEX: <a href='{item.moex_link}'>{item.shortname}</a>")
+
     return "\n".join(lines)
 
 
