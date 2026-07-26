@@ -38,6 +38,11 @@ class DatabaseManager:
             future=True,
             pool_size=5,
             max_overflow=10,
+            # Cloud Run замораживает инстанс между запросами, из-за чего соединения
+            # в пуле успевают протухнуть (InterfaceError: connection is closed).
+            pool_pre_ping=True,
+            pool_recycle=300,
+            pool_timeout=30,
         )
         self.session_factory = async_sessionmaker(
             self.engine, class_=AsyncSession, expire_on_commit=False
