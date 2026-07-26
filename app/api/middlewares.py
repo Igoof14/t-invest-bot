@@ -41,9 +41,7 @@ def create_oidc_middleware(
     """
 
     @web.middleware
-    async def oidc_middleware(
-        request: web.Request, handler: _Handler
-    ) -> web.StreamResponse:
+    async def oidc_middleware(request: web.Request, handler: _Handler) -> web.StreamResponse:
         if not request.path.startswith(_PROTECTED_PREFIX):
             return await handler(request)
 
@@ -62,12 +60,8 @@ def create_oidc_middleware(
             logger.warning("Невалидный OIDC-токен: %s", e)
             return web.json_response({"error": "invalid token"}, status=401)
 
-        if claims.get("email") != service_account_email or not claims.get(
-            "email_verified"
-        ):
-            logger.warning(
-                "OIDC-токен от неожиданного аккаунта: %s", claims.get("email")
-            )
+        if claims.get("email") != service_account_email or not claims.get("email_verified"):
+            logger.warning("OIDC-токен от неожиданного аккаунта: %s", claims.get("email"))
             return web.json_response({"error": "forbidden"}, status=403)
 
         return await handler(request)

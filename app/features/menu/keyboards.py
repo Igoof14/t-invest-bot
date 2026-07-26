@@ -18,9 +18,7 @@ def status_text(enabled: bool) -> str:
     return "Включено 🔔" if enabled else "Выключено 🔕"
 
 
-def nav_button(
-    section: str, text: str = "⬅️ Назад", action: str = "open"
-) -> InlineKeyboardButton:
+def nav_button(section: str, text: str = "⬅️ Назад", action: str = "open") -> InlineKeyboardButton:
     """Кнопка перехода к указанной секции/экрану меню."""
     return InlineKeyboardButton(
         text=text, callback_data=MenuCallback(section=section, action=action).pack()

@@ -69,10 +69,7 @@ async def handle_price_alert(request: web.Request) -> web.Response:
             max_per_severity=DEFAULT_POLICY.max_aggregated_per_severity,
         )
     else:
-        results = [
-            await notifier.send_single(event.telegram_id, anomaly)
-            for anomaly in anomalies
-        ]
+        results = [await notifier.send_single(event.telegram_id, anomaly) for anomaly in anomalies]
         sent = all(results)
 
     if not sent:

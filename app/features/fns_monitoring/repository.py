@@ -22,9 +22,7 @@ class FnsAlertSettingsRepository:
         """Переключает подписку пользователя и возвращает новое состояние."""
         async with session_scope() as session:
             result = await session.execute(
-                select(FnsAlertSettings).where(
-                    FnsAlertSettings.telegram_id == telegram_id
-                )
+                select(FnsAlertSettings).where(FnsAlertSettings.telegram_id == telegram_id)
             )
             settings = result.scalar_one_or_none()
 
@@ -78,9 +76,7 @@ class FnsBlockingRepository:
         try:
             async with session_scope() as session:
                 result = await session.execute(
-                    select(FnsBlockingRecord.id)
-                    .where(FnsBlockingRecord.inn == inn)
-                    .limit(1)
+                    select(FnsBlockingRecord.id).where(FnsBlockingRecord.inn == inn).limit(1)
                 )
                 return result.scalar_one_or_none() is not None
         except Exception as e:

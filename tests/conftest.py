@@ -8,8 +8,8 @@ from datetime import date
 
 import pytest
 import pytest_asyncio
-from features.offer_warning.schemas import BondOffer
 from core.database import Base
+from features.offer_warning.schemas import BondOffer
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 

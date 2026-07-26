@@ -103,4 +103,3 @@ class AlertSettingsRepository:
         except Exception as e:
             logger.error(f"Ошибка при получении пользователей с уведомлениями: {e}")
             return []
-

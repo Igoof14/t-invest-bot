@@ -59,9 +59,10 @@ async def sync_user_bonds(telegram_id: int) -> bool:
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with aiohttp.ClientSession(timeout=_TIMEOUT) as session, session.post(
-            url, headers=headers
-        ) as resp:
+        async with (
+            aiohttp.ClientSession(timeout=_TIMEOUT) as session,
+            session.post(url, headers=headers) as resp,
+        ):
             resp.raise_for_status()
         logger.info(f"Синхронизация облигаций запущена для пользователя {telegram_id}")
         return True

@@ -55,9 +55,7 @@ async def start_broadcast(message: Message, state: FSMContext) -> None:
 @router.message(BroadcastStates.waiting_for_message)
 async def collect_message(message: Message, state: FSMContext) -> None:
     """Сохраняет сообщение и показывает превью с подтверждением."""
-    await state.update_data(
-        from_chat_id=message.chat.id, message_id=message.message_id
-    )
+    await state.update_data(from_chat_id=message.chat.id, message_id=message.message_id)
     await state.set_state(BroadcastStates.waiting_for_confirmation)
     count = len(await BotUserRepository.get_all_active_users())
     await message.answer(
@@ -66,12 +64,8 @@ async def collect_message(message: Message, state: FSMContext) -> None:
     )
 
 
-@router.callback_query(
-    F.data == BROADCAST_CONFIRM, BroadcastStates.waiting_for_confirmation
-)
-async def confirm_broadcast(
-    callback: CallbackQuery, state: FSMContext, bot: Bot
-) -> None:
+@router.callback_query(F.data == BROADCAST_CONFIRM, BroadcastStates.waiting_for_confirmation)
+async def confirm_broadcast(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
     """Выполняет рассылку и показывает отчёт."""
     data = await state.get_data()
     await state.clear()

@@ -31,8 +31,7 @@ def create_price_alerts_keyboard(alerts_enabled: bool) -> InlineKeyboardBuilder:
         builder.add(
             InlineKeyboardButton(
                 text=PriceAlertButtonTexts.ALERTS_SETTINGS.value,
-                callback_data=PriceAlertCallbackData.PRICE_ALERTS_SETTINGS.value
-                + "_thresholds",
+                callback_data=PriceAlertCallbackData.PRICE_ALERTS_SETTINGS.value + "_thresholds",
             )
         )
 

@@ -37,9 +37,7 @@ class UserBlockAlertPayload(BaseModel):
             inn=self.inn,
             entity_name=self.entity_name,
             orders=self.orders,
-            matched_bonds=[
-                MatchedBond(name=b.name, ticker=b.ticker) for b in self.matched_bonds
-            ],
+            matched_bonds=[MatchedBond(name=b.name, ticker=b.ticker) for b in self.matched_bonds],
         )
 
 

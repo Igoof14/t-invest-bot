@@ -42,8 +42,7 @@ class PriceAlertNotifier:
             return False
 
         logger.info(
-            f"Отправлен алерт пользователю {telegram_id}: "
-            f"{anomaly.isin} {anomaly.alert_type.value}"
+            f"Отправлен алерт пользователю {telegram_id}: {anomaly.isin} {anomaly.alert_type.value}"
         )
         return True
 

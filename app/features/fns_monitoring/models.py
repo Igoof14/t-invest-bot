@@ -24,25 +24,18 @@ class FnsAlertSettings(Base):
     __tablename__ = "fns_alert_settings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    telegram_id: Mapped[int] = mapped_column(
-        BigInteger, unique=True, nullable=False, index=True
-    )
+    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False, index=True)
 
     alerts_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), onupdate=func.now(), nullable=True
     )
 
     def __repr__(self) -> str:
         """Представление модели."""
-        return (
-            f"<FnsAlertSettings(telegram_id={self.telegram_id}, "
-            f"enabled={self.alerts_enabled})>"
-        )
+        return f"<FnsAlertSettings(telegram_id={self.telegram_id}, enabled={self.alerts_enabled})>"
 
 
 class FnsBlockingRecord(Base):
@@ -52,9 +45,7 @@ class FnsBlockingRecord(Base):
     """
 
     __tablename__ = "fns_blocking_records"
-    __table_args__ = (
-        UniqueConstraint("inn", "block_uid", name="uq_fns_blocking_records_inn_uid"),
-    )
+    __table_args__ = (UniqueConstraint("inn", "block_uid", name="uq_fns_blocking_records_inn_uid"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     inn: Mapped[str] = mapped_column(String(12), nullable=False, index=True)
@@ -77,9 +68,7 @@ class FnsBlockingRecord(Base):
     first_seen_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    resolved_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     scraped_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -87,6 +76,5 @@ class FnsBlockingRecord(Base):
     def __repr__(self) -> str:
         """Представление модели."""
         return (
-            f"<FnsBlockingRecord(inn={self.inn}, block_uid={self.block_uid}, "
-            f"status={self.status})>"
+            f"<FnsBlockingRecord(inn={self.inn}, block_uid={self.block_uid}, status={self.status})>"
         )

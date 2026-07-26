@@ -18,9 +18,7 @@ router: Router = Router()
 
 
 @router.callback_query(RatingAlertCallback.filter(F.action == "toggle"))
-async def handle_toggle_agency(
-    callback: CallbackQuery, callback_data: RatingAlertCallback
-) -> None:
+async def handle_toggle_agency(callback: CallbackQuery, callback_data: RatingAlertCallback) -> None:
     """Переключает подписку на агентство и обновляет клавиатуру."""
     telegram_id = callback.from_user.id
 

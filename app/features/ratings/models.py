@@ -36,9 +36,7 @@ class RatingAlertSettings(Base):
 
     alerts_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), onupdate=func.now(), nullable=True
     )
@@ -58,9 +56,7 @@ class RatingRelease(Base):
     """
 
     __tablename__ = "rating_releases"
-    __table_args__ = (
-        UniqueConstraint("agency", "uid", name="uq_rating_releases_agency_uid"),
-    )
+    __table_args__ = (UniqueConstraint("agency", "uid", name="uq_rating_releases_agency_uid"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     agency: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
@@ -84,9 +80,7 @@ class RatingRelease(Base):
     # ISO-строка сигнала изменения (для агентств, где релизы меняются).
     modified: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
-    scraped_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    scraped_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self) -> str:
         """Представление модели."""

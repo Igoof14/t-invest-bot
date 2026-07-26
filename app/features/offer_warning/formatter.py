@@ -18,8 +18,7 @@ def _fmt_date(d) -> str:
 
 def _format_single_offer(offer: BondOffer, days_until: int) -> str:
     moex_link = (
-        f"https://www.moex.com/ru/issue.aspx"
-        f"?board={offer.primary_boardid}&code={offer.secid}"
+        f"https://www.moex.com/ru/issue.aspx?board={offer.primary_boardid}&code={offer.secid}"
     )
 
     lines: list[str] = [

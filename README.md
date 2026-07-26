@@ -59,6 +59,21 @@ URL ngrok на free-плане меняется при каждом переза
 | `ADMIN_ID` | нет | Telegram ID администратора (доступ к `/broadcast`). |
 | `T_INVEST_TOKEN` | нет | Сервисный T-Invest токен для фоновых задач. |
 | `BONDS_SYNC_URL` | нет | Базовый URL сервиса синхронизации облигаций. |
+| `BACKEND_URL` | да | Базовый URL приватного Cloud Run сервиса `backend` (без пути), например `https://backend-iyvjwivbpq-ey.a.run.app`. Он же audience OIDC id-token'а. |
+
+Запросы к `backend` авторизуются OIDC id-token'ом: он берётся у metadata server
+(в Cloud Run) или из application default credentials и кэшируется до истечения
+срока. Сервис-аккаунту бота нужна роль `roles/run.invoker` на сервисе `backend`.
+Локально нужны credentials сервис-аккаунта — пользовательские ADC id-token не
+выдают:
+
+```bash
+gcloud auth application-default login \
+  --impersonate-service-account=772435034855-compute@developer.gserviceaccount.com
+```
+
+Без них бот пишет в лог понятную ошибку и отвечает «Не удалось получить данные
+об офертах», а не падает внутри HTTP-клиента.
 
 Без `WEBHOOK_BASE_URL` сервис падает на старте с `RuntimeError` — webhook-режим
 требует публичного URL.

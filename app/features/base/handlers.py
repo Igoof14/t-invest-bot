@@ -6,7 +6,7 @@ from datetime import UTC, date, datetime
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import Message
-from core.clients.backend import OfferItem, get_offers
+from core.clients.backend import BackendError, OfferItem, UserNotFound, get_offers
 from core.clients.t_invest.bonds import (
     MaturityInfo,
     get_nearest_maturities,
@@ -198,22 +198,29 @@ async def handle_maturities_button(message: Message) -> None:
 @router.message(F.text == MainKeyboardButtonTexts.OFFERS.value)
 async def handle_offers_button(message: Message) -> None:
     """Обработка кнопки 'Оферты'."""
-    try:
-        sent = await message.answer("Загружаю данные об офертах...")
-        user_id = message.from_user.id if message.from_user else message.chat.id
-        offers = await get_offers(user_id, limit=5)
+    sent = await message.answer("Загружаю данные об офертах...")
+    user_id = message.from_user.id if message.from_user else message.chat.id
 
-        if offers is None:
-            response = "Не удалось получить данные об офертах, попробуйте позже."
-        elif offers:
-            response = Messages.OFFERS_TITLE.value + _format_offers(offers)
-        else:
-            response = Messages.NO_OFFERS.value
-        await sent.delete()
-        await message.answer(response, parse_mode="HTML")
-    except Exception as e:
+    try:
+        offers = await get_offers(user_id, limit=5)
+        response = (
+            Messages.OFFERS_TITLE.value + _format_offers(offers)
+            if offers
+            else Messages.NO_OFFERS.value
+        )
+    except UserNotFound:
+        # Бэкенд не знает пользователя — портфель ещё не синхронизирован.
+        logger.info(f"Бэкенд не знает пользователя {user_id}")
+        response = Messages.NOT_TOKEN.value
+    except BackendError as e:
         logger.error(f"Ошибка при получении оферт: {e}")
-        await message.answer("Произошла ошибка при получении данных об офертах")
+        response = "Не удалось получить данные об офертах, попробуйте позже."
+    except Exception as e:
+        logger.error(f"Ошибка при получении оферт: {e}", exc_info=True)
+        response = "Произошла ошибка при получении данных об офертах"
+
+    await sent.delete()
+    await message.answer(response, parse_mode="HTML")
 
 
 @router.message(F.text == MainKeyboardButtonTexts.PRICE.value)

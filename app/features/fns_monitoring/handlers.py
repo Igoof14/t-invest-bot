@@ -32,9 +32,7 @@ async def handle_toggle(callback: CallbackQuery) -> None:
         if callback.message and isinstance(callback.message, Message):
             await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
 
-        await callback.answer(
-            "Блокировки ФНС: " + ("Включено 🔔" if new_state else "Выключено 🔕")
-        )
+        await callback.answer("Блокировки ФНС: " + ("Включено 🔔" if new_state else "Выключено 🔕"))
     except Exception as e:
         logger.error(f"Ошибка при переключении блокировок ФНС для {telegram_id}: {e}")
         await callback.answer("Произошла ошибка")

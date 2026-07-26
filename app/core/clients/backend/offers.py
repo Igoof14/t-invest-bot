@@ -1,20 +1,24 @@
 """Клиент бэкенда: ближайшие оферты по облигациям пользователя."""
 
-import asyncio
 import logging
 from dataclasses import dataclass
 from datetime import date
+from http import HTTPStatus
 from typing import Any
 
 import aiohttp
 from core.config import config
-from google.auth.exceptions import GoogleAuthError
-from google.auth.transport.requests import Request
-from google.oauth2.id_token import fetch_id_token
+
+from .auth import auth_headers
+from .errors import BackendError, BackendNotConfigured, UserNotFound
 
 logger = logging.getLogger(__name__)
 
 _TIMEOUT = aiohttp.ClientTimeout(total=30)
+
+# Ограничение эндпоинта на количество возвращаемых оферт.
+_MIN_LIMIT = 1
+_MAX_LIMIT = 50
 
 
 @dataclass
@@ -55,26 +59,8 @@ class OfferItem:
         return f"https://www.moex.com/ru/issue.aspx?code={self.secid}"
 
 
-def _fetch_id_token(audience: str) -> str | None:
-    """Запрашивает OIDC id-token у metadata server GCE (блокирующий вызов)."""
-    return fetch_id_token(Request(), audience)
-
-
-async def _auth_headers(base_url: str) -> dict[str, str]:
-    """Заголовки авторизации для приватного Cloud Run сервиса.
-
-    Если id-token получить не удалось (например, при локальном запуске вне GCE),
-    возвращает пустой словарь — запрос уйдёт без авторизации.
-    """
-    try:
-        token = await asyncio.to_thread(_fetch_id_token, base_url)
-    except GoogleAuthError:
-        logger.warning(f"Не удалось получить OIDC id-token для {base_url}", exc_info=True)
-        return {}
-    return {"Authorization": f"Bearer {token}"} if token else {}
-
-
 def _to_float(value: Any) -> float | None:
+    """Число из строки (на бэкенде это Decimal) или ``None``."""
     if value is None:
         return None
     try:
@@ -124,36 +110,42 @@ def _parse_item(raw: dict[str, Any]) -> OfferItem:
     )
 
 
-async def get_offers(telegram_id: int, limit: int = 5) -> list[OfferItem] | None:
+async def get_offers(telegram_id: int, limit: int = 5) -> list[OfferItem]:
     """Получает ближайшие оферты пользователя из бэкенда.
 
     Args:
         telegram_id: Telegram ID пользователя.
-        limit: Максимальное количество оферт.
+        limit: Сколько ближайших оферт вернуть (1..50).
 
     Returns:
-        Список оферт (возможно пустой) или ``None``, если запрос не удался.
+        Список оферт; пустой, если пользователь известен, но оферт нет.
+
+    Raises:
+        BackendNotConfigured: Не задан `BACKEND_URL`.
+        BackendAuthError: Не удалось получить OIDC id-token.
+        UserNotFound: Бэкенд не знает такого пользователя.
+        BackendError: Прочие ошибки запроса или разбора ответа.
 
     """
     base_url = config.backend_url
     if not base_url:
-        logger.warning("BACKEND_URL не задан — оферты не получены")
-        return None
+        raise BackendNotConfigured("BACKEND_URL не задан")
 
     base_url = base_url.rstrip("/")
-    url = f"{base_url}/{telegram_id}/offers"
-    headers = await _auth_headers(base_url)
+    url = f"{base_url}/api/v1/users/{telegram_id}/offers"
+    params = {"limit": max(_MIN_LIMIT, min(limit, _MAX_LIMIT))}
+    headers = await auth_headers(base_url)
 
     try:
         async with (
             aiohttp.ClientSession(timeout=_TIMEOUT) as session,
-            session.get(url, params={"limit": limit}, headers=headers) as resp,
+            session.get(url, params=params, headers=headers) as resp,
         ):
+            if resp.status == HTTPStatus.NOT_FOUND:
+                raise UserNotFound(f"Пользователь {telegram_id} неизвестен бэкенду")
             resp.raise_for_status()
             payload = await resp.json()
-    except (aiohttp.ClientError, TimeoutError, ValueError):
-        logger.error(f"Ошибка получения оферт для пользователя {telegram_id}", exc_info=True)
-        return None
+    except (aiohttp.ClientError, TimeoutError, ValueError) as exc:
+        raise BackendError(f"Ошибка запроса оферт для пользователя {telegram_id}: {exc}") from exc
 
-    items = payload.get("items") or []
-    return [_parse_item(item) for item in items]
+    return [_parse_item(item) for item in payload.get("items") or []]
