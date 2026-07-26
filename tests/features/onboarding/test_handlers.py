@@ -36,6 +36,7 @@ async def test_start_onboarding_sends_first_step() -> None:
 
     message.answer.assert_awaited_once()
     assert message.answer.await_args.args[0] == STEPS[0].text
+    assert message.answer.await_args.kwargs["parse_mode"] == "HTML"
     markup = message.answer.await_args.kwargs["reply_markup"]
     labels = [b.text for row in markup.inline_keyboard for b in row]
     assert labels == ["Далее →"]
@@ -49,6 +50,7 @@ async def test_nav_advances_to_next_step() -> None:
 
     message.edit_text.assert_awaited_once()
     assert message.edit_text.await_args.args[0] == STEPS[1].text
+    assert message.edit_text.await_args.kwargs["parse_mode"] == "HTML"
     callback.answer.assert_awaited_once()
 
 

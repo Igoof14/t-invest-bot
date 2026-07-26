@@ -52,7 +52,7 @@ async def build_hub(
     for section in sections:
         badge = ""
         if section.status_badge is not None:
-            badge = f"  {await section.status_badge(telegram_id)}"
+            badge = f": {await section.status_badge(telegram_id)}"
         builder.add(
             InlineKeyboardButton(
                 text=f"{section.title}{badge}",

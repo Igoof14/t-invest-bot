@@ -33,7 +33,7 @@ async def start_onboarding(message: Message) -> None:
     await message.answer(
         step.text,
         reply_markup=build_step_keyboard(step).as_markup(),
-        parse_mode="Markdown",
+        parse_mode="HTML",
     )
 
 
@@ -48,7 +48,7 @@ async def handle_nav(callback: CallbackQuery, callback_data: OnboardingNav) -> N
         await callback.message.edit_text(
             step.text,
             reply_markup=build_step_keyboard(step).as_markup(),
-            parse_mode="Markdown",
+            parse_mode="HTML",
         )
     await callback.answer()
 
