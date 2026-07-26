@@ -46,7 +46,7 @@ def _num(value: float) -> str:
 
 
 def _format_accounts(accounts: list[PositionAccount]) -> str:
-    return " ".join(f"\n    {acc.account_name} - {_num(acc.quantity)} шт." for acc in accounts)
+    return " ".join(f"    {acc.account_name} - {_num(acc.quantity)} шт.\n" for acc in accounts)
 
 
 def _format_maturities(maturities: list[MaturityItem]) -> str:
@@ -105,7 +105,7 @@ def _format_offers(offers: list[OfferItem]) -> str:
         block.append(qty_line)
 
         block.append(f"   Погашение: {_format_date(item.maturity_date)}")
-        block.append(f"   MOEX: <a href='{item.moex_link}'>{item.shortname}</a>\n")
+        block.append(f"   MOEX: <a href='{item.moex_link}'>{item.shortname}</a>")
         if item.accounts:
             block.append(f"   Счета: {_format_accounts(item.accounts)}")
         lines.append("\n".join(block))
@@ -132,9 +132,6 @@ async def start_handler(message: Message) -> None:
         if user_has_token:
             await message.answer(Messages.ALREADY_KNOWN.value, reply_markup=main_keyboard)
         else:
-            # Пользователь без токена (новый или вернувшийся) — ведём по воронке.
-            # Короткое сообщение закрепляет reply-клавиатуру (Настройки/Помощь),
-            # которой не может быть у инлайн-экранов воронки.
             await message.answer("Добро пожаловать 👋", reply_markup=new_user_keyboard)
             await start_onboarding(message)
 
