@@ -74,7 +74,7 @@ def _format_offers(offers: list[OfferItem]) -> str:
                 f"   Приём заявок: {_format_date(item.date_start)} — {_format_date(item.date_end)}"
             )
         if item.price is not None:
-            price_line = f"   Цена выкупа: {item.price:g}% от номинала"
+            price_line = f"   Цена выкупа: {item.price:g}%"
             if item.facevalue is not None:
                 price_line += f" ({_num(item.facevalue)} {currency})"
             block.append(price_line)
@@ -86,14 +86,13 @@ def _format_offers(offers: list[OfferItem]) -> str:
             )
         block.append(qty_line)
 
+        block.append(f"   Погашение: {_format_date(item.maturity_date)}")
+        block.append(f"   MOEX: <a href='{item.moex_link}'>{item.shortname}</a>\n")
         if item.accounts:
-            accounts = "; ".join(
+            accounts = " ".join(
                 f"\n    {acc.account_name} - {_num(acc.quantity)} шт." for acc in item.accounts
             )
             block.append(f"   Счета: {accounts}")
-
-        block.append(f"   Погашение: {_format_date(item.maturity_date)}")
-        block.append(f"   MOEX: <a href='{item.moex_link}'>{item.shortname}</a>\n")
         lines.append("\n".join(block))
     return "\n".join(lines)
 
