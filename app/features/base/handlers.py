@@ -68,9 +68,9 @@ def _format_maturities(maturities: list[MaturityItem]) -> str:
             )
         block.append(qty_line)
         if item.accounts:
-            block.append(f"   Счета: {_format_accounts(item.accounts)}")
+            block.append(f"   Счета: {_format_accounts(item.accounts)}\n")
 
-        block.append(f"   MOEX: <a href='{item.moex_link}'>{item.shortname}</a>\n")
+        # block.append(f"   MOEX: <a href='{item.moex_link}'>{item.shortname}</a>\n")
         lines.append("\n".join(block))
     return "\n".join(lines)
 
@@ -105,9 +105,9 @@ def _format_offers(offers: list[OfferItem]) -> str:
 
         block.append(f"   Погашение: {_format_date(item.maturity_date)}")
         if item.accounts:
-            block.append(f"   Счета: {_format_accounts(item.accounts)}")
+            block.append(f"   Счета: {_format_accounts(item.accounts)}\n")
 
-        block.append(f"   MOEX: <a href='{item.moex_link}'>{item.shortname}</a>")
+        # block.append(f"   MOEX: <a href='{item.moex_link}'>{item.shortname}</a>")
         lines.append("\n".join(block))
     return "\n".join(lines)
 
