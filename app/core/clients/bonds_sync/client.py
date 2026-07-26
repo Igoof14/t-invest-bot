@@ -19,7 +19,7 @@ def _fetch_id_token(audience: str) -> str | None:
     return fetch_id_token(Request(), audience)
 
 
-async def sync_user_bonds(telegram_id: int) -> bool:
+async def sync_user_bonds(telegram_id: int) -> int | None:
     """Запускает синхронизацию списка облигаций пользователя в Cloud Run сервисе.
 
     Авторизация выполняется OIDC id-token'ом, полученным через metadata server
@@ -30,13 +30,14 @@ async def sync_user_bonds(telegram_id: int) -> bool:
         telegram_id: Telegram ID пользователя.
 
     Returns:
-        True, если запрос на синхронизацию выполнен успешно.
+        Количество синхронизированных облигаций (`bonds_synced` из ответа)
+        или ``None``, если синхронизация не выполнена.
 
     """
     base_url = config.bonds_sync_url
     if not base_url:
         logger.warning("BONDS_SYNC_URL не задан — синхронизация облигаций пропущена")
-        return False
+        return None
 
     base_url = base_url.rstrip("/")
     url = f"{base_url}/sync/{telegram_id}"
@@ -48,13 +49,13 @@ async def sync_user_bonds(telegram_id: int) -> bool:
             f"Не удалось получить OIDC id-token для синхронизации облигаций {telegram_id}",
             exc_info=True,
         )
-        return False
+        return None
 
     if not token:
         logger.error(
             f"Metadata server не вернул OIDC id-token для синхронизации облигаций {telegram_id}"
         )
-        return False
+        return None
 
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -64,11 +65,20 @@ async def sync_user_bonds(telegram_id: int) -> bool:
             session.post(url, headers=headers) as resp,
         ):
             resp.raise_for_status()
-        logger.info(f"Синхронизация облигаций запущена для пользователя {telegram_id}")
-        return True
-    except (aiohttp.ClientError, TimeoutError):
+            payload = await resp.json()
+    except (aiohttp.ClientError, TimeoutError, ValueError):
         logger.error(
             f"Ошибка синхронизации облигаций для пользователя {telegram_id}",
             exc_info=True,
         )
-        return False
+        return None
+
+    bonds_synced = payload.get("bonds_synced")
+    if not isinstance(bonds_synced, int):
+        logger.error(
+            f"Сервис синхронизации не вернул bonds_synced для пользователя {telegram_id}: {payload}"
+        )
+        return None
+
+    logger.info(f"Синхронизировано облигаций для пользователя {telegram_id}: {bonds_synced}")
+    return bonds_synced

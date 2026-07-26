@@ -33,15 +33,41 @@ async def test_valid_token_schedules_bonds_sync(
 ) -> None:
     monkeypatch.setattr(users_handlers, "check_token", AsyncMock(return_value=True))
     monkeypatch.setattr(users_handlers.BotUserRepository, "add_token", AsyncMock(return_value=True))
-    sync_user_bonds = AsyncMock(return_value=True)
+    sync_user_bonds = AsyncMock(return_value=7)
     monkeypatch.setattr(users_handlers, "sync_user_bonds", sync_user_bonds)
 
-    await handle_token_message(_message("t.valid"), state)
+    message = _message("t.valid")
+    await handle_token_message(message, state)
     # Даём фоновой asyncio.Task шанс выполниться до проверки вызова.
     await asyncio.sleep(0)
 
     sync_user_bonds.assert_awaited_once_with(777)
     state.clear.assert_awaited_once()
+    assert "Токен успешно сохранён" in message.answer.await_args_list[0].args[0]
+
+
+@pytest.mark.parametrize(
+    ("bonds_synced", "expected"),
+    [
+        (7, "7 облигаций в портфеле"),
+        (1, "1 облигация в портфеле"),
+        (2, "2 облигации в портфеле"),
+        (0, "облигаций в портфеле не нашлось"),
+        (None, "Не удалось синхронизировать"),
+    ],
+)
+async def test_sync_result_is_reported_to_user(
+    monkeypatch: pytest.MonkeyPatch, state: MagicMock, bonds_synced: int | None, expected: str
+) -> None:
+    monkeypatch.setattr(users_handlers, "check_token", AsyncMock(return_value=True))
+    monkeypatch.setattr(users_handlers.BotUserRepository, "add_token", AsyncMock(return_value=True))
+    monkeypatch.setattr(users_handlers, "sync_user_bonds", AsyncMock(return_value=bonds_synced))
+
+    message = _message("t.valid")
+    await handle_token_message(message, state)
+    await asyncio.sleep(0)
+
+    assert expected in message.answer.await_args_list[-1].args[0]
 
 
 async def test_invalid_token_does_not_schedule_sync(

@@ -4,9 +4,11 @@ import asyncio
 import logging
 
 from aiogram import F, Router
+from aiogram.exceptions import TelegramAPIError
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
+from common.utils.bot_utils import pluralize_bonds
 from core.clients.bonds_sync.client import sync_user_bonds
 from core.clients.t_invest.common_func import check_token
 from features.base.keyboards import create_main_keyboard, create_new_user_keyboard
@@ -19,17 +21,50 @@ router = Router()
 waiting_for_token: set[int] = set()
 
 # Удержание фоновых задач синхронизации облигаций от сборки GC до завершения.
-_SYNC_TASKS: set[asyncio.Task[bool]] = set()
+_SYNC_TASKS: set[asyncio.Task[None]] = set()
 
 
-def _schedule_bonds_sync(telegram_id: int) -> None:
-    """Запускает синхронизацию облигаций пользователя в фоне, не блокируя ответ.
+async def _sync_bonds_and_notify(message: Message, telegram_id: int) -> None:
+    """Синхронизирует облигации и сообщает пользователю результат.
 
     Args:
+        message: Сообщение с токеном — в его чат уходит уведомление.
         telegram_id: Telegram ID пользователя, для которого запускается синк.
 
     """
-    task = asyncio.create_task(sync_user_bonds(telegram_id))
+    bonds_synced = await sync_user_bonds(telegram_id)
+
+    if bonds_synced is None:
+        text = (
+            "Не удалось синхронизировать список облигаций. "
+            "Мы попробуем ещё раз — данные появятся чуть позже."
+        )
+    elif bonds_synced:
+        text = (
+            f"Список облигаций синхронизирован: "
+            f"{bonds_synced} {pluralize_bonds(bonds_synced)} в портфеле."
+        )
+    else:
+        text = "Список облигаций синхронизирован — облигаций в портфеле не нашлось."
+
+    try:
+        await message.answer(text)
+    except TelegramAPIError:
+        logger.error(
+            f"Не удалось отправить уведомление о синхронизации пользователю {telegram_id}",
+            exc_info=True,
+        )
+
+
+def _schedule_bonds_sync(message: Message, telegram_id: int) -> None:
+    """Запускает синхронизацию облигаций пользователя в фоне, не блокируя ответ.
+
+    Args:
+        message: Сообщение с токеном — в его чат уходит уведомление о результате.
+        telegram_id: Telegram ID пользователя, для которого запускается синк.
+
+    """
+    task = asyncio.create_task(_sync_bonds_and_notify(message, telegram_id))
     _SYNC_TASKS.add(task)
     task.add_done_callback(_SYNC_TASKS.discard)
 
@@ -107,9 +142,12 @@ async def handle_token_message(message: Message, state: FSMContext) -> None:
         logger.info(f"Токен пользователя {telegram_id} валиден")
         success = await BotUserRepository.add_token(telegram_id=telegram_id, token=token)
         if success:
-            _schedule_bonds_sync(telegram_id)
             main_keyboard = create_main_keyboard()
-            await message.answer("Токен успешно сохранён!", reply_markup=main_keyboard)
+            await message.answer(
+                "Токен успешно сохранён! Синхронизирую список облигаций...",
+                reply_markup=main_keyboard,
+            )
+            _schedule_bonds_sync(message, telegram_id)
             await state.clear()
         else:
             logger.warning(f"Не удалось сохранить токен для {telegram_id}")
