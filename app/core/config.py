@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     # Базовый URL Cloud Run сервиса синхронизации облигаций пользователя
     bonds_sync_url: str | None = None
 
+    # Базовый URL бэкенда (оферты, портфель и т.д.)
+    backend_url: str = "https://backend-772435034855.europe-west3.run.app"
+
     # HTTP API для приёма событий от Cloud Tasks.
     # Порт берётся из PORT (его задаёт Cloud Run) или API_PORT; иначе 8080.
     api_host: str = "0.0.0.0"

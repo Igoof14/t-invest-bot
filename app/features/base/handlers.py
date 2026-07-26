@@ -1,16 +1,15 @@
 """Основные обработчики бота."""
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import Message
+from core.clients.backend import OfferItem, get_offers
 from core.clients.t_invest.bonds import (
     MaturityInfo,
-    OfferInfo,
     get_nearest_maturities,
-    get_nearest_offers,
 )
 from core.enums import MainKeyboardButtonTexts, Messages
 from features.coupons.keyboards import create_coupons_keyboard
@@ -43,21 +42,59 @@ def _format_maturities(maturities: list[MaturityInfo]) -> str:
     return "\n".join(lines)
 
 
-def _format_offers(offers: list[OfferInfo]) -> str:
-    now = datetime.now(UTC)
+_CURRENCY_SIGNS = {"SUR": "₽", "RUB": "₽", "USD": "$", "EUR": "€"}
+
+
+def _currency(faceunit: str) -> str:
+    return _CURRENCY_SIGNS.get(faceunit.upper(), faceunit.upper())
+
+
+def _format_date(value: date | None) -> str:
+    return value.strftime("%d.%m.%Y") if value else "—"
+
+
+def _num(value: float) -> str:
+    """Целое число с пробелом в качестве разделителя разрядов."""
+    return f"{value:,.0f}".replace(",", " ")
+
+
+def _format_offers(offers: list[OfferItem]) -> str:
     lines = []
-    for i, offer in enumerate(offers, 1):
-        days_left = (offer.offer_date.date() - now.date()).days
-        total_nominal = offer.nominal * offer.quantity
-        lines.append(
-            f"{i}. <code>{offer.ticker}</code>\n"
-            f"   {offer.name}\n"
-            f"   Оферта: {offer.offer_date.strftime('%d.%m.%Y')} ({days_left} дн.)\n"
-            f"   Кол-во: {offer.quantity} шт. x {offer.nominal:.0f} = "
-            f"{total_nominal:,.0f} {offer.currency.upper()}\n"
-            f"   Средняя цена покупки: {offer.average_position_price:,.0f} {offer.currency.upper()}\n"
-            f"   MOEX: <a href='{offer.moex_link}'>{offer.ticker}</a>\n"
-        )
+    for i, item in enumerate(offers, 1):
+        currency = _currency(item.faceunit)
+        days = f" ({item.days_left} дн.)" if item.days_left is not None else ""
+
+        block = [
+            f"{i}. <code>{item.secid}</code>",
+            f"   {item.name}",
+            f"   {item.offer_type}: {_format_date(item.offer_date)}{days}",
+        ]
+        if item.date_start or item.date_end:
+            block.append(
+                f"   Приём заявок: {_format_date(item.date_start)} — {_format_date(item.date_end)}"
+            )
+        if item.price is not None:
+            price_line = f"   Цена выкупа: {item.price:g}% от номинала"
+            if item.facevalue is not None:
+                price_line += f" ({_num(item.facevalue)} {currency})"
+            block.append(price_line)
+
+        qty_line = f"   Кол-во: {_num(item.quantity)} шт."
+        if item.facevalue is not None:
+            qty_line += (
+                f" x {_num(item.facevalue)} = {_num(item.quantity * item.facevalue)} {currency}"
+            )
+        block.append(qty_line)
+
+        if item.accounts:
+            accounts = "; ".join(
+                f"{acc.account_name} — {_num(acc.quantity)} шт." for acc in item.accounts
+            )
+            block.append(f"   Счета: {accounts}")
+
+        block.append(f"   Погашение: {_format_date(item.maturity_date)}")
+        block.append(f"   MOEX: <a href='{item.moex_link}'>{item.shortname}</a>\n")
+        lines.append("\n".join(block))
     return "\n".join(lines)
 
 
@@ -164,10 +201,10 @@ async def handle_offers_button(message: Message) -> None:
     try:
         sent = await message.answer("Загружаю данные об офертах...")
         user_id = message.from_user.id if message.from_user else message.chat.id
-        offers = await get_nearest_offers(user_id)
+        offers = await get_offers(user_id, limit=5)
 
         if offers is None:
-            response = Messages.NOT_TOKEN.value
+            response = "Не удалось получить данные об офертах, попробуйте позже."
         elif offers:
             response = Messages.OFFERS_TITLE.value + _format_offers(offers)
         else:
