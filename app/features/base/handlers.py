@@ -1,15 +1,19 @@
 """Основные обработчики бота."""
 
 import logging
-from datetime import UTC, date, datetime
+from datetime import date
 
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import Message
-from core.clients.backend import BackendError, OfferItem, UserNotFound, get_offers
-from core.clients.t_invest.bonds import (
-    MaturityInfo,
-    get_nearest_maturities,
+from core.clients.backend import (
+    BackendError,
+    MaturityItem,
+    OfferItem,
+    PositionAccount,
+    UserNotFound,
+    get_maturities,
+    get_offers,
 )
 from core.enums import MainKeyboardButtonTexts, Messages
 from features.coupons.keyboards import create_coupons_keyboard
@@ -23,23 +27,6 @@ from .keyboards import create_main_keyboard, create_new_user_keyboard
 logger = logging.getLogger(__name__)
 
 router: Router = Router()
-
-
-def _format_maturities(maturities: list[MaturityInfo]) -> str:
-    now = datetime.now(UTC)
-    lines = []
-    for i, bond in enumerate(maturities, 1):
-        days_left = (bond.maturity_date.date() - now.date()).days
-        total_nominal = bond.nominal * bond.quantity
-        lines.append(
-            f"{i}. <code>{bond.ticker}</code>\n"
-            f"   {bond.name}\n"
-            f"   Погашение: {bond.maturity_date.strftime('%d.%m.%Y')} ({days_left} дн.)\n"
-            f"   Кол-во: {bond.quantity} шт. x {bond.nominal:.0f} = "
-            f"{total_nominal:,.0f} {bond.currency.upper()}\n"
-            f"   Счёт: {bond.account_name}\n"
-        )
-    return "\n".join(lines)
 
 
 _CURRENCY_SIGNS = {"SUR": "₽", "RUB": "₽", "USD": "$", "EUR": "€"}
@@ -56,6 +43,36 @@ def _format_date(value: date | None) -> str:
 def _num(value: float) -> str:
     """Целое число с пробелом в качестве разделителя разрядов."""
     return f"{value:,.0f}".replace(",", " ")
+
+
+def _format_accounts(accounts: list[PositionAccount]) -> str:
+    return " ".join(f"\n    {acc.account_name} - {_num(acc.quantity)} шт." for acc in accounts)
+
+
+def _format_maturities(maturities: list[MaturityItem]) -> str:
+    lines = []
+    for i, item in enumerate(maturities, 1):
+        currency = _currency(item.faceunit)
+        days = f" ({item.days_left} дн.)" if item.days_left is not None else ""
+
+        block = [
+            f"{i}. <code>{item.secid}</code>",
+            f"   {item.name}",
+            f"   Погашение: {_format_date(item.maturity_date)}{days}",
+        ]
+
+        qty_line = f"   Кол-во: {_num(item.quantity)} шт."
+        if item.facevalue is not None:
+            qty_line += (
+                f" x {_num(item.facevalue)} = {_num(item.quantity * item.facevalue)} {currency}"
+            )
+        block.append(qty_line)
+
+        block.append(f"   MOEX: <a href='{item.moex_link}'>{item.shortname}</a>\n")
+        if item.accounts:
+            block.append(f"   Счета: {_format_accounts(item.accounts)}")
+        lines.append("\n".join(block))
+    return "\n".join(lines)
 
 
 def _format_offers(offers: list[OfferItem]) -> str:
@@ -89,10 +106,7 @@ def _format_offers(offers: list[OfferItem]) -> str:
         block.append(f"   Погашение: {_format_date(item.maturity_date)}")
         block.append(f"   MOEX: <a href='{item.moex_link}'>{item.shortname}</a>\n")
         if item.accounts:
-            accounts = " ".join(
-                f"\n    {acc.account_name} - {_num(acc.quantity)} шт." for acc in item.accounts
-            )
-            block.append(f"   Счета: {accounts}")
+            block.append(f"   Счета: {_format_accounts(item.accounts)}")
         lines.append("\n".join(block))
     return "\n".join(lines)
 
@@ -176,22 +190,29 @@ async def handle_settings_button(message: Message) -> None:
 @router.message(F.text == MainKeyboardButtonTexts.MATURITIES.value)
 async def handle_maturities_button(message: Message) -> None:
     """Обработка кнопки 'Погашения'."""
+    sent = await message.answer("Загружаю данные о погашениях...")
+    user_id = message.from_user.id if message.from_user else message.chat.id
+
     try:
-        await message.answer("Загружаю данные о погашениях...")
-        user_id = message.from_user.id if message.from_user else message.chat.id
-        maturities = await get_nearest_maturities(user_id)
-
-        if maturities is None:
-            response = Messages.NOT_TOKEN.value
-        elif maturities:
-            response = Messages.MATURITIES_TITLE.value + _format_maturities(maturities)
-        else:
-            response = Messages.NO_BONDS.value
-
-        await message.answer(response, parse_mode="HTML")
-    except Exception as e:
+        maturities = await get_maturities(user_id, limit=5)
+        response = (
+            Messages.MATURITIES_TITLE.value + _format_maturities(maturities)
+            if maturities
+            else Messages.NO_BONDS.value
+        )
+    except UserNotFound:
+        # Бэкенд не знает пользователя — портфель ещё не синхронизирован.
+        logger.info(f"Бэкенд не знает пользователя {user_id}")
+        response = Messages.NOT_TOKEN.value
+    except BackendError as e:
         logger.error(f"Ошибка при получении погашений: {e}")
-        await message.answer("Произошла ошибка при получении данных о погашениях")
+        response = "Не удалось получить данные о погашениях, попробуйте позже."
+    except Exception as e:
+        logger.error(f"Ошибка при получении погашений: {e}", exc_info=True)
+        response = "Произошла ошибка при получении данных о погашениях"
+
+    await sent.delete()
+    await message.answer(response, parse_mode="HTML")
 
 
 @router.message(F.text == MainKeyboardButtonTexts.OFFERS.value)

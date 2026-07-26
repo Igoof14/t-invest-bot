@@ -1,4 +1,4 @@
-"""Клиент бэкенда: ближайшие оферты по облигациям пользователя."""
+"""Клиент бэкенда: ближайшие погашения облигаций пользователя."""
 
 import logging
 from dataclasses import dataclass
@@ -12,8 +12,8 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class OfferItem:
-    """Оферта по облигации из портфеля пользователя."""
+class MaturityItem:
+    """Погашение облигации из портфеля пользователя."""
 
     secid: str
     isin: str
@@ -22,13 +22,6 @@ class OfferItem:
     facevalue: float | None
     faceunit: str
     maturity_date: date | None
-    offer_date: date | None
-    offer_type: str
-    date_start: date | None
-    date_end: date | None
-    price: float | None
-    value: float | None
-    agent: str | None
     days_left: int | None
     quantity: float
     accounts: list[PositionAccount]
@@ -39,44 +32,39 @@ class OfferItem:
         return moex_link(self.secid)
 
 
-def _parse_item(raw: dict[str, Any]) -> OfferItem:
+def _parse_item(raw: dict[str, Any]) -> MaturityItem:
     bond = raw.get("bond") or {}
-    offer = raw.get("offer") or {}
-    return OfferItem(
+    maturity = raw.get("maturity") or {}
+    return MaturityItem(
         secid=bond.get("secid", ""),
         isin=bond.get("isin", ""),
         shortname=bond.get("shortname") or bond.get("secid", ""),
         name=bond.get("name", ""),
         facevalue=to_float(bond.get("facevalue")),
         faceunit=bond.get("faceunit") or "",
-        maturity_date=to_date(bond.get("matdate")),
-        offer_date=to_date(offer.get("date")),
-        offer_type=offer.get("type") or "Оферта",
-        date_start=to_date(offer.get("date_start")),
-        date_end=to_date(offer.get("date_end")),
-        price=to_float(offer.get("price")),
-        value=to_float(offer.get("value")),
-        agent=offer.get("agent"),
-        days_left=offer.get("days_left"),
+        # Дата погашения приходит и в bond.matdate, и в maturity.date — берём
+        # блок maturity как основной, bond.matdate как запасной.
+        maturity_date=to_date(maturity.get("date")) or to_date(bond.get("matdate")),
+        days_left=maturity.get("days_left"),
         quantity=to_float(raw.get("quantity")) or 0.0,
         accounts=parse_accounts(raw.get("accounts")),
     )
 
 
-async def get_offers(telegram_id: int, limit: int = 5) -> list[OfferItem]:
-    """Получает ближайшие оферты пользователя из бэкенда.
+async def get_maturities(telegram_id: int, limit: int = 5) -> list[MaturityItem]:
+    """Получает ближайшие погашения пользователя из бэкенда.
 
     Args:
         telegram_id: Telegram ID пользователя.
-        limit: Сколько ближайших оферт вернуть (1..50).
+        limit: Сколько ближайших погашений вернуть (1..50).
 
     Returns:
-        Список оферт; пустой, если пользователь известен, но оферт нет.
+        Список погашений; пустой, если пользователь известен, но погашений нет.
 
     Raises:
         BackendError: Ошибка конфигурации, авторизации или запроса.
         UserNotFound: Бэкенд не знает такого пользователя.
 
     """
-    items = await fetch_user_items("offers", telegram_id, limit)
+    items = await fetch_user_items("maturities", telegram_id, limit)
     return [_parse_item(item) for item in items]
