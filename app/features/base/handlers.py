@@ -88,7 +88,7 @@ def _format_offers(offers: list[OfferItem]) -> str:
 
         if item.accounts:
             accounts = "; ".join(
-                f"{acc.account_name} — {_num(acc.quantity)} шт." for acc in item.accounts
+                f"\n    {acc.account_name} - {_num(acc.quantity)} шт." for acc in item.accounts
             )
             block.append(f"   Счета: {accounts}")
 
