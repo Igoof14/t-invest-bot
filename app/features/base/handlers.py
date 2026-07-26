@@ -46,7 +46,7 @@ def _num(value: float) -> str:
 
 
 def _format_accounts(accounts: list[PositionAccount]) -> str:
-    return " ".join(f"    {acc.account_name} - {_num(acc.quantity)} шт.\n" for acc in accounts)
+    return " ".join(f"\n    {acc.account_name} - {_num(acc.quantity)} шт." for acc in accounts)
 
 
 def _format_maturities(maturities: list[MaturityItem]) -> str:
@@ -69,10 +69,9 @@ def _format_maturities(maturities: list[MaturityItem]) -> str:
         block.append(qty_line)
         if item.accounts:
             block.append(f"   Счета: {_format_accounts(item.accounts)}")
-        lines.append("\n".join(block))
 
         block.append(f"   MOEX: <a href='{item.moex_link}'>{item.shortname}</a>\n")
-
+        lines.append("\n".join(block))
     return "\n".join(lines)
 
 
@@ -107,9 +106,9 @@ def _format_offers(offers: list[OfferItem]) -> str:
         block.append(f"   Погашение: {_format_date(item.maturity_date)}")
         if item.accounts:
             block.append(f"   Счета: {_format_accounts(item.accounts)}")
-        lines.append("\n".join(block))
-        block.append(f"   MOEX: <a href='{item.moex_link}'>{item.shortname}</a>")
 
+        block.append(f"   MOEX: <a href='{item.moex_link}'>{item.shortname}</a>")
+        lines.append("\n".join(block))
     return "\n".join(lines)
 
 
