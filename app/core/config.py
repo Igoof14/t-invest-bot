@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     analytics_enabled: bool = True
     # По умолчанию действия админа в аналитику не попадают: /broadcast и
     # тестовые прожатия иначе искажают воронку и использование фич.
-    analytics_track_admin: bool = True
+    analytics_track_admin: bool = False
 
     # Сервисный T-Invest токен для фоновых задач (синхронизация реестра эмитентов).
     t_invest_token: SecretStr | None = None
