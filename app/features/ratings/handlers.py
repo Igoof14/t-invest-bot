@@ -6,6 +6,7 @@ import logging
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
+from features.analytics import EventName, track
 
 from .enums import RatingAgency
 from .menu import render
@@ -30,6 +31,14 @@ async def handle_toggle_agency(callback: CallbackQuery, callback_data: RatingAle
 
     try:
         new_state = await RatingAlertSettingsRepository.toggle(telegram_id, agency)
+        await track(
+            EventName.ALERT_TOGGLED,
+            telegram_id=telegram_id,
+            action=f"rating:{agency.value}",
+            feature="rating",
+            agency=agency.value,
+            enabled=new_state,
+        )
 
         text, markup = await render(telegram_id)
         if callback.message and isinstance(callback.message, Message):

@@ -7,6 +7,7 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 from common.utils.datetime_utils import DateTimeHelper
 from core.clients.t_invest.bonds import get_coupon_payment
+from features.analytics import EventName, track
 
 from .enums import CouponCallbackData
 from .keyboards import create_coupons_keyboard
@@ -105,6 +106,14 @@ async def handle_coupon_request(callback: CallbackQuery) -> None:
             return
         user_id = callback.from_user.id
         coupon_data = await get_coupon_payment(user_id, start_datetime)
+        await track(
+            EventName.DATA_SCREEN_VIEWED,
+            telegram_id=user_id,
+            action=callback.data,
+            screen="coupons",
+            items=len(coupon_data.accounts) if coupon_data else 0,
+            outcome="ok" if coupon_data else "no_data",
+        )
         if not coupon_data:
             await callback.answer("Нет данных о купонах")
             return

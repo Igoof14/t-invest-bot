@@ -6,6 +6,7 @@ import logging
 
 from aiohttp import web
 from api.keys import BOT_KEY
+from api.responses import delivery_response
 from pydantic import BaseModel, Field, ValidationError
 
 from .notifier import RatingAlertNotifier
@@ -27,8 +28,9 @@ class RatingAlertEvent(BaseModel):
 async def handle_rating_change(request: web.Request) -> web.Response:
     """Принимает событие об изменениях рейтингов и уведомляет пользователя.
 
-    Невалидный payload подтверждается (200), чтобы Cloud Tasks не
-    ретраил заведомо неисправимую задачу. Ошибка отправки — 503 (ретрай).
+    Невалидный payload и постоянные ошибки доставки подтверждаются (200),
+    чтобы Cloud Tasks не ретраил заведомо неисправимую задачу. Ретрай имеет
+    смысл только при временной ошибке — тогда 503.
     """
     try:
         event = RatingAlertEvent.model_validate(await request.json())
@@ -37,8 +39,5 @@ async def handle_rating_change(request: web.Request) -> web.Response:
         return web.json_response({"status": "dropped", "reason": "invalid payload"})
 
     notifier = RatingAlertNotifier(request.app[BOT_KEY])
-    sent = await notifier.send(event.telegram_id, event.alerts)
-
-    if not sent:
-        return web.json_response({"status": "error"}, status=503)
-    return web.json_response({"status": "sent"})
+    result = await notifier.send(event.telegram_id, event.alerts)
+    return delivery_response(result)

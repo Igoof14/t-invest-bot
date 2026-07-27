@@ -6,6 +6,7 @@ import logging
 
 from aiohttp import web
 from api.keys import BOT_KEY
+from api.responses import delivery_response
 from pydantic import BaseModel, Field, ValidationError
 
 from .events import BlockingOrder, MatchedBond, UserBlockAlert
@@ -52,8 +53,9 @@ class FnsBlockEvent(BaseModel):
 async def handle_fns_block(request: web.Request) -> web.Response:
     """Принимает событие о блокировках ФНС и уведомляет пользователя.
 
-    Невалидный payload подтверждается (200), чтобы Cloud Tasks не
-    ретраил заведомо неисправимую задачу. Ошибка отправки — 503 (ретрай).
+    Невалидный payload и постоянные ошибки доставки подтверждаются (200),
+    чтобы Cloud Tasks не ретраил заведомо неисправимую задачу. Ретрай имеет
+    смысл только при временной ошибке — тогда 503.
     """
     try:
         event = FnsBlockEvent.model_validate(await request.json())
@@ -63,8 +65,5 @@ async def handle_fns_block(request: web.Request) -> web.Response:
 
     notifier = FnsBlockNotifier(request.app[BOT_KEY])
     alerts = [a.to_domain() for a in event.alerts]
-    sent = await notifier.send(event.telegram_id, alerts)
-
-    if not sent:
-        return web.json_response({"status": "error"}, status=503)
-    return web.json_response({"status": "sent"})
+    result = await notifier.send(event.telegram_id, alerts)
+    return delivery_response(result)

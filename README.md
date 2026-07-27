@@ -57,6 +57,8 @@ URL ngrok на free-плане меняется при каждом переза
 | `API_AUDIENCE` | нет | Ожидаемый `aud` OIDC-токена Cloud Tasks (публичный URL API). |
 | `TASKS_SERVICE_ACCOUNT_EMAIL` | нет | Email сервисного аккаунта Cloud Tasks. |
 | `ADMIN_ID` | нет | Telegram ID администратора (доступ к `/broadcast`). |
+| `ANALYTICS_ENABLED` | нет | Запись продуктовых событий в `bot_events`. По умолчанию `true`; `false` — аварийный выключатель без деплоя кода. |
+| `ANALYTICS_TRACK_ADMIN` | нет | Трекать ли действия `ADMIN_ID`. По умолчанию `false`, чтобы `/broadcast` и тестовые прожатия не искажали воронку. |
 | `T_INVEST_TOKEN` | нет | Сервисный T-Invest токен для фоновых задач. |
 | `BONDS_SYNC_URL` | нет | Базовый URL сервиса синхронизации облигаций. |
 | `BACKEND_URL` | да | Базовый URL приватного Cloud Run сервиса `backend` (без пути), например `https://backend-iyvjwivbpq-ey.a.run.app`. Он же audience OIDC id-token'а. |
@@ -77,3 +79,9 @@ gcloud auth application-default login \
 
 Без `WEBHOOK_BASE_URL` сервис падает на старте с `RuntimeError` — webhook-режим
 требует публичного URL.
+
+## Продуктовая аналитика
+
+События пишутся в таблицу `bot_events`. Таксономия событий, готовые SQL-запросы
+(воронка онбординга, retention, DAU/WAU/MAU, охват уведомлений, использование
+фич, отток) и политика хранения — в [docs/analytics.md](docs/analytics.md).

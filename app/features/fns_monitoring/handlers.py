@@ -6,6 +6,7 @@ import logging
 
 from aiogram import Bot, F, Router
 from aiogram.types import CallbackQuery, Message
+from features.analytics import EventName, track
 
 from .formatter import format_scan_report
 from .menu import render
@@ -27,6 +28,13 @@ async def handle_toggle(callback: CallbackQuery) -> None:
 
     try:
         new_state = await FnsAlertSettingsRepository.toggle(telegram_id)
+        await track(
+            EventName.ALERT_TOGGLED,
+            telegram_id=telegram_id,
+            action="fns",
+            feature="fns",
+            enabled=new_state,
+        )
 
         text, markup = await render(telegram_id)
         if callback.message and isinstance(callback.message, Message):

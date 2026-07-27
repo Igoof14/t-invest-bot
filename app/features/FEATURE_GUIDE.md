@@ -310,10 +310,21 @@ async def handle_my_event(request: web.Request) -> web.Response:
 |---|---|
 | Уведомление отправлено | `200 {"status": "sent"}` |
 | Невалидный payload (ретрай бессмысленен) | `200 {"status": "dropped"}` + лог |
-| Временная ошибка (Telegram/сеть) | `503` — Cloud Tasks сделает ретрай |
+| Пользователь заблокировал бота | `200 {"status": "dropped", "reason": "blocked"}` |
+| Постоянная ошибка Telegram (`bad_request`) | `200 {"status": "dropped"}` |
+| Временная ошибка (сеть, флуд-контроль, 5xx) | `503` — Cloud Tasks сделает ретрай |
+
+Классифицировать ошибку отправки руками не нужно. Отправляй через
+`common.delivery.deliver()`, а ответ собирай через
+`api.responses.delivery_response()`. `deliver()` сам различает
+`TelegramForbiddenError` (и деактивирует пользователя), флуд-контроль (ждёт и
+повторяет ровно один раз) и постоянные ошибки, а также трекает
+`notification_sent` / `notification_failed`. Notifier возвращает
+`DeliveryResult`, а не `bool`.
 
 Тесты `test_api.py`: собери минимальное приложение с роутами фичи и мок-ботом
-в `app[BOT_KEY]`, проверь happy path, невалидный payload и ошибку отправки.
+в `app[BOT_KEY]`, проверь happy path, невалидный payload, заблокировавшего бота
+пользователя (200 dropped) и временную ошибку отправки (503).
 
 ## Фоновые задачи
 

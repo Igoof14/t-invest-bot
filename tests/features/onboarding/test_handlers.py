@@ -19,6 +19,7 @@ def _message() -> MagicMock:
     message = MagicMock(spec=Message)
     message.answer = AsyncMock()
     message.edit_text = AsyncMock()
+    message.chat = MagicMock(id=777)
     return message
 
 
@@ -26,6 +27,7 @@ def _callback(message: MagicMock) -> MagicMock:
     callback = MagicMock()
     callback.message = message
     callback.answer = AsyncMock()
+    callback.from_user = MagicMock(id=777)
     return callback
 
 

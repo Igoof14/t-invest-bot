@@ -11,6 +11,7 @@ from aiogram.exceptions import (
     TelegramForbiddenError,
     TelegramRetryAfter,
 )
+from features.analytics import Direction, EventName, track
 from features.users.repository import BotUserRepository
 
 from .schemas import BroadcastResult
@@ -59,12 +60,32 @@ class BroadcastService:
                 blocked += 1
             else:
                 failed += 1
+            # Рассылка тоже часть исходящего охвата, поэтому событие на
+            # получателя — такое же, как у уведомлений.
+            await track(
+                EventName.NOTIFICATION_SENT
+                if outcome == "delivered"
+                else EventName.NOTIFICATION_FAILED,
+                telegram_id=user_id,
+                action="broadcast",
+                direction=Direction.OUT,
+                kind="broadcast",
+                reason=None if outcome == "delivered" else outcome,
+            )
             await asyncio.sleep(_SEND_DELAY)
         logger.info(
             "Рассылка завершена: доставлено=%d, заблокировали=%d, ошибок=%d",
             delivered,
             blocked,
             failed,
+        )
+        await track(
+            EventName.BROADCAST_FINISHED,
+            direction=Direction.OUT,
+            delivered=delivered,
+            blocked=blocked,
+            failed=failed,
+            recipients=len(user_ids),
         )
         return BroadcastResult(delivered=delivered, blocked=blocked, failed=failed)
 

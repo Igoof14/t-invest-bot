@@ -4,7 +4,7 @@ import logging
 from datetime import date
 
 from aiogram import F, Router
-from aiogram.filters import Command
+from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 from core.clients.backend import (
     BackendError,
@@ -16,6 +16,7 @@ from core.clients.backend import (
     get_offers,
 )
 from core.enums import MainKeyboardButtonTexts, Messages
+from features.analytics import EventName, sanitize_source, track
 from features.coupons.keyboards import create_coupons_keyboard
 from features.menu import render_hub
 from features.onboarding import start_onboarding
@@ -113,8 +114,15 @@ def _format_offers(offers: list[OfferItem]) -> str:
 
 
 @router.message(Command("start"))
-async def start_handler(message: Message) -> None:
-    """Обработчик команды /start."""
+async def start_handler(message: Message, command: CommandObject) -> None:
+    """Обработчик команды /start.
+
+    Args:
+        message: Сообщение с командой.
+        command: Разобранная команда. ``command.args`` содержит deep-link
+            payload из ``t.me/<bot>?start=<payload>`` — источник привлечения.
+
+    """
     try:
         main_keyboard = create_main_keyboard()
         new_user_keyboard = create_new_user_keyboard()
@@ -128,6 +136,14 @@ async def start_handler(message: Message) -> None:
         user_has_token = await BotUserRepository.has_token(telegram_id=message.chat.id)
         logger.info(
             f"Пользователь {message.chat.id}: новый={is_new_user}, есть_токен={user_has_token}"
+        )
+        await track(
+            EventName.BOT_START,
+            telegram_id=message.chat.id,
+            action="start",
+            is_new_user=is_new_user,
+            has_token=user_has_token,
+            source=sanitize_source(command.args),
         )
         if user_has_token:
             await message.answer(Messages.ALREADY_KNOWN.value, reply_markup=main_keyboard)
@@ -191,8 +207,11 @@ async def handle_maturities_button(message: Message) -> None:
     sent = await message.answer("Загружаю данные о погашениях...")
     user_id = message.from_user.id if message.from_user else message.chat.id
 
+    outcome = "ok"
+    items = 0
     try:
         maturities = await get_maturities(user_id, limit=5)
+        items = len(maturities)
         response = (
             Messages.MATURITIES_TITLE.value + _format_maturities(maturities)
             if maturities
@@ -202,13 +221,24 @@ async def handle_maturities_button(message: Message) -> None:
         # Бэкенд не знает пользователя — портфель ещё не синхронизирован.
         logger.info(f"Бэкенд не знает пользователя {user_id}")
         response = Messages.NOT_TOKEN.value
+        outcome = "no_token"
     except BackendError as e:
         logger.error(f"Ошибка при получении погашений: {e}")
         response = "Не удалось получить данные о погашениях, попробуйте позже."
+        outcome = "backend_error"
     except Exception as e:
         logger.error(f"Ошибка при получении погашений: {e}", exc_info=True)
         response = "Произошла ошибка при получении данных о погашениях"
+        outcome = "error"
 
+    await track(
+        EventName.DATA_SCREEN_VIEWED,
+        telegram_id=user_id,
+        action="maturities",
+        screen="maturities",
+        items=items,
+        outcome=outcome,
+    )
     await sent.delete()
     await message.answer(response, parse_mode="HTML")
 
@@ -219,8 +249,11 @@ async def handle_offers_button(message: Message) -> None:
     sent = await message.answer("Загружаю данные об офертах...")
     user_id = message.from_user.id if message.from_user else message.chat.id
 
+    outcome = "ok"
+    items = 0
     try:
         offers = await get_offers(user_id, limit=5)
+        items = len(offers)
         response = (
             Messages.OFFERS_TITLE.value + _format_offers(offers)
             if offers
@@ -230,13 +263,24 @@ async def handle_offers_button(message: Message) -> None:
         # Бэкенд не знает пользователя — портфель ещё не синхронизирован.
         logger.info(f"Бэкенд не знает пользователя {user_id}")
         response = Messages.NOT_TOKEN.value
+        outcome = "no_token"
     except BackendError as e:
         logger.error(f"Ошибка при получении оферт: {e}")
         response = "Не удалось получить данные об офертах, попробуйте позже."
+        outcome = "backend_error"
     except Exception as e:
         logger.error(f"Ошибка при получении оферт: {e}", exc_info=True)
         response = "Произошла ошибка при получении данных об офертах"
+        outcome = "error"
 
+    await track(
+        EventName.DATA_SCREEN_VIEWED,
+        telegram_id=user_id,
+        action="offers",
+        screen="offers",
+        items=items,
+        outcome=outcome,
+    )
     await sent.delete()
     await message.answer(response, parse_mode="HTML")
 

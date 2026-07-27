@@ -1,4 +1,4 @@
-"""Общие фикстуры для тестов offer_warning."""
+"""Общие фикстуры тестов."""
 
 from __future__ import annotations
 
@@ -8,10 +8,28 @@ from datetime import date
 
 import pytest
 import pytest_asyncio
+from core.config import config
 from core.database import Base
 from features.offer_warning.schemas import BondOffer
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
+
+
+@pytest.fixture(autouse=True)
+def disable_analytics(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Отключает запись продуктовых событий во всех тестах по умолчанию.
+
+    Иначе каждый тест хендлера пытался бы писать в реальную БД. Тесты самой
+    аналитики включают её обратно фикстурой ``enable_analytics``.
+    """
+    monkeypatch.setattr(config, "analytics_enabled", False)
+
+
+@pytest.fixture
+def enable_analytics(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Включает аналитику и трекинг админа для тестов самой фичи."""
+    monkeypatch.setattr(config, "analytics_enabled", True)
+    monkeypatch.setattr(config, "analytics_track_admin", True)
 
 
 @pytest.fixture
@@ -59,6 +77,7 @@ async def patch_session_scope(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[
 
     # Патчим session_scope во всех репозиториях, использующих in-memory БД.
     for target in (
+        "features.analytics.repository.session_scope",
         "features.offer_warning.repository.session_scope",
         "features.ratings.repository.session_scope",
         "features.fns_monitoring.repository.session_scope",

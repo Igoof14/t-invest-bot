@@ -53,6 +53,7 @@ class DatabaseManager:
         try:
             # Укажите здесь актуальные пути в зависимости от вашей структуры.
             # Если перешли на Feature-driven, пути будут такими:
+            from features.analytics.models import BotEvent
             from features.fns_monitoring.models import (
                 FnsAlertSettings,
                 FnsBlockingRecord,
@@ -63,6 +64,7 @@ class DatabaseManager:
             from features.users.models import TinvestUser, User
 
             __all__ = [
+                BotEvent,
                 OfferAlertSettings,
                 PriceAlertSettings,
                 RatingAlertSettings,

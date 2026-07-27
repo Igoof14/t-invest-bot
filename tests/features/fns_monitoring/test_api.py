@@ -3,7 +3,9 @@
 from collections.abc import AsyncIterator
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 import pytest_asyncio
+from aiogram.exceptions import TelegramForbiddenError
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 from api.keys import BOT_KEY
@@ -63,3 +65,21 @@ async def test_send_failure_returns_503(client: TestClient, bot: MagicMock) -> N
     body = {"telegram_id": 42, "alerts": [_alert_payload()]}
     response = await client.post("/events/fns-block", json=body)
     assert response.status == 503
+
+
+async def test_blocked_user_dropped_with_200(
+    client: TestClient, bot: MagicMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Заблокировавший бота пользователь: 200 dropped, а не бесконечный ретрай."""
+    deactivate = AsyncMock(return_value=True)
+    monkeypatch.setattr(
+        "features.users.repository.BotUserRepository.deactivate_user", deactivate
+    )
+    bot.send_message.side_effect = TelegramForbiddenError(method=None, message="blocked")
+
+    body = {"telegram_id": 42, "alerts": [_alert_payload()]}
+    response = await client.post("/events/fns-block", json=body)
+
+    assert response.status == 200
+    assert (await response.json())["status"] == "dropped"
+    deactivate.assert_awaited_once_with(42)

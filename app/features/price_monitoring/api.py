@@ -6,6 +6,8 @@ import logging
 
 from aiohttp import web
 from api.keys import BOT_KEY
+from api.responses import delivery_response
+from common.delivery import DeliveryOutcome, DeliveryResult
 from pydantic import BaseModel, Field, ValidationError
 
 from .config import DEFAULT_POLICY
@@ -50,8 +52,9 @@ class PriceAlertEvent(BaseModel):
 async def handle_price_alert(request: web.Request) -> web.Response:
     """Принимает событие ценовых аномалий и уведомляет пользователя.
 
-    Невалидный payload подтверждается (200), чтобы Cloud Tasks не
-    ретраил заведомо неисправимую задачу. Ошибка отправки — 503 (ретрай).
+    Невалидный payload и постоянные ошибки доставки подтверждаются (200),
+    чтобы Cloud Tasks не ретраил заведомо неисправимую задачу. Ретрай имеет
+    смысл только при временной ошибке — тогда 503.
     """
     try:
         event = PriceAlertEvent.model_validate(await request.json())
@@ -63,15 +66,18 @@ async def handle_price_alert(request: web.Request) -> web.Response:
     anomalies = [a.to_domain() for a in event.alerts]
 
     if len(anomalies) >= DEFAULT_POLICY.aggregate_threshold:
-        sent = await notifier.send_aggregated(
+        result = await notifier.send_aggregated(
             event.telegram_id,
             anomalies,
             max_per_severity=DEFAULT_POLICY.max_aggregated_per_severity,
         )
     else:
-        results = [await notifier.send_single(event.telegram_id, anomaly) for anomaly in anomalies]
-        sent = all(results)
+        result = DeliveryResult(DeliveryOutcome.SENT)
+        for anomaly in anomalies:
+            result = await notifier.send_single(event.telegram_id, anomaly)
+            if not result.is_sent:
+                # Дальше отправлять бессмысленно: либо пользователь заблокировал
+                # бота, либо задачу будет ретраить Cloud Tasks целиком.
+                break
 
-    if not sent:
-        return web.json_response({"status": "error"}, status=503)
-    return web.json_response({"status": "sent"})
+    return delivery_response(result)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from aiogram import Bot
+from common.delivery import DeliveryOutcome, DeliveryResult, deliver
 
 from .events import UserBlockAlert
 from .formatter import format_fns_alert
@@ -19,30 +20,26 @@ class FnsBlockNotifier:
         """Инициализирует notifier."""
         self._bot = bot
 
-    async def send(self, telegram_id: int, alerts: list[UserBlockAlert]) -> bool:
+    async def send(self, telegram_id: int, alerts: list[UserBlockAlert]) -> DeliveryResult:
         """Отправляет одно сообщение со всеми блокировками пользователя.
 
         Returns:
-            True при успешной отправке, False при ошибке.
+            Итог доставки: см. ``DeliveryOutcome``.
 
         """
         if not alerts:
-            return True
+            return DeliveryResult(DeliveryOutcome.SENT)
 
         message = format_fns_alert(alerts)
 
-        try:
-            await self._bot.send_message(
+        return await deliver(
+            lambda: self._bot.send_message(
                 telegram_id,
                 message,
                 parse_mode="HTML",
                 disable_web_page_preview=True,
-            )
-            logger.info(
-                f"Отправлено уведомление о блокировках ФНС пользователю "
-                f"{telegram_id}: {len(alerts)} эмитент(ов)"
-            )
-            return True
-        except Exception as e:
-            logger.error(f"Ошибка при отправке уведомления ФНС {telegram_id}: {e}")
-            return False
+            ),
+            telegram_id=telegram_id,
+            kind="fns",
+            items=len(alerts),
+        )

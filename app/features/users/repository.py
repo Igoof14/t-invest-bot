@@ -4,7 +4,7 @@ import logging
 from datetime import UTC, datetime
 
 from core.database import session_scope
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 
 from .models import User
 
@@ -201,6 +201,37 @@ class BotUserRepository:
                 await session.rollback()
                 logger.error(f"Ошибка при обновлении активности {telegram_id}: {e}")
                 return False
+
+    @classmethod
+    async def touch_last_activity_if_stale(cls, telegram_id: int) -> bool:
+        """Двигает ``last_activity``, если она ещё не обновлялась сегодня.
+
+        Вызывается на каждый апдейт из аналитической мидлвари, поэтому
+        сделана условной: один UPDATE в сутки на пользователя вместо
+        записи на каждое нажатие кнопки. Без предварительного SELECT —
+        условие целиком в WHERE.
+
+        Returns:
+            True, если время активности было обновлено.
+
+        """
+        now = datetime.now(UTC)
+        day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        try:
+            async with session_scope() as session:
+                result = await session.execute(
+                    update(User)
+                    .where(
+                        User.telegram_id == telegram_id,
+                        or_(User.last_activity.is_(None), User.last_activity < day_start),
+                    )
+                    .values(last_activity=now)
+                )
+                await session.commit()
+                return getattr(result, "rowcount", 0) > 0
+        except Exception as e:
+            logger.warning(f"Не удалось обновить активность {telegram_id}: {e}")
+            return False
 
     @classmethod
     async def deactivate_user(cls, telegram_id: int) -> bool:

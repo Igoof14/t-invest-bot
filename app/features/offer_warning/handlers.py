@@ -7,6 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from common.utils.bot_utils import pluralize_days
+from features.analytics import EventName, track
 from features.menu import nav_button
 
 from .keyboards import create_offer_alert_setting_keyboard
@@ -24,6 +25,13 @@ async def handle_toggle_alerts(callback: CallbackQuery, callback_data: OfferAler
     try:
         telegram_id = callback.from_user.id
         new_state = await OfferSettingsRepository.toggle_alerts(telegram_id)
+        await track(
+            EventName.ALERT_TOGGLED,
+            telegram_id=telegram_id,
+            action="offer",
+            feature="offer",
+            enabled=new_state,
+        )
 
         text, markup = await render(telegram_id)
         if callback.message and isinstance(callback.message, Message):
@@ -129,6 +137,14 @@ async def process_first_alert(message: Message, state: FSMContext):
         telegram_id = message.chat.id
         await message.delete()
         await OfferSettingsRepository.update(telegram_id, first_alert=val)
+        await track(
+            EventName.ALERT_SETTING_CHANGED,
+            telegram_id=telegram_id,
+            action="offer:first_alert",
+            feature="offer",
+            field="first_alert",
+            value=val,
+        )
         await message.answer(f"Первое напоминание успешно установлено: {val}")
         await state.clear()
     except Exception as e:
@@ -155,6 +171,14 @@ async def process_second_alert(message: Message, state: FSMContext):
         telegram_id = message.chat.id
         await message.delete()
         await OfferSettingsRepository.update(telegram_id, second_alert=val)
+        await track(
+            EventName.ALERT_SETTING_CHANGED,
+            telegram_id=telegram_id,
+            action="offer:second_alert",
+            feature="offer",
+            field="second_alert",
+            value=val,
+        )
         await message.answer(f"Второе напоминание успешно установлено: {val}")
         await state.clear()
     except Exception as e:
@@ -180,6 +204,13 @@ async def process_time_alert(message: Message, state: FSMContext):
         notification_time = datetime.strptime(text, "%H:%M").time()
         await message.delete()
         await OfferSettingsRepository.update(telegram_id, notification_time=notification_time)
+        await track(
+            EventName.ALERT_SETTING_CHANGED,
+            telegram_id=telegram_id,
+            action="offer:notification_time",
+            feature="offer",
+            field="notification_time",
+        )
         await message.answer(f"Время напоминания успешно установлено: {text} мск")
         await state.clear()
     except Exception as e:

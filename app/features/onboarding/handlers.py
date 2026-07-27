@@ -11,6 +11,7 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
+from features.analytics import EventName, track
 
 from .keyboards import build_step_keyboard
 from .schemas import TOKEN_CALLBACK, OnboardingNav
@@ -35,6 +36,7 @@ async def start_onboarding(message: Message) -> None:
         reply_markup=build_step_keyboard(step).as_markup(),
         parse_mode="HTML",
     )
+    await track(EventName.ONBOARDING_STEP_SHOWN, telegram_id=message.chat.id, step=0)
 
 
 @router.callback_query(OnboardingNav.filter())
@@ -50,6 +52,11 @@ async def handle_nav(callback: CallbackQuery, callback_data: OnboardingNav) -> N
             reply_markup=build_step_keyboard(step).as_markup(),
             parse_mode="HTML",
         )
+    await track(
+        EventName.ONBOARDING_STEP_SHOWN,
+        telegram_id=callback.from_user.id,
+        step=callback_data.step,
+    )
     await callback.answer()
 
 
@@ -59,6 +66,7 @@ async def handle_token_cta(callback: CallbackQuery, state: FSMContext) -> None:
     # Отложенный импорт: разрывает цикл base -> onboarding -> users -> base.
     from features.users.handlers import prompt_for_token
 
+    await track(EventName.ONBOARDING_CTA_CLICKED, telegram_id=callback.from_user.id)
     if isinstance(callback.message, Message):
-        await prompt_for_token(callback.message, state)
+        await prompt_for_token(callback.message, state, entry="onboarding")
     await callback.answer()

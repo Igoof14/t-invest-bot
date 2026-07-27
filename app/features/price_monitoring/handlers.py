@@ -5,6 +5,7 @@ from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
+from features.analytics import EventName, track
 
 from .enums import PriceAlertCallbackData
 from .keyboards import create_thresholds_keyboard
@@ -44,6 +45,13 @@ async def handle_toggle_alerts(callback: CallbackQuery) -> None:
     try:
         telegram_id = callback.from_user.id
         new_state = await AlertSettingsRepository.toggle_alerts(telegram_id)
+        await track(
+            EventName.ALERT_TOGGLED,
+            telegram_id=telegram_id,
+            action="price",
+            feature="price",
+            enabled=new_state,
+        )
 
         text, markup = await render(telegram_id)
         if callback.message and isinstance(callback.message, Message):
@@ -189,6 +197,14 @@ async def handle_threshold_input(message: Message, state: FSMContext) -> None:
         field = field_map.get(current_state)
         if field:
             await AlertSettingsRepository.update(telegram_id, **{field: value})
+            await track(
+                EventName.ALERT_SETTING_CHANGED,
+                telegram_id=telegram_id,
+                action=f"price:{field}",
+                feature="price",
+                field=field,
+                value=value,
+            )
 
             state_data = await state.get_data()
             prompt_message_id = state_data.get("prompt_message_id")

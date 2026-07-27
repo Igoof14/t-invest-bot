@@ -4,6 +4,7 @@ import logging
 from collections.abc import Sequence
 
 from aiogram import Bot
+from common.delivery import DeliveryResult, deliver
 
 from .formatter import format_aggregated_alert, format_single_alert
 from .schemas import PriceAnomaly
@@ -27,24 +28,22 @@ class PriceAlertNotifier:
         """
         self._bot = bot
 
-    async def send_single(self, telegram_id: int, anomaly: PriceAnomaly) -> bool:
+    async def send_single(self, telegram_id: int, anomaly: PriceAnomaly) -> DeliveryResult:
         """Отправляет одно уведомление.
 
         Returns:
-            True при успешной отправке, False при ошибке.
+            Итог доставки: см. ``DeliveryOutcome``.
 
         """
         message = format_single_alert(anomaly)
-        try:
-            await self._bot.send_message(telegram_id, message, parse_mode="HTML")
-        except Exception as e:
-            logger.error(f"Ошибка при отправке алерта пользователю {telegram_id}: {e}")
-            return False
-
-        logger.info(
-            f"Отправлен алерт пользователю {telegram_id}: {anomaly.isin} {anomaly.alert_type.value}"
+        return await deliver(
+            lambda: self._bot.send_message(telegram_id, message, parse_mode="HTML"),
+            telegram_id=telegram_id,
+            kind="price",
+            items=1,
+            isin=anomaly.isin,
+            alert_type=anomaly.alert_type.value,
         )
-        return True
 
     async def send_aggregated(
         self,
@@ -52,22 +51,19 @@ class PriceAlertNotifier:
         anomalies: Sequence[PriceAnomaly],
         *,
         max_per_severity: int,
-    ) -> bool:
+    ) -> DeliveryResult:
         """Отправляет сводное уведомление по нескольким аномалиям.
 
         Returns:
-            True при успешной отправке, False при ошибке.
+            Итог доставки: см. ``DeliveryOutcome``.
 
         """
         message, shown = format_aggregated_alert(anomalies, max_per_severity=max_per_severity)
-        try:
-            await self._bot.send_message(telegram_id, message, parse_mode="HTML")
-        except Exception as e:
-            logger.error(f"Ошибка при отправке сводного алерта пользователю {telegram_id}: {e}")
-            return False
-
-        logger.info(
-            f"Отправлен сводный алерт пользователю {telegram_id}: "
-            f"показано {len(shown)} из {len(anomalies)} аномалий"
+        return await deliver(
+            lambda: self._bot.send_message(telegram_id, message, parse_mode="HTML"),
+            telegram_id=telegram_id,
+            kind="price",
+            items=len(anomalies),
+            shown=len(shown),
+            aggregated=True,
         )
-        return True

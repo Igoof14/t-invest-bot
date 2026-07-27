@@ -11,6 +11,7 @@ from aiogram.types import CallbackQuery, Message
 from common.utils.bot_utils import pluralize_bonds
 from core.clients.bonds_sync.client import sync_user_bonds
 from core.clients.t_invest.common_func import check_token
+from features.analytics import EventName, track
 from features.base.keyboards import create_main_keyboard, create_new_user_keyboard
 from features.users.repository import BotUserRepository
 
@@ -47,6 +48,13 @@ async def _sync_bonds_and_notify(message: Message, telegram_id: int) -> None:
     else:
         text = "Список облигаций синхронизирован — облигаций в портфеле не нашлось."
 
+    await track(
+        EventName.BONDS_SYNCED,
+        telegram_id=telegram_id,
+        count=bonds_synced,
+        ok=bonds_synced is not None,
+    )
+
     try:
         await message.answer(text)
     except TelegramAPIError:
@@ -82,7 +90,7 @@ callback_values = {
 }
 
 
-async def prompt_for_token(message: Message, state: FSMContext) -> None:
+async def prompt_for_token(message: Message, state: FSMContext, *, entry: str = "settings") -> None:
     """Показывает экран ввода токена и переводит FSM в ожидание токена.
 
     Общий шаг для кнопки «Добавить токен» в настройках и финального CTA
@@ -91,6 +99,8 @@ async def prompt_for_token(message: Message, state: FSMContext) -> None:
     Args:
         message: Сообщение, в чат которого отправить инструкцию.
         state: FSM-контекст пользователя.
+        entry: Откуда пришёл пользователь — ``onboarding`` или ``settings``.
+            Нужен, чтобы считать конверсию двух входов раздельно.
 
     """
     await message.answer(
@@ -104,6 +114,7 @@ async def prompt_for_token(message: Message, state: FSMContext) -> None:
         disable_web_page_preview=True,
     )
     await state.set_state(TokenStates.waiting_for_token)
+    await track(EventName.TOKEN_PROMPT_SHOWN, telegram_id=message.chat.id, entry=entry)
 
 
 @router.callback_query(F.data.in_(callback_values))
@@ -138,10 +149,13 @@ async def handle_token_message(message: Message, state: FSMContext) -> None:
         return
     token = message.text.strip()
     logger.info(f"Получен токен от пользователя {telegram_id}")
-    if await check_token(token):
+    is_valid = await check_token(token)
+    await track(EventName.TOKEN_SUBMITTED, telegram_id=telegram_id, valid=is_valid)
+    if is_valid:
         logger.info(f"Токен пользователя {telegram_id} валиден")
         success = await BotUserRepository.add_token(telegram_id=telegram_id, token=token)
         if success:
+            await track(EventName.TOKEN_CONNECTED, telegram_id=telegram_id)
             main_keyboard = create_main_keyboard()
             await message.answer(
                 "Токен успешно сохранён! Синхронизирую список облигаций...",
@@ -170,6 +184,7 @@ async def handle_delete_confirmation(message: Message, state: FSMContext) -> Non
     if text == "удалить":
         success = await BotUserRepository.remove_token(telegram_id=telegram_id)
         if success:
+            await track(EventName.TOKEN_REMOVED, telegram_id=telegram_id)
             new_user_keyboard = create_new_user_keyboard()
             await message.answer("Токен успешно удалён!", reply_markup=new_user_keyboard)
         else:

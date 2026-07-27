@@ -7,6 +7,7 @@ from common.utils.bot_utils import BotUtils
 from core.config import config
 from core.database import db_manager
 from features import (
+    analytics,
     base,
     broadcast,
     coupons,
@@ -63,6 +64,10 @@ def main() -> None:
     register_section(offer_section)
     register_section(ratings_section)
     register_section(fns_section)
+
+    # Продуктовая аналитика: outer-мидлварь на update видит каждый апдейт
+    # ровно один раз, включая те, для которых не нашлось хендлера.
+    dp.update.outer_middleware(analytics.AnalyticsMiddleware())
 
     dp.include_routers(
         base.router,
