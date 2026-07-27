@@ -42,10 +42,13 @@ def _alert(n: int) -> UserBlockAlert:
 
 def test_alert_is_aggregated_with_copyable_ticker() -> None:
     msg = _plain(format_fns_alert([_alert(7)]))
+    assert "🚫 ФНС: заблокированы счета ваших эмитентов" in msg
+    # ИНН копируется по тапу.
+    assert "ИНН: <code>7706</code>" in msg
     assert "Заблокировано счетов: 7" in msg
-    assert "Отрицательное сальдо ЕНС: 1 647 440,01 ₽" in msg
-    # Тикер обёрнут в <code> — копируется по тапу.
-    assert "В вашем портфеле: Мосрегионлифт БО-02 (<code>RU000A105AJ4</code>)" in msg
+    assert "Отрицательное сальдо: 1 647 440,01 ₽" in msg
+    # Сначала тикер в <code> (копируется по тапу), затем имя бумаги.
+    assert "В вашем портфеле:\n<code>RU000A105AJ4</code> Мосрегионлифт БО-02" in msg
     # Агрегировано: нет построчного перечисления решений/БИК.
     assert "Решение №" not in msg
     assert "БИК" not in msg
@@ -67,8 +70,9 @@ def test_bond_without_ticker_shows_name_only() -> None:
         matched_bonds=[MatchedBond(name="ТЕСТ-БО-01", ticker=None)],
     )
     msg = format_fns_alert([alert])
-    assert "В вашем портфеле: ТЕСТ-БО-01" in msg
-    assert "<code>" not in msg
+    assert "В вашем портфеле:\nТЕСТ-БО-01" in msg
+    # Единственный <code> — ИНН эмитента, тикера у бумаги нет.
+    assert msg.count("<code>") == 1
     assert "сальдо" not in msg.lower()
 
 
@@ -81,8 +85,26 @@ def test_bond_ticker_equal_name_no_duplicate() -> None:
         matched_bonds=[MatchedBond(name="RU000A0TEST1", ticker="RU000A0TEST1")],
     )
     msg = format_fns_alert([alert])
-    assert "В вашем портфеле: <code>RU000A0TEST1</code>" in msg
-    assert "(<code>" not in msg
+    assert "В вашем портфеле:\n<code>RU000A0TEST1</code>" in msg
+    assert "<code>RU000A0TEST1</code> RU000A0TEST1" not in msg
+
+
+def test_several_bonds_each_on_own_line() -> None:
+    alert = UserBlockAlert(
+        inn="7706",
+        entity_name="X",
+        orders=[BlockingOrder(inn="7706", block_uid="b:1", nomer="1")],
+        matched_bonds=[
+            MatchedBond(name="ТЕСТ-БО-01", ticker="RU000A0TEST1"),
+            MatchedBond(name="ТЕСТ-БО-02", ticker="RU000A0TEST2"),
+        ],
+    )
+    msg = format_fns_alert([alert])
+    assert (
+        "В вашем портфеле:\n"
+        "<code>RU000A0TEST1</code> ТЕСТ-БО-01\n"
+        "<code>RU000A0TEST2</code> ТЕСТ-БО-02"
+    ) in msg
 
 
 def test_saldo_uses_max_across_orders() -> None:
