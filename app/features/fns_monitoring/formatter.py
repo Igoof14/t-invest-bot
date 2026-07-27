@@ -55,7 +55,7 @@ def _format_single(alert: UserBlockAlert) -> str:
     if saldo is not None:
         lines.append(f"Отрицательное сальдо: {_format_money(saldo)} ₽")
     if alert.matched_bonds:
-        bonds = "\n".join(_format_bond(b) for b in alert.matched_bonds)
+        bonds = " \n".join(_format_bond(b) for b in alert.matched_bonds)
         lines.append(f"\nВ вашем портфеле:\n{bonds}")
     return "\n".join(lines)
 
