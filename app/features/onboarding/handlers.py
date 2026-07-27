@@ -11,6 +11,7 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
+from common.utils.bot_utils import safe_edit_text
 from features.analytics import EventName, track
 
 from .keyboards import build_step_keyboard
@@ -47,10 +48,10 @@ async def handle_nav(callback: CallbackQuery, callback_data: OnboardingNav) -> N
         return
     step = STEPS[callback_data.step]
     if isinstance(callback.message, Message):
-        await callback.message.edit_text(
+        await safe_edit_text(
+            callback.message,
             step.text,
             reply_markup=build_step_keyboard(step).as_markup(),
-            parse_mode="HTML",
         )
     await track(
         EventName.ONBOARDING_STEP_SHOWN,

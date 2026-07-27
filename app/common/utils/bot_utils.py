@@ -3,9 +3,48 @@
 import logging
 
 from aiogram import Bot
-from aiogram.types import BotCommand
+from aiogram.exceptions import TelegramBadRequest
+from aiogram.types import BotCommand, InlineKeyboardMarkup, Message
 
 logger = logging.getLogger(__name__)
+
+# Telegram отвечает 400 на edit_text, если текст и разметка совпадают с текущими.
+_NOT_MODIFIED = "message is not modified"
+
+
+async def safe_edit_text(
+    message: Message,
+    text: str,
+    *,
+    reply_markup: InlineKeyboardMarkup | None = None,
+    parse_mode: str | None = "HTML",
+) -> bool:
+    """Перерисовывает сообщение, не считая повторный тап ошибкой.
+
+    Пользователь регулярно нажимает ту же кнопку дважды или тапает по старому
+    сообщению. Тогда новый контент совпадает с текущим, и Telegram отвечает
+    ``Bad Request: message is not modified``. Для пользователя это не ошибка —
+    он уже на нужном экране, поэтому такой ответ проглатывается. Все остальные
+    ``TelegramBadRequest`` пробрасываются как раньше.
+
+    Args:
+        message: Сообщение, которое нужно перерисовать.
+        text: Новый текст.
+        reply_markup: Новая инлайн-клавиатура.
+        parse_mode: Режим разметки.
+
+    Returns:
+        True, если сообщение действительно изменилось.
+
+    """
+    try:
+        await message.edit_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
+    except TelegramBadRequest as e:
+        if _NOT_MODIFIED not in str(e):
+            raise
+        logger.debug(f"Повторный тап: сообщение {message.message_id} не изменилось")
+        return False
+    return True
 
 
 def pluralize_days(n: int) -> str:

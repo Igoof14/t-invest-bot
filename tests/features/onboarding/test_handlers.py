@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
 
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import Message
 from features.onboarding.handlers import (
     handle_nav,
@@ -20,6 +21,7 @@ def _message() -> MagicMock:
     message.answer = AsyncMock()
     message.edit_text = AsyncMock()
     message.chat = MagicMock(id=777)
+    message.message_id = 1
     return message
 
 
@@ -53,6 +55,19 @@ async def test_nav_advances_to_next_step() -> None:
     message.edit_text.assert_awaited_once()
     assert message.edit_text.await_args.args[0] == STEPS[1].text
     assert message.edit_text.await_args.kwargs["parse_mode"] == "HTML"
+    callback.answer.assert_awaited_once()
+
+
+async def test_nav_repeated_tap_does_not_raise() -> None:
+    """Повторный тап по той же кнопке не должен ронять хендлер."""
+    message = _message()
+    message.edit_text.side_effect = TelegramBadRequest(
+        method=None, message="Bad Request: message is not modified"
+    )
+    callback = _callback(message)
+
+    await handle_nav(callback, OnboardingNav(step=1))
+
     callback.answer.assert_awaited_once()
 
 

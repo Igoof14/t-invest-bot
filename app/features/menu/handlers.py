@@ -6,6 +6,7 @@ import logging
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
+from common.utils.bot_utils import safe_edit_text
 
 from .callbacks import MenuCallback
 from .keyboards import HUB_KEY, build_help, build_hub
@@ -22,9 +23,13 @@ async def render_hub(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
 
 
 async def _edit(callback: CallbackQuery, text: str, markup: InlineKeyboardMarkup) -> None:
-    """Перерисовывает сообщение на месте."""
+    """Перерисовывает сообщение на месте.
+
+    Повторный тап по той же кнопке не считается ошибкой: пользователь уже
+    находится на нужном экране.
+    """
     if callback.message and isinstance(callback.message, Message):
-        await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+        await safe_edit_text(callback.message, text, reply_markup=markup)
 
 
 @router.callback_query(MenuCallback.filter(F.section == HUB_KEY))
