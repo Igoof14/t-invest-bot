@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from aiogram.types import InlineKeyboardMarkup
+from core.clients.backend.notifications import PriceAlertSettings
 from features.menu import MenuSection, back_to_hub_button, help_button, status_text
 
 from .keyboards import create_price_alerts_keyboard
-from .models import PriceAlertSettings
 from .repository import AlertSettingsRepository
 
 SECTION_KEY = "price"
@@ -44,7 +44,7 @@ def build_text(settings: PriceAlertSettings) -> str:
 
 async def render(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
     """Экран раздела цен: описание + тумблер/пороги + «Назад»."""
-    settings = await AlertSettingsRepository.get_or_create(telegram_id)
+    settings = await AlertSettingsRepository.get(telegram_id)
     builder = create_price_alerts_keyboard(settings.alerts_enabled)
     builder.row(back_to_hub_button())
     builder.row(help_button(SECTION_KEY))
@@ -58,7 +58,7 @@ async def render(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
 
 async def status_badge(telegram_id: int) -> str:
     """Бейдж для хаба: ✅ если мониторинг включён."""
-    settings = await AlertSettingsRepository.get_or_create(telegram_id)
+    settings = await AlertSettingsRepository.get(telegram_id)
     return status_text(settings.alerts_enabled)
 
 

@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass
 
+from core.clients.backend.notifications import PriceAlertSettings
+
 
 @dataclass(frozen=True, slots=True)
 class AlertPolicyConfig:
@@ -32,8 +34,8 @@ DEFAULT_POLICY = AlertPolicyConfig()
 class AlertThresholds:
     """Пороги пользователя для срабатывания алерта (в процентах изменения цены).
 
-    Это domain-объект, не привязанный к ORM. Сервис создаёт его из
-    ``PriceAlertSettings`` через :meth:`from_settings`.
+    Сами алерты считает сервис `price-monitoring`, читая настройки из БД напрямую;
+    здесь тип остаётся как описание формы порогов.
     """
 
     drop_warning: float
@@ -42,11 +44,11 @@ class AlertThresholds:
     rise_critical: float
 
     @classmethod
-    def from_settings(cls, settings: object) -> "AlertThresholds":
-        """Собирает AlertThresholds из ORM-модели PriceAlertSettings."""
+    def from_settings(cls, settings: PriceAlertSettings) -> "AlertThresholds":
+        """Собирает AlertThresholds из настроек, полученных от бэкенда."""
         return cls(
-            drop_warning=settings.drop_warning_threshold,  # type: ignore[attr-defined]
-            drop_critical=settings.drop_critical_threshold,  # type: ignore[attr-defined]
-            rise_warning=settings.rise_warning_threshold,  # type: ignore[attr-defined]
-            rise_critical=settings.rise_critical_threshold,  # type: ignore[attr-defined]
+            drop_warning=settings.drop_warning_threshold,
+            drop_critical=settings.drop_critical_threshold,
+            rise_warning=settings.rise_warning_threshold,
+            rise_critical=settings.rise_critical_threshold,
         )

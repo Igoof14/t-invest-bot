@@ -51,28 +51,14 @@ class DatabaseManager:
     async def create_tables(self) -> None:
         """Создает все таблицы в базе данных."""
         try:
-            # Укажите здесь актуальные пути в зависимости от вашей структуры.
-            # Если перешли на Feature-driven, пути будут такими:
+            # Здесь остались только таблицы, которыми владеет сам бот. Настройки
+            # уведомлений и `bot_users` мигрирует bondelo-backend, состояние дедупа
+            # (`rating_releases`, `fns_blocking_records`) — сервисы мониторингов.
             from features.analytics.models import BotEvent
-            from features.fns_monitoring.models import (
-                FnsAlertSettings,
-                FnsBlockingRecord,
-            )
-            from features.offer_warning.models import OfferAlertSettings
-            from features.price_monitoring.models import PriceAlertSettings
-            from features.ratings.models import RatingAlertSettings, RatingRelease
-
-            # `bot_users` тут намеренно нет: её схемой владеет и мигрирует bondelo-backend.
             from features.users.models import TinvestUser
 
             __all__ = [
                 BotEvent,
-                OfferAlertSettings,
-                PriceAlertSettings,
-                RatingAlertSettings,
-                RatingRelease,
-                FnsAlertSettings,
-                FnsBlockingRecord,
                 TinvestUser,
             ]
         except ImportError as e:

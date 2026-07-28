@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from aiogram.types import InlineKeyboardMarkup
 from common.utils.bot_utils import pluralize_days
+from core.clients.backend.notifications import OfferAlertSettings
 from features.menu import MenuSection, back_to_hub_button, help_button, status_text
 
 from .keyboards import create_offer_alerts_keyboard
-from .models import OfferAlertSettings
 from .repository import OfferSettingsRepository
 
 SECTION_KEY = "offer"
@@ -45,7 +45,7 @@ def build_text(settings: OfferAlertSettings) -> str:
 
 async def render(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
     """Экран раздела оферт: тумблер/настройки + «Как это работает» + «Назад»."""
-    settings = await OfferSettingsRepository.get_or_create(telegram_id)
+    settings = await OfferSettingsRepository.get(telegram_id)
     builder = create_offer_alerts_keyboard(settings.alerts_enabled)
     builder.row(back_to_hub_button())
     builder.row(help_button(SECTION_KEY))
@@ -59,7 +59,7 @@ async def render(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
 
 async def status_badge(telegram_id: int) -> str:
     """Бейдж для хаба: включено, если уведомления активны."""
-    settings = await OfferSettingsRepository.get_or_create(telegram_id)
+    settings = await OfferSettingsRepository.get(telegram_id)
     return status_text(settings.alerts_enabled)
 
 

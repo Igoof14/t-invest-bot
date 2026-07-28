@@ -23,14 +23,14 @@ def _settings(enabled: bool) -> SimpleNamespace:
 
 async def test_status_badge_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        menu.AlertSettingsRepository, "get_or_create", AsyncMock(return_value=_settings(False))
+        menu.AlertSettingsRepository, "get", AsyncMock(return_value=_settings(False))
     )
     assert await menu.status_badge(111) == "Выключено 🔕"
 
 
 async def test_render_has_back_button_and_thresholds(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        menu.AlertSettingsRepository, "get_or_create", AsyncMock(return_value=_settings(True))
+        menu.AlertSettingsRepository, "get", AsyncMock(return_value=_settings(True))
     )
 
     text, markup = await menu.render(111)

@@ -23,14 +23,14 @@ def _settings(enabled: bool) -> SimpleNamespace:
 
 async def test_status_badge(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        menu.OfferSettingsRepository, "get_or_create", AsyncMock(return_value=_settings(True))
+        menu.OfferSettingsRepository, "get", AsyncMock(return_value=_settings(True))
     )
     assert await menu.status_badge(111) == "Включено 🔔"
 
 
 async def test_render_has_back_button(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        menu.OfferSettingsRepository, "get_or_create", AsyncMock(return_value=_settings(False))
+        menu.OfferSettingsRepository, "get", AsyncMock(return_value=_settings(False))
     )
 
     text, markup = await menu.render(111)

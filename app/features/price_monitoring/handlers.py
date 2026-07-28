@@ -71,7 +71,9 @@ async def handle_thresholds_menu(callback: CallbackQuery) -> None:
         telegram_id = callback.from_user.id
         settings = await AlertSettingsRepository.get(telegram_id)
 
-        if not settings:
+        # Кнопка порогов есть только при включённых уведомлениях; сюда можно попасть
+        # лишь по устаревшему сообщению.
+        if not settings.alerts_enabled:
             await callback.answer("Сначала включите уведомления")
             return
 

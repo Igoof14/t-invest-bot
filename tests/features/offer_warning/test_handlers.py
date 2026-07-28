@@ -158,7 +158,7 @@ async def test_handle_toggle_enabled_edits_message(
     )
     monkeypatch.setattr(
         handlers.OfferSettingsRepository,
-        "get_or_create",
+        "get",
         AsyncMock(
             return_value=SimpleNamespace(
                 alerts_enabled=True,

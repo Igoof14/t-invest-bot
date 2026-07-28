@@ -49,7 +49,7 @@ async def handle_offer_alert_setting(callback: CallbackQuery) -> None:
     """Обработчик для кнопки настроек уведомлений об офертах."""
     try:
         telegram_id = callback.from_user.id
-        settings = await OfferSettingsRepository.get_or_create(telegram_id)
+        settings = await OfferSettingsRepository.get(telegram_id)
         message_text = "<b>Настройки уведомлений об офертах</b>\n\n"
 
         if settings.alerts_enabled:
