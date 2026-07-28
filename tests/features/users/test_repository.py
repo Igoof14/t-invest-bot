@@ -14,6 +14,25 @@ async def test_add_user_returns_true_for_new_then_false_for_existing() -> None:
     assert await BotUserRepository.add_user(1, username="alice") is False
 
 
+async def test_register_and_get_state_for_new_user() -> None:
+    assert await BotUserRepository.register_and_get_state(100, username="new") == (True, False)
+
+
+async def test_register_and_get_state_for_existing_user() -> None:
+    await BotUserRepository.add_user(101)
+    assert await BotUserRepository.register_and_get_state(101) == (False, False)
+
+    await BotUserRepository.add_token(101, "t.secret")
+    assert await BotUserRepository.register_and_get_state(101) == (False, True)
+
+
+async def test_register_and_get_state_reactivates_user() -> None:
+    await BotUserRepository.add_user(102)
+    await BotUserRepository.deactivate_user(102)
+    assert await BotUserRepository.register_and_get_state(102) == (False, False)
+    assert await BotUserRepository.has_user(102) is True
+
+
 async def test_has_user_reflects_existence() -> None:
     assert await BotUserRepository.has_user(2) is False
     await BotUserRepository.add_user(2)

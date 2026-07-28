@@ -57,6 +57,12 @@ async def on_startup(bot: Bot) -> None:
     )
 
 
+async def on_shutdown() -> None:
+    """Гасит сервис: дописывает фоновую аналитику и закрывает пул БД."""
+    await analytics.flush_tracking()
+    await db_manager.close()
+
+
 def main() -> None:
     """Собирает приложение и запускает webhook-сервер."""
     # Регистрируем секции хаба «Уведомления» (порядок = порядок в меню).
@@ -83,6 +89,7 @@ def main() -> None:
     )
 
     dp.startup.register(on_startup)
+    dp.shutdown.register(on_shutdown)
 
     app = create_app(bot, dp)
     web.run_app(app, host=config.api_host, port=config.api_port)

@@ -16,7 +16,7 @@ from core.clients.backend import (
     get_offers,
 )
 from core.enums import MainKeyboardButtonTexts, Messages
-from features.analytics import EventName, sanitize_source, track
+from features.analytics import EventName, sanitize_source, track_bg
 from features.coupons.keyboards import create_coupons_keyboard
 from features.menu import render_hub
 from features.onboarding import start_onboarding
@@ -127,17 +127,16 @@ async def start_handler(message: Message, command: CommandObject) -> None:
         main_keyboard = create_main_keyboard()
         new_user_keyboard = create_new_user_keyboard()
 
-        is_new_user = await BotUserRepository.add_user(
+        is_new_user, user_has_token = await BotUserRepository.register_and_get_state(
             telegram_id=message.chat.id,
             username=message.from_user.username if message.from_user else None,
             first_name=message.from_user.first_name if message.from_user else None,
             last_name=message.from_user.last_name if message.from_user else None,
         )
-        user_has_token = await BotUserRepository.has_token(telegram_id=message.chat.id)
         logger.info(
             f"Пользователь {message.chat.id}: новый={is_new_user}, есть_токен={user_has_token}"
         )
-        await track(
+        track_bg(
             EventName.BOT_START,
             telegram_id=message.chat.id,
             action="start",
@@ -150,8 +149,6 @@ async def start_handler(message: Message, command: CommandObject) -> None:
         else:
             await message.answer("Добро пожаловать 👋", reply_markup=new_user_keyboard)
             await start_onboarding(message)
-
-        logger.info(f"Всего пользователей: {await BotUserRepository.get_user_count()}")
 
     except Exception as e:
         logger.error(f"Ошибка в start handler: {e}")
@@ -231,7 +228,7 @@ async def handle_maturities_button(message: Message) -> None:
         response = "Произошла ошибка при получении данных о погашениях"
         outcome = "error"
 
-    await track(
+    track_bg(
         EventName.DATA_SCREEN_VIEWED,
         telegram_id=user_id,
         action="maturities",
@@ -273,7 +270,7 @@ async def handle_offers_button(message: Message) -> None:
         response = "Произошла ошибка при получении данных об офертах"
         outcome = "error"
 
-    await track(
+    track_bg(
         EventName.DATA_SCREEN_VIEWED,
         telegram_id=user_id,
         action="offers",

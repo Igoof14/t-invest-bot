@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from core.config import config
-from features.analytics import EventName, sanitize_source, track
+from features.analytics import EventName, flush_tracking, sanitize_source, track, track_bg
 from features.analytics.schemas import Direction
 
 
@@ -114,6 +114,22 @@ async def test_track_never_raises(monkeypatch: pytest.MonkeyPatch, enable_analyt
     )
 
     assert await track(EventName.BOT_START, telegram_id=777) is None
+
+
+async def test_track_bg_does_not_block_caller(
+    add_event: AsyncMock, enable_analytics: None
+) -> None:
+    """Событие пишется, но вызывающий код не ждёт похода в БД."""
+    track_bg(EventName.BOT_START, telegram_id=779)
+    assert add_event.await_count == 0  # ещё не выполнилось — задача только создана
+
+    await flush_tracking()
+    assert add_event.await_count == 1
+    assert add_event.await_args.kwargs["telegram_id"] == 779
+
+
+async def test_flush_tracking_without_pending_tasks() -> None:
+    await flush_tracking()
 
 
 @pytest.mark.parametrize(

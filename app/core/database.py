@@ -36,13 +36,13 @@ class DatabaseManager:
             database_url,
             echo=False,
             future=True,
-            pool_size=5,
-            max_overflow=10,
-            # Cloud Run замораживает инстанс между запросами, из-за чего соединения
-            # в пуле успевают протухнуть (InterfaceError: connection is closed).
-            pool_pre_ping=True,
-            pool_recycle=300,
-            pool_timeout=30,
+            # Параметры пула вынесены в конфиг: их приходится подбирать под
+            # конкретный деплой, а не под код. См. комментарий в ``Settings``.
+            pool_size=config.db_pool_size,
+            max_overflow=config.db_max_overflow,
+            pool_pre_ping=config.db_pool_pre_ping,
+            pool_recycle=config.db_pool_recycle,
+            pool_timeout=config.db_pool_timeout,
         )
         self.session_factory = async_sessionmaker(
             self.engine, class_=AsyncSession, expire_on_commit=False
@@ -106,13 +106,20 @@ async def get_session() -> AsyncGenerator[AsyncSession]:
 async def session_scope() -> AsyncIterator[AsyncSession]:
     """Контекст-менеджер для одной сессии БД.
 
-    Обёртка над ``get_session()`` для удобства: позволяет писать
-    ``async with session_scope() as session:`` вместо
-    ``async for session in get_session():``.
+    Основной способ работы с БД в хендлерах и репозиториях; ``get_session()``
+    оставлен как зависимость для HTTP-слоя.
 
-    Откат транзакции при исключении и закрытие сессии выполняются
-    внутри ``get_session()``.
+    Сессия создаётся напрямую, а не через ``get_session()``: выход из
+    ``async for`` по ``return`` бросал асинхронный генератор недоработанным,
+    поэтому его ``finally`` (и возврат соединения в пул) откладывался до
+    сборки мусора. Под нагрузкой соединения копились до
+    ``pool_size + max_overflow``, и следующие обращения к БД вставали в
+    ожидание на ``pool_timeout``.
     """
-    async for session in get_session():
-        yield session
-        return
+    async with db_manager.session_factory() as session:
+        try:
+            yield session
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Ошибка сессии БД: {e}")
+            raise

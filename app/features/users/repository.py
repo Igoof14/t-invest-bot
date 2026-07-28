@@ -61,6 +61,55 @@ class BotUserRepository:
                 raise e
 
     @classmethod
+    async def register_and_get_state(
+        cls,
+        telegram_id: int,
+        username: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+    ) -> tuple[bool, bool]:
+        """Регистрирует пользователя и возвращает его состояние за одну сессию.
+
+        Делает то же, что ``add_user()`` + ``has_token()``, но одним походом
+        в БД: на ``/start`` это горячий путь, а каждая сессия — отдельное
+        соединение из пула.
+
+        Returns:
+            Кортеж ``(is_new_user, has_token)``.
+
+        """
+        async with session_scope() as session:
+            try:
+                result = await session.execute(select(User).where(User.telegram_id == telegram_id))
+                existing_user = result.scalar_one_or_none()
+
+                if existing_user:
+                    token = existing_user.tinvest_token
+                    existing_user.last_activity = datetime.now(UTC)
+                    existing_user.is_active = True
+                    await session.commit()
+                    logger.info(f"Обновлена активность пользователя: {telegram_id}")
+                    return False, token is not None and token != ""
+
+                session.add(
+                    User(
+                        telegram_id=telegram_id,
+                        username=username,
+                        first_name=first_name,
+                        last_name=last_name,
+                        last_activity=datetime.now(UTC),
+                    )
+                )
+                await session.commit()
+                logger.info(f"Добавлен новый пользователь: {telegram_id} ({username})")
+                return True, False
+
+            except Exception as e:
+                await session.rollback()
+                logger.error(f"Ошибка при регистрации пользователя {telegram_id}: {e}")
+                raise e
+
+    @classmethod
     async def get_user_by_telegram_id(cls, telegram_id: int) -> User | None:
         """Получает пользователя по telegram_id."""
         async with session_scope() as session:

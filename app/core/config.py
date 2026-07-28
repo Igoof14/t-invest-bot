@@ -13,6 +13,20 @@ class Settings(BaseSettings):
     bot_token: SecretStr
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/tinvest"
 
+    # Пул соединений к БД. Значения подобраны под текущий деплой (контейнер на
+    # сервере, БД на отдельном хосте по публичной сети):
+    #  * pool_pre_ping оставлен — соединение через публичную сеть может умереть
+    #    молча, лишний round-trip дешевле InterfaceError в хендлере;
+    #  * pool_recycle поднят с 300 до 1800 — пересоздание соединения стоит
+    #    ~60 мс, каждые 5 минут это неоправданно часто;
+    #  * pool_timeout снижен с 30 до 10 — если пул исчерпан, лучше быстро
+    #    упасть с понятной ошибкой, чем держать пользователя полминуты.
+    db_pool_size: int = 10
+    db_max_overflow: int = 20
+    db_pool_recycle: int = 1800
+    db_pool_timeout: int = 10
+    db_pool_pre_ping: bool = True
+
     # Telegram ID администратора — единственный, кому доступна рассылка
     # /broadcast. Если не задан, рассылка отключена для всех.
     admin_id: int | None = None

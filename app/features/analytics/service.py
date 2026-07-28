@@ -1,5 +1,6 @@
 """Публичный API продуктовой аналитики."""
 
+import asyncio
 import logging
 import re
 from typing import Any
@@ -10,6 +11,10 @@ from .repository import AnalyticsRepository
 from .schemas import Direction, EventName
 
 logger = logging.getLogger(__name__)
+
+# Сильные ссылки на фоновые задачи трекинга: asyncio хранит только слабые,
+# и без этого множества задача может быть собрана GC до записи события.
+_pending: set[asyncio.Task[None]] = set()
 
 # Ключи props, которые нельзя писать ни при каких условиях: через текст
 # сообщений проходит T-Invest токен пользователя (FSM waiting_for_token).
@@ -90,3 +95,32 @@ async def track(
         # Осознанно глушим всё: единственное место в проекте, где потеря
         # данных предпочтительнее сломанного хендлера.
         logger.warning(f"Сбой трекинга события {event}: {e}")
+
+
+def track_bg(event: EventName, **kwargs: Any) -> None:
+    """Планирует запись события, не дожидаясь её.
+
+    Версия ``track()`` для горячего пути: на пользовательских сценариях
+    ответ бота не должен ждать похода в БД за аналитикой. Аргументы те же,
+    что у ``track()``.
+
+    Исключения не пробрасываются: ``track()`` гасит их внутри себя.
+    """
+    task = asyncio.create_task(track(event, **kwargs))
+    _pending.add(task)
+    task.add_done_callback(_pending.discard)
+
+
+async def flush_tracking(timeout: float = 5.0) -> None:
+    """Дожидается фоновых задач трекинга (вызывается при остановке сервиса).
+
+    Args:
+        timeout: Сколько секунд ждать. По истечении незавершённые события
+            теряются — это предпочтительнее зависшей остановки.
+
+    """
+    if not _pending:
+        return
+    _, pending = await asyncio.wait(set(_pending), timeout=timeout)
+    if pending:
+        logger.warning(f"Не дописано событий аналитики: {len(pending)}")
