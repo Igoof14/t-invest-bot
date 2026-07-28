@@ -74,6 +74,11 @@ async def confirm_broadcast(callback: CallbackQuery, state: FSMContext, bot: Bot
     if from_chat_id is None or message_id is None:
         await callback.answer()
         return
+    # Квитируем нажатие до рассылки, а не после: она идёт десятки секунд, а
+    # callback query живёт считаные секунды. Ответ в конце падал с
+    # "query is too old and response timeout expired or query ID is invalid",
+    # хотя сама рассылка к тому моменту уже была доставлена.
+    await callback.answer()
     if isinstance(callback.message, Message):
         await callback.message.edit_text("Отправляю…")
     result = await BroadcastService(bot).broadcast(from_chat_id, message_id)
@@ -85,7 +90,6 @@ async def confirm_broadcast(callback: CallbackQuery, state: FSMContext, bot: Bot
     )
     if isinstance(callback.message, Message):
         await callback.message.answer(report)
-    await callback.answer()
 
 
 @router.callback_query(F.data == BROADCAST_CANCEL)

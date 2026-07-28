@@ -99,6 +99,41 @@ async def test_confirm_runs_service_and_clears(monkeypatch: pytest.MonkeyPatch) 
     callback.answer.assert_awaited_once()
 
 
+async def test_confirm_answers_callback_before_broadcasting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Квитирование обязано идти до рассылки.
+
+    Рассылка длится десятки секунд, а callback query протухает: ответ после
+    неё падал с ``query is too old and response timeout expired``.
+    """
+    calls: list[str] = []
+
+    service = MagicMock()
+
+    async def _broadcast(*_args: object) -> BroadcastResult:
+        calls.append("broadcast")
+        return BroadcastResult(delivered=2, blocked=1)
+
+    service.broadcast = _broadcast
+    monkeypatch.setattr(handlers_module, "BroadcastService", MagicMock(return_value=service))
+
+    async def _answer(*_args: object, **_kwargs: object) -> None:
+        calls.append("answer")
+
+    callback = MagicMock()
+    callback.message = MagicMock(spec=Message)
+    callback.message.edit_text = AsyncMock()
+    callback.message.answer = AsyncMock()
+    callback.answer = _answer
+    state = _state()
+    state.get_data = AsyncMock(return_value={"from_chat_id": 5, "message_id": 7})
+
+    await confirm_broadcast(callback, state, MagicMock())
+
+    assert calls == ["answer", "broadcast"]
+
+
 async def test_cancel_clears_state() -> None:
     callback = MagicMock()
     callback.message = MagicMock(spec=Message)

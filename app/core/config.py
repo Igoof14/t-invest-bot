@@ -13,17 +13,19 @@ class Settings(BaseSettings):
     bot_token: SecretStr
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/tinvest"
 
-    # Пул соединений к БД. Значения подобраны под текущий деплой (контейнер на
-    # сервере, БД на отдельном хосте по публичной сети):
-    #  * pool_pre_ping оставлен — соединение через публичную сеть может умереть
-    #    молча, лишний round-trip дешевле InterfaceError в хендлере;
-    #  * pool_recycle поднят с 300 до 1800 — пересоздание соединения стоит
-    #    ~60 мс, каждые 5 минут это неоправданно часто;
-    #  * pool_timeout снижен с 30 до 10 — если пул исчерпан, лучше быстро
-    #    упасть с понятной ошибкой, чем держать пользователя полминуты.
-    db_pool_size: int = 10
-    db_max_overflow: int = 20
-    db_pool_recycle: int = 1800
+    # Пул соединений к БД. Значения вынесены в env, чтобы подбирать их под
+    # окружение без правки кода, но дефолты рассчитаны на Cloud Run:
+    #  * размер пула намеренно небольшой — инстансов много, а у Postgres
+    #    max_connections=100 на всех; pool_size * число инстансов не должно
+    #    упираться в этот потолок;
+    #  * pool_recycle=300 и pool_pre_ping — Cloud Run замораживает инстанс
+    #    между запросами, соединения в пуле успевают протухнуть
+    #    (InterfaceError: connection is closed);
+    #  * pool_timeout снижен с 30 до 10 — если пул всё же исчерпан, лучше
+    #    быстро упасть с понятной ошибкой, чем держать пользователя полминуты.
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
+    db_pool_recycle: int = 300
     db_pool_timeout: int = 10
     db_pool_pre_ping: bool = True
 
@@ -37,7 +39,7 @@ class Settings(BaseSettings):
     analytics_enabled: bool = True
     # По умолчанию действия админа в аналитику не попадают: /broadcast и
     # тестовые прожатия иначе искажают воронку и использование фич.
-    analytics_track_admin: bool = False
+    analytics_track_admin: bool = True
 
     # Сервисный T-Invest токен для фоновых задач (синхронизация реестра эмитентов).
     t_invest_token: SecretStr | None = None
