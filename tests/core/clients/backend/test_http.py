@@ -3,18 +3,16 @@
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import MagicMock
 
-import aiohttp
 import pytest
 from core.clients.backend.errors import BackendError, BackendNotConfigured, UserNotFound
-from core.clients.backend.http import fetch_user_items
+from core.clients.backend.http import fetch_user_items, request
 
 BASE_URL = "https://backend.example.run.app"
 
 
 class _FakeResponse:
-    """Заглушка aiohttp-ответа для async-контекста session.get(...)."""
+    """Заглушка aiohttp-ответа для async-контекста session.request(...)."""
 
     def __init__(self, status: int = 200, payload: dict[str, Any] | None = None) -> None:
         self.status = status
@@ -26,12 +24,11 @@ class _FakeResponse:
     async def __aexit__(self, *args: object) -> None:
         return None
 
-    def raise_for_status(self) -> None:
-        if self.status >= 400:
-            raise aiohttp.ClientResponseError(MagicMock(), (), status=self.status)
-
     async def json(self) -> dict[str, Any]:
         return self._payload
+
+    async def text(self) -> str:
+        return str(self._payload)
 
 
 class _FakeSession:
@@ -48,8 +45,8 @@ class _FakeSession:
     async def __aexit__(self, *args: object) -> None:
         return None
 
-    def get(self, url: str, **kwargs: Any) -> _FakeResponse:
-        _FakeSession.last_call = {"url": url, **kwargs}
+    def request(self, method: str, url: str, **kwargs: Any) -> _FakeResponse:
+        _FakeSession.last_call = {"method": method, "url": url, **kwargs}
         return self._response
 
 
@@ -124,3 +121,27 @@ async def test_missing_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
 
     with pytest.raises(BackendNotConfigured):
         await fetch_user_items("offers", telegram_id=42, limit=5)
+
+
+async def test_request_passes_method_and_body(monkeypatch: pytest.MonkeyPatch) -> None:
+    patch_session(monkeypatch, _FakeResponse(200, {"has_token": True}))
+
+    payload = await request("PUT", "/api/v1/users/42/token", json={"token": "t.secret"})
+
+    assert payload == {"has_token": True}
+    assert _FakeSession.last_call["method"] == "PUT"
+    assert _FakeSession.last_call["url"] == f"{BASE_URL}/api/v1/users/42/token"
+    assert _FakeSession.last_call["json"] == {"token": "t.secret"}
+
+
+async def test_no_content_returns_empty_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    patch_session(monkeypatch, _FakeResponse(204))
+
+    assert await request("DELETE", "/api/v1/users/42/token") == {}
+
+
+async def test_error_body_is_kept_in_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    patch_session(monkeypatch, _FakeResponse(422, {"detail": "token: too short"}))
+
+    with pytest.raises(BackendError, match="too short"):
+        await request("PUT", "/api/v1/users/42/token", json={"token": ""})

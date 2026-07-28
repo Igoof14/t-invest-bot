@@ -1,5 +1,6 @@
 """Клиент приватного Cloud Run бэкенда Bondelo."""
 
+from . import users
 from .auth import auth_headers, get_id_token
 from .common import PositionAccount
 from .errors import BackendAuthError, BackendError, BackendNotConfigured, UserNotFound
@@ -18,4 +19,5 @@ __all__ = [
     "get_id_token",
     "get_maturities",
     "get_offers",
+    "users",
 ]

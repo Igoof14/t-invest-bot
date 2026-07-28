@@ -16,13 +16,9 @@ pytestmark = pytest.mark.usefixtures("enable_analytics")
 
 @pytest.fixture
 def track(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
-    """Подменяет track и touch активности, чтобы не ходить в БД."""
+    """Подменяет track, чтобы не ходить в БД."""
     mock = AsyncMock()
     monkeypatch.setattr("features.analytics.middleware.track", mock)
-    monkeypatch.setattr(
-        "features.users.repository.BotUserRepository.touch_last_activity_if_stale",
-        AsyncMock(return_value=True),
-    )
     return mock
 
 
@@ -135,20 +131,6 @@ async def test_analytics_failure_does_not_break_handler(monkeypatch: pytest.Monk
     result = await _run(_message_update("/start"), AsyncMock(return_value="handler result"))
 
     assert result == "handler result"
-
-
-async def test_last_activity_is_touched(
-    track: AsyncMock, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Фикс DAU: активность двигается на любом апдейте, не только на /start."""
-    touch = AsyncMock(return_value=True)
-    monkeypatch.setattr(
-        "features.users.repository.BotUserRepository.touch_last_activity_if_stale", touch
-    )
-
-    await _run(_callback_update("menu:hub:open"), AsyncMock(return_value="done"))
-
-    touch.assert_awaited_once_with(777)
 
 
 async def test_admin_flag_is_set(track: AsyncMock, monkeypatch: pytest.MonkeyPatch) -> None:

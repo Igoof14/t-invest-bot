@@ -86,13 +86,6 @@ class AnalyticsMiddleware(BaseMiddleware):
             **extra,
         )
 
-        if telegram_id is not None:
-            # Отложенный импорт: features.users.handlers трекает события, то есть
-            # импортирует эту фичу, — цикл analytics -> users -> analytics.
-            from features.users.repository import BotUserRepository
-
-            await BotUserRepository.touch_last_activity_if_stale(telegram_id)
-
     @staticmethod
     def _inner_event(update: Update) -> TelegramObject | None:
         """Возвращает вложенный объект апдейта или None для неизвестного типа."""

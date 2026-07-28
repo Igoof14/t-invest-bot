@@ -61,7 +61,9 @@ class DatabaseManager:
             from features.offer_warning.models import OfferAlertSettings
             from features.price_monitoring.models import PriceAlertSettings
             from features.ratings.models import RatingAlertSettings, RatingRelease
-            from features.users.models import TinvestUser, User
+
+            # `bot_users` тут намеренно нет: её схемой владеет и мигрирует bondelo-backend.
+            from features.users.models import TinvestUser
 
             __all__ = [
                 BotEvent,
@@ -71,7 +73,6 @@ class DatabaseManager:
                 RatingRelease,
                 FnsAlertSettings,
                 FnsBlockingRecord,
-                User,
                 TinvestUser,
             ]
         except ImportError as e:

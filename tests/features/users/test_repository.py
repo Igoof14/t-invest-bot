@@ -1,77 +1,107 @@
-"""Тесты репозитория пользователей (in-memory SQLite через session_scope)."""
+"""Тесты репозитория пользователей.
+
+Данные живут в бэкенде, поэтому здесь проверяется ровно то, за что репозиторий
+теперь отвечает: он зовёт нужный метод API и не даёт его ошибке дойти до хендлера
+(кроме регистрации — там ошибка пробрасывается).
+"""
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock
+
 import pytest
+from core.clients.backend.errors import BackendError, UserNotFound
+from core.clients.backend.users import Registration
 from features.users.repository import BotUserRepository
 
-pytestmark = pytest.mark.usefixtures("patch_session_scope")
+
+@pytest.fixture
+def api(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
+    """Подменяет модуль-клиент целиком: каждый метод — AsyncMock."""
+    mock = AsyncMock()
+    mock.register.return_value = Registration(is_new_user=True, has_token=False)
+    mock.get_token.return_value = None
+    mock.list_active.return_value = []
+    monkeypatch.setattr("features.users.repository.users_api", mock)
+    return mock
 
 
-async def test_add_user_returns_true_for_new_then_false_for_existing() -> None:
-    assert await BotUserRepository.add_user(1, username="alice") is True
-    # Повторный вызов для того же пользователя только обновляет активность.
-    assert await BotUserRepository.add_user(1, username="alice") is False
+async def test_register_returns_state(api: AsyncMock) -> None:
+    api.register.return_value = Registration(is_new_user=False, has_token=True)
+
+    assert await BotUserRepository.register_and_get_state(100, username="new") == (False, True)
+    api.register.assert_awaited_once_with(
+        telegram_id=100, username="new", first_name=None, last_name=None
+    )
 
 
-async def test_register_and_get_state_for_new_user() -> None:
-    assert await BotUserRepository.register_and_get_state(100, username="new") == (True, False)
+async def test_register_propagates_backend_error(api: AsyncMock) -> None:
+    """На `/start` показывать нечего без ответа бэкенда — ошибку ловит хендлер."""
+    api.register.side_effect = BackendError("backend down")
+
+    with pytest.raises(BackendError):
+        await BotUserRepository.register_and_get_state(100)
 
 
-async def test_register_and_get_state_for_existing_user() -> None:
-    await BotUserRepository.add_user(101)
-    assert await BotUserRepository.register_and_get_state(101) == (False, False)
+async def test_get_token(api: AsyncMock) -> None:
+    api.get_token.return_value = "t.secret"
 
-    await BotUserRepository.add_token(101, "t.secret")
-    assert await BotUserRepository.register_and_get_state(101) == (False, True)
-
-
-async def test_register_and_get_state_reactivates_user() -> None:
-    await BotUserRepository.add_user(102)
-    await BotUserRepository.deactivate_user(102)
-    assert await BotUserRepository.register_and_get_state(102) == (False, False)
-    assert await BotUserRepository.has_user(102) is True
-
-
-async def test_has_user_reflects_existence() -> None:
-    assert await BotUserRepository.has_user(2) is False
-    await BotUserRepository.add_user(2)
-    assert await BotUserRepository.has_user(2) is True
-
-
-async def test_token_lifecycle() -> None:
-    await BotUserRepository.add_user(3)
-    assert await BotUserRepository.has_token(3) is False
-
-    assert await BotUserRepository.add_token(3, "t.secret") is True
-    assert await BotUserRepository.has_token(3) is True
     assert await BotUserRepository.get_token_by_telegram_id(3) == "t.secret"
 
-    assert await BotUserRepository.remove_token(3) is True
-    assert await BotUserRepository.has_token(3) is False
+
+@pytest.mark.parametrize("value", [None, ""])
+async def test_get_token_without_token_is_none(api: AsyncMock, value: str | None) -> None:
+    api.get_token.return_value = value
+
+    assert await BotUserRepository.get_token_by_telegram_id(3) is None
 
 
-async def test_add_token_returns_false_for_unknown_user() -> None:
-    assert await BotUserRepository.add_token(999, "t.secret") is False
+async def test_get_token_swallows_unknown_user(api: AsyncMock) -> None:
+    api.get_token.side_effect = UserNotFound("нет такого")
 
-
-async def test_get_token_returns_none_for_unknown_user() -> None:
     assert await BotUserRepository.get_token_by_telegram_id(999) is None
 
 
-async def test_active_users_listing_and_count() -> None:
-    await BotUserRepository.add_user(10)
-    await BotUserRepository.add_user(11)
-    assert set(await BotUserRepository.get_all_active_users()) == {10, 11}
-    assert await BotUserRepository.get_user_count() == 2
+async def test_add_token(api: AsyncMock) -> None:
+    assert await BotUserRepository.add_token(3, "t.secret") is True
+    api.set_token.assert_awaited_once_with(3, "t.secret")
 
 
-async def test_deactivate_excludes_user_from_active() -> None:
-    await BotUserRepository.add_user(20)
-    assert await BotUserRepository.deactivate_user(20) is True
-    assert await BotUserRepository.has_user(20) is False
+async def test_add_token_returns_false_for_unknown_user(api: AsyncMock) -> None:
+    api.set_token.side_effect = UserNotFound("нет такого")
+
+    assert await BotUserRepository.add_token(999, "t.secret") is False
+
+
+async def test_remove_token(api: AsyncMock) -> None:
+    assert await BotUserRepository.remove_token(3) is True
+    api.delete_token.assert_awaited_once_with(3)
+
+
+async def test_remove_token_returns_false_on_error(api: AsyncMock) -> None:
+    api.delete_token.side_effect = BackendError("backend down")
+
+    assert await BotUserRepository.remove_token(3) is False
+
+
+async def test_active_users_listing(api: AsyncMock) -> None:
+    api.list_active.return_value = [10, 11]
+
+    assert await BotUserRepository.get_all_active_users() == [10, 11]
+
+
+async def test_active_users_returns_empty_on_error(api: AsyncMock) -> None:
+    api.list_active.side_effect = BackendError("backend down")
+
     assert await BotUserRepository.get_all_active_users() == []
 
 
-async def test_update_last_activity_unknown_user_returns_false() -> None:
-    assert await BotUserRepository.update_last_activity(999) is False
+async def test_deactivate_user(api: AsyncMock) -> None:
+    assert await BotUserRepository.deactivate_user(20) is True
+    api.deactivate.assert_awaited_once_with(20)
+
+
+async def test_deactivate_user_returns_false_on_error(api: AsyncMock) -> None:
+    api.deactivate.side_effect = BackendError("backend down")
+
+    assert await BotUserRepository.deactivate_user(20) is False
