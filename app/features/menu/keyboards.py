@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
+
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from .callbacks import MenuCallback
 from .registry import MenuSection
+
+logger = logging.getLogger(__name__)
 
 # Ключ корневого экрана хаба.
 HUB_KEY = "hub"
@@ -42,18 +47,39 @@ def build_help(section: MenuSection) -> tuple[str, InlineKeyboardMarkup]:
     return section.help_text or "", builder.as_markup()
 
 
+async def _no_badge() -> str:
+    """Заглушка для секций без бейджа: держит порядок результатов ``gather``."""
+    return ""
+
+
 async def build_hub(
     telegram_id: int, sections: list[MenuSection]
 ) -> tuple[str, InlineKeyboardMarkup]:
-    """Собирает экран хаба: строка-кнопка на каждую секцию с бейджем статуса."""
+    """Собирает экран хаба: строка-кнопка на каждую секцию с бейджем статуса.
+
+    Бейджи запрашиваются параллельно: каждая секция самостоятельно ходит в БД
+    за своими настройками, последовательный цикл складывал их задержки.
+    Сбой одной секции не должен ронять весь экран — такая секция просто
+    остаётся без бейджа.
+    """
+    badges = await asyncio.gather(
+        *(
+            section.status_badge(telegram_id) if section.status_badge is not None else _no_badge()
+            for section in sections
+        ),
+        return_exceptions=True,
+    )
+
     builder = InlineKeyboardBuilder()
-    for section in sections:
-        badge = ""
-        if section.status_badge is not None:
-            badge = f": {await section.status_badge(telegram_id)}"
+    for section, result in zip(sections, badges, strict=True):
+        if isinstance(result, BaseException):
+            logger.error(f"Не удалось получить бейдж секции {section.key}: {result}")
+            badge = ""
+        else:
+            badge = result
         builder.add(
             InlineKeyboardButton(
-                text=f"{section.title}{badge}",
+                text=f"{section.title}{f': {badge}' if badge else ''}",
                 callback_data=MenuCallback(section=section.key).pack(),
             )
         )
