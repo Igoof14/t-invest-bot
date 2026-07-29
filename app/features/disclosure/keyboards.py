@@ -7,9 +7,7 @@ from .enums import RISK_CHOICE_TITLES, RISK_ICONS
 from .schemas import RISK_LEVELS, DisclosureAlertCallback
 
 
-def create_disclosure_alerts_keyboard(
-    enabled: bool, min_risk_level: str
-) -> InlineKeyboardBuilder:
+def create_disclosure_alerts_keyboard(enabled: bool, min_risk_level: str) -> InlineKeyboardBuilder:
     """Создаёт клавиатуру: тумблер подписки и выбор минимального уровня риска.
 
     Args:
@@ -34,10 +32,13 @@ def create_disclosure_alerts_keyboard(
         return builder
 
     for level in RISK_LEVELS:
-        selected = "✅ " if level == min_risk_level else f"{RISK_ICONS[level]} "
+        # Иконка уровня остаётся и у выбранного варианта: она показывает тяжесть,
+        # а галочка в конце — что выбрано именно это. Раньше ✅ вставала вместо
+        # иконки, и строка читалась как ещё одна иконка в общем ряду.
+        selected = " ✅" if level == min_risk_level else ""
         builder.row(
             InlineKeyboardButton(
-                text=f"{selected}{RISK_CHOICE_TITLES[level]}",
+                text=f"{RISK_ICONS[level]} {RISK_CHOICE_TITLES[level]}{selected}",
                 callback_data=DisclosureAlertCallback(action="level", level=level).pack(),
             )
         )

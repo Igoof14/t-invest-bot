@@ -30,13 +30,14 @@ async def test_status_badge_when_disabled(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 async def test_render_marks_current_level(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Галочка стоит у выбранного варианта, иконка тяжести при этом остаётся."""
     _patch(monkeypatch, _settings(enabled=True, level="high"))
 
     _, markup = await menu.render(111)
 
     buttons = [btn.text for row in markup.inline_keyboard for btn in row]
-    assert "✅ Высокий и выше" in buttons
-    assert "Все события" in " ".join(buttons)
+    assert "🔴 Высокий и выше ✅" in buttons
+    assert "🟡 Все события" in buttons
 
 
 async def test_disabled_section_hides_level_choice(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -47,3 +48,35 @@ async def test_disabled_section_hides_level_choice(monkeypatch: pytest.MonkeyPat
 
     buttons = [btn.text for row in markup.inline_keyboard for btn in row]
     assert not any("Все события" in text for text in buttons)
+
+
+async def test_text_states_status_and_threshold() -> None:
+    """Экран сам сообщает, что включено, — не только подписи кнопок."""
+    text = menu.build_text(_settings(enabled=True, level="medium"))
+
+    assert "Статус: <b>включено</b>" in text
+    assert "Текущий порог:" in text
+    assert "🟠 Средний и выше" in text
+
+
+async def test_text_lists_every_level_that_passes() -> None:
+    """Порог — это «уровень и выше», поэтому перечисляем, что реально дойдёт."""
+    text = menu.build_text(_settings(enabled=True, level="high"))
+
+    assert "Высокий риск" in text
+    assert "Критический риск" in text
+    assert "Средний риск" not in text
+
+
+async def test_text_for_disabled_section_shows_no_threshold() -> None:
+    text = menu.build_text(_settings(enabled=False))
+
+    assert "Статус: <b>выключено</b>" in text
+    assert "Текущий порог" not in text
+
+
+async def test_text_survives_an_unknown_level() -> None:
+    """Шкалу задаёт воркер и может расширить её без изменений в боте."""
+    text = menu.build_text(_settings(enabled=True, level="catastrophic"))
+
+    assert "catastrophic" in text
