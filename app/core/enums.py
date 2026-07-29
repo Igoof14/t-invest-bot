@@ -19,7 +19,7 @@ class Messages(Enum):
     WELCOME = "Привет! Я Bondelo, делюсь информацией о облигациях. \n \n Для начала работы добавьте токен в настройках."
     NOT_TOKEN = "Для начала работы добавьте токен в настройках."
     ALREADY_KNOWN = "Настройки завершены, можно подписаться на отчеты."
-    HELP_TEXT = "Обратиться к владельцу: @aleksgoof \nЧат участников: @bondelo_chat"
+    HELP_TEXT = "Обратиться к владельцу: @aleksgoof \nЧат участников: @bondelo_chat \nКанал с обновлениями: @bondelo_release"
     COUPONS_PROMPT = "Купоны за:"
     COUPONS_TODAY = "Купоны на сегодня \n\n"
     COUPONS_WEEK = "Купоны за неделю \n\n"
