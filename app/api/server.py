@@ -6,6 +6,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 from core.config import config
+from features.disclosure import api as disclosure_api
 from features.fns_monitoring import api as fns_monitoring_api
 from features.offer_warning import api as offer_warning_api
 from features.price_monitoring import api as price_monitoring_api
@@ -47,6 +48,7 @@ def create_app(bot: Bot, dp: Dispatcher) -> web.Application:
     app.add_routes(offer_warning_api.routes)
     app.add_routes(fns_monitoring_api.routes)
     app.add_routes(ratings_api.routes)
+    app.add_routes(disclosure_api.routes)
 
     secret = config.webhook_secret.get_secret_value() if config.webhook_secret else None
     SimpleRequestHandler(dispatcher=dp, bot=bot, secret_token=secret).register(

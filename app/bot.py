@@ -11,6 +11,7 @@ from features import (
     base,
     broadcast,
     coupons,
+    disclosure,
     fns_monitoring,
     offer_warning,
     onboarding,
@@ -19,6 +20,7 @@ from features import (
     users,
 )
 from features import menu as menu_feature
+from features.disclosure.menu import SECTION as disclosure_section
 from features.fns_monitoring.menu import SECTION as fns_section
 from features.menu import register_section
 from features.offer_warning.menu import SECTION as offer_section
@@ -70,6 +72,7 @@ def main() -> None:
     register_section(offer_section)
     register_section(ratings_section)
     register_section(fns_section)
+    register_section(disclosure_section)
 
     # Продуктовая аналитика: outer-мидлварь на update видит каждый апдейт
     # ровно один раз, включая те, для которых не нашлось хендлера.
@@ -85,6 +88,7 @@ def main() -> None:
         users.router,
         ratings.router,
         fns_monitoring.router,
+        disclosure.router,
         menu_feature.router,
     )
 

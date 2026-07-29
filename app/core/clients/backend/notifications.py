@@ -39,6 +39,15 @@ class PriceAlertSettings:
 
 
 @dataclass
+class DisclosureAlertSettings:
+    """Подписка на раскрытия эмитентов и минимальный уровень риска."""
+
+    alerts_enabled: bool = False
+    # "low" — нижняя граница шкалы, то есть «все события».
+    min_risk_level: str = "low"
+
+
+@dataclass
 class NotificationSettings:
     """Состояние всех секций хаба уведомлений."""
 
@@ -46,6 +55,7 @@ class NotificationSettings:
     prices: PriceAlertSettings = field(default_factory=PriceAlertSettings)
     fns_enabled: bool = False
     enabled_agencies: frozenset[str] = frozenset()
+    disclosure: DisclosureAlertSettings = field(default_factory=DisclosureAlertSettings)
 
 
 def _path(telegram_id: int, suffix: str = "") -> str:
@@ -90,8 +100,16 @@ def _prices(raw: dict[str, Any]) -> PriceAlertSettings:
     )
 
 
+def _disclosure(raw: dict[str, Any]) -> DisclosureAlertSettings:
+    defaults = DisclosureAlertSettings()
+    return DisclosureAlertSettings(
+        alerts_enabled=bool(raw.get("alerts_enabled")),
+        min_risk_level=str(raw.get("min_risk_level") or defaults.min_risk_level),
+    )
+
+
 async def get_settings(telegram_id: int) -> NotificationSettings:
-    """Забирает состояние всех четырёх секций одним запросом.
+    """Забирает состояние всех секций одним запросом.
 
     Raises:
         BackendError: Ошибка конфигурации, авторизации или запроса.
@@ -104,11 +122,12 @@ async def get_settings(telegram_id: int) -> NotificationSettings:
         prices=_prices(payload.get("prices") or {}),
         fns_enabled=bool((payload.get("fns") or {}).get("alerts_enabled")),
         enabled_agencies=frozenset(ratings.get("enabled_agencies") or ()),
+        disclosure=_disclosure(payload.get("disclosure") or {}),
     )
 
 
 async def toggle(telegram_id: int, section: str) -> bool:
-    """Переключает секцию (`offers`, `prices`, `fns`) и возвращает новое состояние.
+    """Переключает секцию (`offers`, `prices`, `fns`, `disclosure`) и возвращает состояние.
 
     Raises:
         BackendError: Ошибка конфигурации, авторизации или запроса.
@@ -151,3 +170,15 @@ async def update_prices(telegram_id: int, **fields: Any) -> PriceAlertSettings:
 
     """
     return _prices(await request("PATCH", _path(telegram_id, "/prices"), json=dict(fields)))
+
+
+async def update_disclosure(telegram_id: int, **fields: Any) -> DisclosureAlertSettings:
+    """Меняет переданные поля настроек раскрытий; остальные остаются как были.
+
+    Raises:
+        BackendError: Ошибка конфигурации, авторизации или запроса.
+
+    """
+    return _disclosure(
+        await request("PATCH", _path(telegram_id, "/disclosure"), json=dict(fields))
+    )
