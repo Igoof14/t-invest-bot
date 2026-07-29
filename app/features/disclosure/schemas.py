@@ -42,6 +42,7 @@ class DisclosureAlert(BaseModel):
     obligation_type: str | None = None
     default_kind: str | None = None
     unfulfilled_amount: float | None = None
+    currency: str | None = None
 
 
 class DisclosureAlertCallback(CallbackData, prefix="disclosure"):

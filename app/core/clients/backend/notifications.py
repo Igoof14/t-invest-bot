@@ -32,10 +32,12 @@ class PriceAlertSettings:
     """Пороги уведомлений об изменении цены, в процентах."""
 
     alerts_enabled: bool = False
-    drop_warning_threshold: float = 2.0
-    drop_critical_threshold: float = 5.0
-    rise_warning_threshold: float = 3.0
-    rise_critical_threshold: float = 7.0
+    # Дублируют дефолты колонок в bondelo-backend (notifications.models) —
+    # используются, только если бэкенд не прислал поле.
+    drop_warning_threshold: float = 4.0
+    drop_critical_threshold: float = 7.0
+    rise_warning_threshold: float = 6.0
+    rise_critical_threshold: float = 8.0
 
 
 @dataclass

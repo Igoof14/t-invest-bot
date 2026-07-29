@@ -61,7 +61,7 @@ def _format_single(alert: UserBlockAlert, scope: AlertScope = AlertScope.PORTFOL
     if saldo is not None:
         lines.append(f"Отрицательное сальдо: {_format_money(saldo)} ₽")
     if alert.matched_bonds:
-        bonds = " \n".join(_format_bond(b) for b in alert.matched_bonds)
+        bonds = "\n".join(_format_bond(b) for b in alert.matched_bonds)
         label = "Облигации эмитента" if scope.is_market else "В вашем портфеле"
         lines.append(f"\n{label}:\n{bonds}")
     return "\n".join(lines)

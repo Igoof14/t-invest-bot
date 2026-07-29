@@ -8,6 +8,7 @@ from common.scope import AlertScope, with_market_hint
 
 from .enums import (
     CIRCUMSTANCE_TITLES,
+    CURRENCY_SYMBOLS,
     DEFAULT_KIND_TITLES,
     OBLIGATION_TITLES,
     RISK_ICONS,
@@ -52,7 +53,9 @@ def _format_single(alert: DisclosureAlert) -> str:
         lines.append(f"  {escape(title)}")
 
     if alert.unfulfilled_amount:
-        lines.append(f"  Не исполнено: {_format_money(alert.unfulfilled_amount)} ₽")
+        currency = alert.currency or "rub"
+        symbol = CURRENCY_SYMBOLS.get(currency, escape(currency.upper()))
+        lines.append(f"  Не исполнено: {_format_money(alert.unfulfilled_amount)} {symbol}")
 
     if alert.event_date:
         lines.append(f"  Дата события: {escape(alert.event_date)}")

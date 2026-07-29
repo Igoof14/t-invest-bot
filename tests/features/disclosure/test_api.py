@@ -83,6 +83,7 @@ async def test_non_fulfillment_alert_shows_amount(
         obligation_type="coupon",
         default_kind="technical",
         unfulfilled_amount=12500000.0,
+        currency="rub",
         risk_level="critical",
     )
 
@@ -91,6 +92,23 @@ async def test_non_fulfillment_alert_shows_amount(
     message_text = bot.send_message.await_args.args[1]
     assert "Выплата купона — технический дефолт" in message_text
     assert "12" in message_text and "500" in message_text
+    assert "₽" in message_text
+
+
+async def test_amount_uses_disclosure_currency(client: TestClient, bot: MagicMock) -> None:
+    """Валютный выпуск не должен подписываться рублём."""
+    alert = _alert_payload(
+        source_type="default",
+        obligation_type="coupon",
+        unfulfilled_amount=1000.0,
+        currency="usd",
+    )
+
+    await client.post("/events/disclosure", json={"telegram_id": 42, "alerts": [alert]})
+
+    message_text = bot.send_message.await_args.args[1]
+    assert "$" in message_text
+    assert "₽" not in message_text
 
 
 async def test_invalid_payload_dropped_with_200(

@@ -52,9 +52,12 @@ async def test_get_settings_falls_back_to_defaults(request_mock: AsyncMock) -> N
 
     assert settings.offers.alerts_enabled is False
     assert settings.offers.first_alert == 14
-    assert settings.prices.rise_critical_threshold == 7.0
+    # Дефолты повторяют колонки бэкенда (notifications.models).
+    assert settings.prices.rise_critical_threshold == 8.0
     assert settings.enabled_agencies == frozenset()
     assert settings.fns_enabled is False
+    assert settings.disclosure.alerts_enabled is False
+    assert settings.disclosure.min_risk_level == "low"
 
 
 async def test_unparsable_time_falls_back(request_mock: AsyncMock) -> None:
