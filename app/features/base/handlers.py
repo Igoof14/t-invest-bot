@@ -6,6 +6,7 @@ from datetime import date
 from aiogram import F, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
+from common.token_gate import TOKEN_REQUIRED, has_token
 from core.clients.backend import (
     BackendError,
     MaturityItem,
@@ -113,6 +114,33 @@ def _format_offers(offers: list[OfferItem]) -> str:
     return "\n".join(lines)
 
 
+def _user_id(message: Message) -> int:
+    return message.from_user.id if message.from_user else message.chat.id
+
+
+async def _blocked_without_token(message: Message, screen: str) -> bool:
+    """Закрывает портфельный раздел, если токен не подключён.
+
+    Returns:
+        ``True`` — заглушка отправлена, хендлеру дальше делать нечего.
+
+    """
+    user_id = _user_id(message)
+    if await has_token(user_id):
+        return False
+
+    await message.answer(TOKEN_REQUIRED, parse_mode="HTML")
+    track_bg(
+        EventName.DATA_SCREEN_VIEWED,
+        telegram_id=user_id,
+        action=screen,
+        screen=screen,
+        items=0,
+        outcome="no_token",
+    )
+    return True
+
+
 @router.message(Command("start"))
 async def start_handler(message: Message, command: CommandObject) -> None:
     """Обработчик команды /start.
@@ -158,7 +186,7 @@ async def start_handler(message: Message, command: CommandObject) -> None:
 @router.message(F.text == MainKeyboardButtonTexts.NOTIFICATIONS.value)
 async def handle_notifications_button(message: Message) -> None:
     """Открывает инлайн-хаб «Уведомления»."""
-    telegram_id = message.from_user.id if message.from_user else message.chat.id
+    telegram_id = _user_id(message)
     text, markup = await render_hub(telegram_id)
     await message.answer(text, reply_markup=markup, parse_mode="HTML")
     await message.delete()
@@ -168,6 +196,8 @@ async def handle_notifications_button(message: Message) -> None:
 async def handle_coupons_button(message: Message) -> None:
     """Обработка кнопки 'Купоны'."""
     try:
+        if await _blocked_without_token(message, "coupons"):
+            return
         builder = create_coupons_keyboard()
         await message.answer(Messages.COUPONS_PROMPT.value, reply_markup=builder.as_markup())
     except Exception as e:
@@ -201,8 +231,11 @@ async def handle_settings_button(message: Message) -> None:
 @router.message(F.text == MainKeyboardButtonTexts.MATURITIES.value)
 async def handle_maturities_button(message: Message) -> None:
     """Обработка кнопки 'Погашения'."""
+    if await _blocked_without_token(message, "maturities"):
+        return
+
     sent = await message.answer("Загружаю данные о погашениях...")
-    user_id = message.from_user.id if message.from_user else message.chat.id
+    user_id = _user_id(message)
 
     outcome = "ok"
     items = 0
@@ -217,7 +250,7 @@ async def handle_maturities_button(message: Message) -> None:
     except UserNotFound:
         # Бэкенд не знает пользователя — портфель ещё не синхронизирован.
         logger.info(f"Бэкенд не знает пользователя {user_id}")
-        response = Messages.NOT_TOKEN.value
+        response = TOKEN_REQUIRED
         outcome = "no_token"
     except BackendError as e:
         logger.error(f"Ошибка при получении погашений: {e}")
@@ -243,8 +276,11 @@ async def handle_maturities_button(message: Message) -> None:
 @router.message(F.text == MainKeyboardButtonTexts.OFFERS.value)
 async def handle_offers_button(message: Message) -> None:
     """Обработка кнопки 'Оферты'."""
+    if await _blocked_without_token(message, "offers"):
+        return
+
     sent = await message.answer("Загружаю данные об офертах...")
-    user_id = message.from_user.id if message.from_user else message.chat.id
+    user_id = _user_id(message)
 
     outcome = "ok"
     items = 0
@@ -259,7 +295,7 @@ async def handle_offers_button(message: Message) -> None:
     except UserNotFound:
         # Бэкенд не знает пользователя — портфель ещё не синхронизирован.
         logger.info(f"Бэкенд не знает пользователя {user_id}")
-        response = Messages.NOT_TOKEN.value
+        response = TOKEN_REQUIRED
         outcome = "no_token"
     except BackendError as e:
         logger.error(f"Ошибка при получении оферт: {e}")

@@ -26,12 +26,12 @@ def create_main_keyboard() -> ReplyKeyboardMarkup:
 
 
 def create_new_user_keyboard() -> ReplyKeyboardMarkup:
-    """Создает клавиатуру для нового пользователя."""
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text=MainKeyboardButtonTexts.SETTINGS.value)],
-            [KeyboardButton(text=MainKeyboardButtonTexts.HELP.value)],
-        ],
-        resize_keyboard=True,
-        one_time_keyboard=False,
-    )
+    """Создает клавиатуру для пользователя без токена.
+
+    Раскладка та же, что и у основной: без токена бот присылает уведомления по
+    всему рынку, а значит «Уведомления» должны открываться — иначе настройки
+    оказываются недоступны. Портфельные разделы остаются на месте и отвечают
+    заглушкой (см. :data:`common.token_gate.TOKEN_REQUIRED`): прятать кнопки
+    смысла нет — так видно, что появится после подключения токена.
+    """
+    return create_main_keyboard()
