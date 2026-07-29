@@ -6,10 +6,12 @@ import asyncio
 import time
 from unittest.mock import AsyncMock
 
+import pytest
 from aiogram.types import InlineKeyboardMarkup
 from features.menu.callbacks import MenuCallback
 from features.menu.keyboards import (
     HUB_KEY,
+    MARKET_MODE_NOTE,
     back_to_hub_button,
     build_help,
     build_hub,
@@ -17,6 +19,17 @@ from features.menu.keyboards import (
     status_text,
 )
 from features.menu.registry import MenuSection
+
+
+@pytest.fixture(autouse=True)
+def user_with_token(monkeypatch):
+    """По умолчанию токен подключён — хаб не добавляет подсказку о режиме.
+
+    Без этого каждый тест хаба ходил бы в реальный бэкенд.
+    """
+    get_token = AsyncMock(return_value="t0ken")
+    monkeypatch.setattr("features.menu.keyboards.users_api.get_token", get_token)
+    return get_token
 
 
 def _section(key: str, *, badge: str | None = None) -> MenuSection:
@@ -85,6 +98,28 @@ async def test_build_hub_without_badge() -> None:
     _text, markup = await build_hub(111, [_section("plain")])
     texts = [btn.text for row in markup.inline_keyboard for btn in row]
 
+    assert texts == ["Plain"]
+
+
+async def test_build_hub_upsells_token_when_absent(user_with_token) -> None:
+    """Без токена хаб объясняет режим и предлагает его подключить."""
+    user_with_token.return_value = None
+
+    text, markup = await build_hub(111, [_section("plain")])
+    texts = [btn.text for row in markup.inline_keyboard for btn in row]
+
+    assert MARKET_MODE_NOTE in text
+    assert texts == ["Plain", "Добавить токен"]
+
+
+async def test_build_hub_hides_upsell_when_backend_fails(user_with_token) -> None:
+    """Сбой бэкенда не должен предлагать токен тому, у кого он уже есть."""
+    user_with_token.side_effect = RuntimeError("бэкенд лёг")
+
+    text, markup = await build_hub(111, [_section("plain")])
+    texts = [btn.text for row in markup.inline_keyboard for btn in row]
+
+    assert MARKET_MODE_NOTE not in text
     assert texts == ["Plain"]
 
 

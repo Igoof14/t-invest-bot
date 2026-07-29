@@ -7,6 +7,7 @@ import logging
 from aiohttp import web
 from api.keys import BOT_KEY
 from api.responses import delivery_response
+from common.scope import AlertScope
 from pydantic import BaseModel, Field, ValidationError
 
 from .events import BlockingOrder, MatchedBond, UserBlockAlert
@@ -47,6 +48,9 @@ class FnsBlockEvent(BaseModel):
 
     telegram_id: int
     alerts: list[UserBlockAlertPayload] = Field(min_length=1)
+    # Продюсер, ещё не задеплоенный с поддержкой аудиторий, поля не пришлёт —
+    # для него поведение остаётся прежним, «по портфелю».
+    scope: AlertScope = AlertScope.PORTFOLIO
 
 
 @routes.post("/events/fns-block")
@@ -65,5 +69,5 @@ async def handle_fns_block(request: web.Request) -> web.Response:
 
     notifier = FnsBlockNotifier(request.app[BOT_KEY])
     alerts = [a.to_domain() for a in event.alerts]
-    result = await notifier.send(event.telegram_id, alerts)
+    result = await notifier.send(event.telegram_id, alerts, scope=event.scope)
     return delivery_response(result)

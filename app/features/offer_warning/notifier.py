@@ -6,6 +6,7 @@ import logging
 
 from aiogram import Bot
 from common.delivery import DeliveryOutcome, DeliveryResult, deliver
+from common.scope import AlertScope
 
 from .formatter import format_offer_alerts
 from .schemas import BondOffer
@@ -25,12 +26,19 @@ class OfferAlertNotifier:
         """
         self._bot = bot
 
-    async def send(self, telegram_id: int, offers: list[BondOffer]) -> DeliveryResult:
+    async def send(
+        self,
+        telegram_id: int,
+        offers: list[BondOffer],
+        *,
+        scope: AlertScope = AlertScope.PORTFOLIO,
+    ) -> DeliveryResult:
         """Отправляет одно сообщение со всеми офертами пользователя.
 
         Args:
             telegram_id: Telegram ID получателя.
             offers: Список оферт для уведомления.
+            scope: Аудитория события — влияет только на текст.
 
         Returns:
             Итог доставки: см. ``DeliveryOutcome``.
@@ -39,7 +47,7 @@ class OfferAlertNotifier:
         if not offers:
             return DeliveryResult(DeliveryOutcome.SENT)
 
-        message = format_offer_alerts(offers)
+        message = format_offer_alerts(offers, scope)
 
         return await deliver(
             lambda: self._bot.send_message(
@@ -51,4 +59,5 @@ class OfferAlertNotifier:
             telegram_id=telegram_id,
             kind="offer",
             items=len(offers),
+            scope=scope.value,
         )

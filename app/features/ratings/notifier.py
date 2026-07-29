@@ -6,6 +6,7 @@ import logging
 
 from aiogram import Bot
 from common.delivery import DeliveryOutcome, DeliveryResult, deliver
+from common.scope import AlertScope
 
 from .formatter import format_rating_alert
 from .schemas import RatingChange
@@ -25,7 +26,13 @@ class RatingAlertNotifier:
         """
         self._bot = bot
 
-    async def send(self, telegram_id: int, changes: list[RatingChange]) -> DeliveryResult:
+    async def send(
+        self,
+        telegram_id: int,
+        changes: list[RatingChange],
+        *,
+        scope: AlertScope = AlertScope.PORTFOLIO,
+    ) -> DeliveryResult:
         """Отправляет одно сообщение со всеми изменениями рейтингов.
 
         Returns:
@@ -35,7 +42,7 @@ class RatingAlertNotifier:
         if not changes:
             return DeliveryResult(DeliveryOutcome.SENT)
 
-        message = format_rating_alert(changes)
+        message = format_rating_alert(changes, scope)
 
         return await deliver(
             lambda: self._bot.send_message(
@@ -47,4 +54,5 @@ class RatingAlertNotifier:
             telegram_id=telegram_id,
             kind="rating",
             items=len(changes),
+            scope=scope.value,
         )

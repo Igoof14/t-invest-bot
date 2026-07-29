@@ -7,6 +7,7 @@ import logging
 from aiohttp import web
 from api.keys import BOT_KEY
 from api.responses import delivery_response
+from common.scope import AlertScope
 from pydantic import BaseModel, Field, ValidationError
 
 from .notifier import OfferAlertNotifier
@@ -22,6 +23,9 @@ class OfferWarningEvent(BaseModel):
 
     telegram_id: int
     offers: list[BondOffer] = Field(min_length=1)
+    # Продюсер, ещё не задеплоенный с поддержкой аудиторий, поля не пришлёт —
+    # для него поведение остаётся прежним, «по портфелю».
+    scope: AlertScope = AlertScope.PORTFOLIO
 
 
 @routes.post("/events/offer-warning")
@@ -39,5 +43,5 @@ async def handle_offer_warning(request: web.Request) -> web.Response:
         return web.json_response({"status": "dropped", "reason": "invalid payload"})
 
     notifier = OfferAlertNotifier(request.app[BOT_KEY])
-    result = await notifier.send(event.telegram_id, event.offers)
+    result = await notifier.send(event.telegram_id, event.offers, scope=event.scope)
     return delivery_response(result)

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from html import escape
 
+from common.scope import AlertScope, with_market_hint
+
 from .events import BlockingOrder, MatchedBond, UserBlockAlert, UserScanReport
 
 
@@ -43,8 +45,12 @@ def _format_bond(bond: MatchedBond) -> str:
     return name
 
 
-def _format_single(alert: UserBlockAlert) -> str:
-    """Форматирует агрегированный блок одного эмитента."""
+def _format_single(alert: UserBlockAlert, scope: AlertScope = AlertScope.PORTFOLIO) -> str:
+    """Форматирует агрегированный блок одного эмитента.
+
+    Для рыночной аудитории ``matched_bonds`` — это бумаги эмитента, а не
+    портфель получателя, поэтому и подпись к списку другая.
+    """
     name = escape(alert.entity_name or "Эмитент")
     lines: list[str] = [
         f"<b>{name}</b>",
@@ -56,24 +62,31 @@ def _format_single(alert: UserBlockAlert) -> str:
         lines.append(f"Отрицательное сальдо: {_format_money(saldo)} ₽")
     if alert.matched_bonds:
         bonds = " \n".join(_format_bond(b) for b in alert.matched_bonds)
-        lines.append(f"\nВ вашем портфеле:\n{bonds}")
+        label = "Облигации эмитента" if scope.is_market else "В вашем портфеле"
+        lines.append(f"\n{label}:\n{bonds}")
     return "\n".join(lines)
 
 
-def format_fns_alert(alerts: list[UserBlockAlert]) -> str:
-    """Формирует HTML-сообщение о блокировках счетов по бумагам пользователя.
+def format_fns_alert(alerts: list[UserBlockAlert], scope: AlertScope = AlertScope.PORTFOLIO) -> str:
+    """Формирует HTML-сообщение о блокировках счетов эмитентов.
 
     Args:
-        alerts: Блокировки эмитентов, затрагивающие портфель пользователя.
+        alerts: Блокировки эмитентов. Для аудитории ``PORTFOLIO`` они уже
+            отфильтрованы по бумагам пользователя, для ``MARKET`` — нет.
+        scope: Аудитория события — влияет только на формулировки.
 
     Returns:
         Отформатированное HTML-сообщение.
 
     """
-    header = "<b>🚫 ФНС: заблокированы счета ваших эмитентов</b>"
+    header = (
+        "<b>🚫 ФНС: заблокированы счета эмитента облигаций</b>"
+        if scope.is_market
+        else "<b>🚫 ФНС: заблокированы счета ваших эмитентов</b>"
+    )
     blocks: list[str] = [header]
-    blocks.extend(_format_single(alert) for alert in alerts)
-    return "\n\n".join(blocks)
+    blocks.extend(_format_single(alert, scope) for alert in alerts)
+    return with_market_hint("\n\n".join(blocks), scope)
 
 
 def format_scan_report(report: UserScanReport) -> str:

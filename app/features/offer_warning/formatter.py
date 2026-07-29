@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from common.scope import AlertScope, with_market_hint
 from common.utils.bot_utils import pluralize_days
 
 from .schemas import BondOffer
@@ -46,18 +47,24 @@ def _format_single_offer(offer: BondOffer, days_until: int) -> str:
     return "\n".join(lines)
 
 
-def format_offer_alerts(offers: list[BondOffer]) -> str:
+def format_offer_alerts(offers: list[BondOffer], scope: AlertScope = AlertScope.PORTFOLIO) -> str:
     """Формирует HTML-сообщение с перечнем приближающихся оферт.
 
     Args:
         offers: Список оферт из MOEX.
+        scope: Аудитория события — влияет только на шапку и приписку.
 
     Returns:
         Отформатированное HTML-сообщение.
 
     """
     today = datetime.now(_MSK_TZ).date()
-    blocks: list[str] = ["<b>⚠️ Приближается оферта (PUT-опцион)</b>\n"]
+    header = (
+        "<b>⚠️ Ближайшие оферты на рынке (PUT-опцион)</b>\n"
+        if scope.is_market
+        else "<b>⚠️ Приближается оферта (PUT-опцион)</b>\n"
+    )
+    blocks: list[str] = [header]
 
     last_deadline: str | None = None
     for offer in offers:
@@ -77,4 +84,4 @@ def format_offer_alerts(offers: list[BondOffer]) -> str:
             "обычно приём заявок закрывается за несколько дней до даты оферты."
         )
 
-    return "\n".join(blocks)
+    return with_market_hint("\n".join(blocks), scope)

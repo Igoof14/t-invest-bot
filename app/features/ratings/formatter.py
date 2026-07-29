@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from common.scope import AlertScope, with_market_hint
+
 # Иконка по каноничному рейтинговому действию.
 _ACTION_ICONS = {
     "Понижен": "🔻",
@@ -42,17 +44,23 @@ def _format_single(change) -> str:
     return "\n".join(lines)
 
 
-def format_rating_alert(changes: list) -> str:
-    """Формирует HTML-сообщение об изменениях рейтинга по бумагам пользователя.
+def format_rating_alert(changes: list, scope: AlertScope = AlertScope.PORTFOLIO) -> str:
+    """Формирует HTML-сообщение об изменениях рейтинга.
 
     Args:
-        changes: Список изменений, затрагивающих портфель пользователя.
+        changes: Список изменений. Для аудитории ``PORTFOLIO`` они уже
+            отфильтрованы по бумагам пользователя, для ``MARKET`` — нет.
+        scope: Аудитория события — влияет только на шапку и приписку.
 
     Returns:
         Отформатированное HTML-сообщение.
 
     """
-    header = "<b>📊 Обновление кредитного рейтинга по вашим облигациям</b>"
+    header = (
+        "<b>📊 Обновление кредитных рейтингов</b>"
+        if scope.is_market
+        else "<b>📊 Обновление кредитного рейтинга по вашим облигациям</b>"
+    )
     blocks: list[str] = [header]
     blocks.extend(_format_single(change) for change in changes)
-    return "\n\n".join(blocks)
+    return with_market_hint("\n\n".join(blocks), scope)

@@ -51,6 +51,13 @@ class EventName(StrEnum):
     ONBOARDING_CTA_CLICKED = "onboarding_cta_clicked"
     """Клик по финальной кнопке «Подключить портфель»."""
 
+    ONBOARDING_MARKET_CHOSEN = "onboarding_market_chosen"
+    """Выбран режим без токена — события по всему рынку.
+
+    Вместе с ``ONBOARDING_CTA_CLICKED`` даёт разбивку финального шага по
+    режимам: видно, сколько людей уходит в токен, а сколько — в рынок.
+    """
+
     TOKEN_PROMPT_SHOWN = "token_prompt_shown"
     """Показана инструкция по получению токена. props: entry."""
 

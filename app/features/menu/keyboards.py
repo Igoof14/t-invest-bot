@@ -7,6 +7,7 @@ import logging
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from core.clients.backend import users as users_api
 
 from .callbacks import MenuCallback
 from .registry import MenuSection
@@ -16,6 +17,12 @@ logger = logging.getLogger(__name__)
 # Ключ корневого экрана хаба.
 HUB_KEY = "hub"
 HUB_TITLE = "<b>🔔 Уведомления</b>\n\nВыберите раздел:"
+
+# Приписка для пользователей без токена: объясняет текущий режим и апселл.
+MARKET_MODE_NOTE = (
+    "\n\n📡 <i>Сейчас вы получаете события по всему рынку. "
+    "Подключите токен — останутся только ваши бумаги.</i>"
+)
 
 
 def status_text(enabled: bool) -> str:
@@ -52,6 +59,18 @@ async def _no_badge() -> str:
     return ""
 
 
+async def _has_token(telegram_id: int) -> bool:
+    """Подключён ли токен.
+
+    Идёт в клиент бэкенда напрямую, а не через ``BotUserRepository``: тот
+    гасит ``BackendError`` и возвращает ``None``, что неотличимо от «токена
+    нет». Здесь разница принципиальна — при сбое бэкенда мы предпочитаем не
+    показать подсказку, чем предложить подключить токен тому, у кого он уже
+    есть. Исключение ловит ``gather`` в :func:`build_hub`.
+    """
+    return await users_api.get_token(telegram_id) is not None
+
+
 async def build_hub(
     telegram_id: int, sections: list[MenuSection]
 ) -> tuple[str, InlineKeyboardMarkup]:
@@ -61,12 +80,16 @@ async def build_hub(
     за своими настройками, последовательный цикл складывал их задержки.
     Сбой одной секции не должен ронять весь экран — такая секция просто
     остаётся без бейджа.
+
+    Проверка токена едет тем же ``gather``: она нужна только для подсказки о
+    режиме, и отдельный последовательный round-trip ради неё был бы лишним.
     """
-    badges = await asyncio.gather(
+    *badges, token_state = await asyncio.gather(
         *(
             section.status_badge(telegram_id) if section.status_badge is not None else _no_badge()
             for section in sections
         ),
+        _has_token(telegram_id),
         return_exceptions=True,
     )
 
@@ -83,5 +106,19 @@ async def build_hub(
                 callback_data=MenuCallback(section=section.key).pack(),
             )
         )
+
+    title = HUB_TITLE
+    if token_state is False:
+        # Отложенный импорт: разрывает цикл menu -> users -> base -> menu.
+        from features.users.enums import SettingsButtonTexts, SettingsCallbackData
+
+        title += MARKET_MODE_NOTE
+        builder.add(
+            InlineKeyboardButton(
+                text=SettingsButtonTexts.ADD_TOKEN.value,
+                callback_data=SettingsCallbackData.ADD_TOKEN.value,
+            )
+        )
+
     builder.adjust(1)
-    return HUB_TITLE, builder.as_markup()
+    return title, builder.as_markup()

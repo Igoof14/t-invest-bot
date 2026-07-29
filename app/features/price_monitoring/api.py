@@ -8,6 +8,7 @@ from aiohttp import web
 from api.keys import BOT_KEY
 from api.responses import delivery_response
 from common.delivery import DeliveryOutcome, DeliveryResult
+from common.scope import AlertScope
 from pydantic import BaseModel, Field, ValidationError
 
 from .config import DEFAULT_POLICY
@@ -46,6 +47,9 @@ class PriceAlertEvent(BaseModel):
 
     telegram_id: int
     alerts: list[PriceAnomalyPayload] = Field(min_length=1)
+    # Продюсер, ещё не задеплоенный с поддержкой аудиторий, поля не пришлёт —
+    # для него поведение остаётся прежним, «по портфелю».
+    scope: AlertScope = AlertScope.PORTFOLIO
 
 
 @routes.post("/events/price-alert")
@@ -70,11 +74,12 @@ async def handle_price_alert(request: web.Request) -> web.Response:
             event.telegram_id,
             anomalies,
             max_per_severity=DEFAULT_POLICY.max_aggregated_per_severity,
+            scope=event.scope,
         )
     else:
         result = DeliveryResult(DeliveryOutcome.SENT)
         for anomaly in anomalies:
-            result = await notifier.send_single(event.telegram_id, anomaly)
+            result = await notifier.send_single(event.telegram_id, anomaly, scope=event.scope)
             if not result.is_sent:
                 # Дальше отправлять бессмысленно: либо пользователь заблокировал
                 # бота, либо задачу будет ретраить Cloud Tasks целиком.

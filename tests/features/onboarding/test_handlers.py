@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import Message
 from features.onboarding.handlers import (
+    handle_market_cta,
     handle_nav,
     handle_token_cta,
     start_onboarding,
@@ -78,6 +79,33 @@ async def test_nav_out_of_range_is_ignored() -> None:
     await handle_nav(callback, OnboardingNav(step=99))
 
     message.edit_text.assert_not_awaited()
+    callback.answer.assert_awaited_once()
+
+
+async def test_last_step_offers_both_modes() -> None:
+    """Финальный экран — развилка: токен или весь рынок."""
+    message = _message()
+    callback = _callback(message)
+
+    await handle_nav(callback, OnboardingNav(step=len(STEPS) - 1))
+
+    markup = message.edit_text.await_args.kwargs["reply_markup"]
+    labels = [b.text for row in markup.inline_keyboard for b in row]
+    assert labels == [STEPS[-1].cta_token_label, STEPS[-1].cta_market_label]
+
+
+async def test_market_cta_opens_notifications_hub(monkeypatch) -> None:
+    """Кнопка «все события» ведёт в хаб уведомлений, ничего не переключая."""
+    message = _message()
+    callback = _callback(message)
+    render_hub = AsyncMock(return_value=("ХАБ", None))
+    monkeypatch.setattr("features.menu.render_hub", render_hub)
+
+    await handle_market_cta(callback)
+
+    render_hub.assert_awaited_once_with(777)
+    message.edit_text.assert_awaited_once()
+    assert message.edit_text.await_args.args[0] == "ХАБ"
     callback.answer.assert_awaited_once()
 
 

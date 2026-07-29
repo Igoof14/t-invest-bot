@@ -7,6 +7,7 @@ import logging
 from aiohttp import web
 from api.keys import BOT_KEY
 from api.responses import delivery_response
+from common.scope import AlertScope
 from pydantic import BaseModel, Field, ValidationError
 
 from .notifier import RatingAlertNotifier
@@ -22,6 +23,9 @@ class RatingAlertEvent(BaseModel):
 
     telegram_id: int
     alerts: list[RatingChange] = Field(min_length=1)
+    # Продюсер, ещё не задеплоенный с поддержкой аудиторий, поля не пришлёт —
+    # для него поведение остаётся прежним, «по портфелю».
+    scope: AlertScope = AlertScope.PORTFOLIO
 
 
 @routes.post("/events/rating-change")
@@ -39,5 +43,5 @@ async def handle_rating_change(request: web.Request) -> web.Response:
         return web.json_response({"status": "dropped", "reason": "invalid payload"})
 
     notifier = RatingAlertNotifier(request.app[BOT_KEY])
-    result = await notifier.send(event.telegram_id, event.alerts)
+    result = await notifier.send(event.telegram_id, event.alerts, scope=event.scope)
     return delivery_response(result)

@@ -6,6 +6,7 @@ import logging
 
 from aiogram import Bot
 from common.delivery import DeliveryOutcome, DeliveryResult, deliver
+from common.scope import AlertScope
 
 from .events import UserBlockAlert
 from .formatter import format_fns_alert
@@ -20,7 +21,13 @@ class FnsBlockNotifier:
         """Инициализирует notifier."""
         self._bot = bot
 
-    async def send(self, telegram_id: int, alerts: list[UserBlockAlert]) -> DeliveryResult:
+    async def send(
+        self,
+        telegram_id: int,
+        alerts: list[UserBlockAlert],
+        *,
+        scope: AlertScope = AlertScope.PORTFOLIO,
+    ) -> DeliveryResult:
         """Отправляет одно сообщение со всеми блокировками пользователя.
 
         Returns:
@@ -30,7 +37,7 @@ class FnsBlockNotifier:
         if not alerts:
             return DeliveryResult(DeliveryOutcome.SENT)
 
-        message = format_fns_alert(alerts)
+        message = format_fns_alert(alerts, scope)
 
         return await deliver(
             lambda: self._bot.send_message(
@@ -42,4 +49,5 @@ class FnsBlockNotifier:
             telegram_id=telegram_id,
             kind="fns",
             items=len(alerts),
+            scope=scope.value,
         )

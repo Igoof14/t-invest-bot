@@ -15,7 +15,7 @@ from common.utils.bot_utils import safe_edit_text
 from features.analytics import EventName, track
 
 from .keyboards import build_step_keyboard
-from .schemas import TOKEN_CALLBACK, OnboardingNav
+from .schemas import MARKET_CALLBACK, TOKEN_CALLBACK, OnboardingNav
 from .texts import STEPS
 
 logger = logging.getLogger(__name__)
@@ -70,4 +70,23 @@ async def handle_token_cta(callback: CallbackQuery, state: FSMContext) -> None:
     await track(EventName.ONBOARDING_CTA_CLICKED, telegram_id=callback.from_user.id)
     if isinstance(callback.message, Message):
         await prompt_for_token(callback.message, state, entry="onboarding")
+    await callback.answer()
+
+
+@router.callback_query(F.data == MARKET_CALLBACK)
+async def handle_market_cta(callback: CallbackQuery) -> None:
+    """Второй вариант финального шага: работать без токена, по всему рынку.
+
+    Ничего не включает — дефолтные настройки уведомлений бэкенд создал ещё на
+    ``/start``. Кнопка только фиксирует выбор в аналитике и показывает, где
+    эти настройки крутить.
+    """
+    # Отложенный импорт: разрывает цикл base -> onboarding -> menu -> base.
+    from features.menu import render_hub
+
+    telegram_id = callback.from_user.id
+    await track(EventName.ONBOARDING_MARKET_CHOSEN, telegram_id=telegram_id)
+    if isinstance(callback.message, Message):
+        text, markup = await render_hub(telegram_id)
+        await safe_edit_text(callback.message, text, reply_markup=markup)
     await callback.answer()

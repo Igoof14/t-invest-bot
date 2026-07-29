@@ -5,10 +5,12 @@
 
 from collections.abc import Sequence
 
+from common.scope import AlertScope, with_market_hint
+
 from .schemas import PriceAnomaly
 
 
-def format_single_alert(anomaly: PriceAnomaly) -> str:
+def format_single_alert(anomaly: PriceAnomaly, scope: AlertScope = AlertScope.PORTFOLIO) -> str:
     """Формирует HTML-сообщение для одной аномалии."""
     if anomaly.is_critical:
         if anomaly.is_drop:
@@ -34,13 +36,14 @@ def format_single_alert(anomaly: PriceAnomaly) -> str:
         lines.append("")
         lines.append("⚡ <i>Рекомендуем проверить новости эмитента</i>")
 
-    return "\n".join(lines)
+    return with_market_hint("\n".join(lines), scope)
 
 
 def format_aggregated_alert(
     anomalies: Sequence[PriceAnomaly],
     *,
     max_per_severity: int,
+    scope: AlertScope = AlertScope.PORTFOLIO,
 ) -> tuple[str, list[PriceAnomaly]]:
     """Формирует сводное сообщение по нескольким аномалиям.
 
@@ -49,6 +52,7 @@ def format_aggregated_alert(
             антиспам-политикой).
         max_per_severity: Максимум аномалий, показываемых по каждому уровню
             критичности (CRITICAL / WARNING).
+        scope: Аудитория события — влияет только на шапку и приписку.
 
     Returns:
         Кортеж ``(сообщение, показанные_аномалии)``. ``показанные_аномалии`` —
@@ -63,7 +67,10 @@ def format_aggregated_alert(
     shown_warnings = warnings[:max_per_severity]
     shown = shown_critical + shown_warnings
 
-    lines = ["<b>Множественные изменения цен облигаций</b>\n"]
+    if scope.is_market:
+        lines = ["<b>Резкие движения цен на рынке облигаций</b>\n"]
+    else:
+        lines = ["<b>Множественные изменения цен облигаций</b>\n"]
 
     if critical:
         lines.append(f"<b>Критических: {len(critical)}</b>")
@@ -77,9 +84,10 @@ def format_aggregated_alert(
     if not_shown > 0:
         lines.append(f"\n... и ещё {not_shown} изменений")
 
-    lines.append("\n<i>Рекомендуем проверить портфель</i>")
+    if not scope.is_market:
+        lines.append("\n<i>Рекомендуем проверить портфель</i>")
 
-    return "\n".join(lines), shown
+    return with_market_hint("\n".join(lines), scope), shown
 
 
 def _format_summary_rows(anomalies: Sequence[PriceAnomaly]) -> list[str]:
