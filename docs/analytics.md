@@ -84,6 +84,7 @@ bot_events
 | `token_connected` | — | `users/handlers.py` |
 | `token_removed` | — | `users/handlers.py` |
 | `bonds_synced` | `count`, `ok` | `users/handlers.py` |
+| `events_synced` | `count`, `ok` | `users/handlers.py` |
 | `alert_toggled` | `feature`, `enabled`, `agency` | 4 фичи уведомлений |
 | `alert_setting_changed` | `feature`, `field`, `value` | `price_monitoring`, `offer_warning` |
 | `data_screen_viewed` | `screen`, `items`, `outcome` | `base/handlers.py`, `coupons` |

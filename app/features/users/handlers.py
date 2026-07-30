@@ -11,7 +11,7 @@ from aiogram.types import CallbackQuery, Message
 from common.token_gate import has_token
 from common.utils.bot_utils import pluralize_bonds, safe_delete, safe_edit_text
 from core.clients.backend.errors import BackendError, UserNotFound
-from core.clients.bonds_sync.client import sync_user_bonds
+from core.clients.bonds_sync.client import sync_user_bonds, sync_user_events
 from core.clients.t_invest.common_func import TokenCheck, check_token
 from features.analytics import EventName, track
 from features.base.keyboards import create_main_keyboard
@@ -28,7 +28,7 @@ from .keyboards import (
 logger = logging.getLogger(__name__)
 router = Router()
 
-# Удержание фоновых задач синхронизации облигаций от сборки GC до завершения.
+# Удержание фоновых задач синхронизации портфеля от сборки GC до завершения.
 _SYNC_TASKS: set[asyncio.Task[None]] = set()
 
 
@@ -71,15 +71,47 @@ async def _sync_bonds_and_notify(message: Message, telegram_id: int) -> None:
         )
 
 
-def _schedule_bonds_sync(message: Message, telegram_id: int) -> None:
-    """Запускает синхронизацию облигаций пользователя в фоне, не блокируя ответ.
+async def _sync_events(telegram_id: int) -> None:
+    """Догружает историю операций по бумагам пользователя.
+
+    Идёт после облигаций: операции привязаны к уже сохранённым бумагам.
+    Пользователю о ней не сообщаем — она нужна расчётам, а не текущему экрану,
+    поэтому сбой виден только в логах клиента и в аналитике.
+
+    Args:
+        telegram_id: Telegram ID пользователя, для которого запускается синк.
+
+    """
+    events_synced = await sync_user_events(telegram_id)
+    await track(
+        EventName.EVENTS_SYNCED,
+        telegram_id=telegram_id,
+        count=events_synced,
+        ok=events_synced is not None,
+    )
+
+
+async def _sync_portfolio(message: Message, telegram_id: int) -> None:
+    """Синхронизирует портфель: сначала список облигаций, затем историю операций.
 
     Args:
         message: Сообщение с токеном — в его чат уходит уведомление о результате.
         telegram_id: Telegram ID пользователя, для которого запускается синк.
 
     """
-    task = asyncio.create_task(_sync_bonds_and_notify(message, telegram_id))
+    await _sync_bonds_and_notify(message, telegram_id)
+    await _sync_events(telegram_id)
+
+
+def _schedule_portfolio_sync(message: Message, telegram_id: int) -> None:
+    """Запускает синхронизацию портфеля в фоне, не блокируя ответ пользователю.
+
+    Args:
+        message: Сообщение с токеном — в его чат уходит уведомление о результате.
+        telegram_id: Telegram ID пользователя, для которого запускается синк.
+
+    """
+    task = asyncio.create_task(_sync_portfolio(message, telegram_id))
     _SYNC_TASKS.add(task)
     task.add_done_callback(_SYNC_TASKS.discard)
 
@@ -261,4 +293,4 @@ async def handle_token_message(message: Message, state: FSMContext) -> None:
         "Токен успешно сохранён! Синхронизирую список облигаций...",
         reply_markup=create_main_keyboard(),
     )
-    _schedule_bonds_sync(message, telegram_id)
+    _schedule_portfolio_sync(message, telegram_id)

@@ -46,6 +46,24 @@ def state() -> MagicMock:
     return fsm
 
 
+@pytest.fixture(autouse=True)
+def sync_user_events(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
+    """Синхронизация операций — иначе тесты пошли бы в реальный сервис."""
+    mock = AsyncMock(return_value=42)
+    monkeypatch.setattr(users_handlers, "sync_user_events", mock)
+    return mock
+
+
+async def _drain_background_tasks() -> None:
+    """Даёт фоновой задаче синхронизации досчитаться до конца.
+
+    Синк портфеля — это две последовательные операции, поэтому одного
+    ``sleep(0)`` на всю цепочку не хватает.
+    """
+    for _ in range(10):
+        await asyncio.sleep(0)
+
+
 # --- приём токена ------------------------------------------------------------
 
 
@@ -67,6 +85,52 @@ async def test_valid_token_schedules_bonds_sync(
     sync_user_bonds.assert_awaited_once_with(777)
     state.clear.assert_awaited_once()
     assert "Токен успешно сохранён" in message.answer.await_args_list[0].args[0]
+
+
+async def test_valid_token_syncs_events_after_bonds(
+    monkeypatch: pytest.MonkeyPatch, state: MagicMock, sync_user_events: AsyncMock
+) -> None:
+    """История операций догружается после облигаций — она привязана к бумагам."""
+    order: list[str] = []
+    monkeypatch.setattr(users_handlers, "check_token", AsyncMock(return_value=TokenCheck.VALID))
+    monkeypatch.setattr(users_handlers.BotUserRepository, "add_token", AsyncMock(return_value=True))
+
+    async def _bonds(telegram_id: int) -> int:
+        order.append("bonds")
+        return 7
+
+    async def _events(telegram_id: int) -> int:
+        order.append("events")
+        return 42
+
+    monkeypatch.setattr(users_handlers, "sync_user_bonds", _bonds)
+    sync_user_events.side_effect = _events
+
+    message = _message("t.valid")
+    await handle_token_message(message, state)
+    await _drain_background_tasks()
+
+    assert order == ["bonds", "events"]
+    sync_user_events.assert_awaited_once_with(777)
+    # Пользователю про операции не сообщаем — только про облигации.
+    answers = " ".join(call.args[0] for call in message.answer.await_args_list)
+    assert "операц" not in answers.lower()
+
+
+async def test_events_sync_failure_stays_silent(
+    monkeypatch: pytest.MonkeyPatch, state: MagicMock, sync_user_events: AsyncMock
+) -> None:
+    """Сбой синка операций не мешает сообщению об облигациях."""
+    monkeypatch.setattr(users_handlers, "check_token", AsyncMock(return_value=TokenCheck.VALID))
+    monkeypatch.setattr(users_handlers.BotUserRepository, "add_token", AsyncMock(return_value=True))
+    monkeypatch.setattr(users_handlers, "sync_user_bonds", AsyncMock(return_value=7))
+    sync_user_events.return_value = None
+
+    message = _message("t.valid")
+    await handle_token_message(message, state)
+    await _drain_background_tasks()
+
+    assert "7 облигаций в портфеле" in message.answer.await_args_list[-1].args[0]
 
 
 async def test_token_message_is_deleted_from_chat(
@@ -113,7 +177,7 @@ async def test_sync_result_is_reported_to_user(
 
 
 async def test_invalid_token_does_not_schedule_sync(
-    monkeypatch: pytest.MonkeyPatch, state: MagicMock
+    monkeypatch: pytest.MonkeyPatch, state: MagicMock, sync_user_events: AsyncMock
 ) -> None:
     monkeypatch.setattr(
         users_handlers, "check_token", AsyncMock(return_value=TokenCheck.INVALID)
@@ -128,6 +192,7 @@ async def test_invalid_token_does_not_schedule_sync(
 
     add_token.assert_not_called()
     sync_user_bonds.assert_not_called()
+    sync_user_events.assert_not_called()
     assert "Некорректный токен" in message.answer.await_args.args[0]
     # Состояние держим: пользователь может отправить токен ещё раз.
     state.clear.assert_not_called()

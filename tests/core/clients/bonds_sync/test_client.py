@@ -1,4 +1,4 @@
-"""Тесты клиента синхронизации облигаций пользователя."""
+"""Тесты клиента синхронизации портфеля пользователя."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import aiohttp
 import pytest
-from core.clients.bonds_sync.client import sync_user_bonds
+from core.clients.bonds_sync.client import sync_user_bonds, sync_user_events
 from google.auth.exceptions import GoogleAuthError
 
 
@@ -36,6 +36,8 @@ class _FakeSession:
 
     def __init__(self, response: _FakeResponse) -> None:
         self._response = response
+        # URL'ы запросов: по ним тесты проверяют, какой эндпоинт был дёрнут.
+        self.urls: list[str] = []
 
     async def __aenter__(self) -> _FakeSession:
         return self
@@ -43,7 +45,8 @@ class _FakeSession:
     async def __aexit__(self, *args: object) -> None:
         return None
 
-    def post(self, *args: object, **kwargs: object) -> _FakeResponse:
+    def post(self, url: str, *args: object, **kwargs: object) -> _FakeResponse:
+        self.urls.append(url)
         return self._response
 
 
@@ -55,16 +58,52 @@ def _bonds_sync_url(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-async def test_sync_user_bonds_success(monkeypatch: pytest.MonkeyPatch) -> None:
+def _patch_session(monkeypatch: pytest.MonkeyPatch, response: _FakeResponse) -> _FakeSession:
+    """Подменяет токен и сессию, возвращая заглушку для проверки URL."""
     monkeypatch.setattr(
         "core.clients.bonds_sync.client._fetch_id_token", lambda audience: "fake-token"
     )
+    session = _FakeSession(response)
     monkeypatch.setattr(
         "core.clients.bonds_sync.client.aiohttp.ClientSession",
-        lambda *args, **kwargs: _FakeSession(_FakeResponse(200)),
+        lambda *args, **kwargs: session,
     )
+    return session
+
+
+async def test_sync_user_bonds_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    session = _patch_session(monkeypatch, _FakeResponse(200))
 
     assert await sync_user_bonds(telegram_id=123) == 7
+    assert session.urls == ["https://bonds-sync.example.run.app/sync/123"]
+
+
+async def test_sync_user_events_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    session = _patch_session(
+        monkeypatch, _FakeResponse(200, {"telegram_id": 123, "events_synced": 42})
+    )
+
+    assert await sync_user_events(telegram_id=123) == 42
+    assert session.urls == ["https://bonds-sync.example.run.app/sync/events/123"]
+
+
+async def test_sync_user_events_without_count_in_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ответ облигаций не годится для операций: ждём именно events_synced."""
+    _patch_session(monkeypatch, _FakeResponse(200, {"telegram_id": 123, "bonds_synced": 7}))
+
+    assert await sync_user_events(telegram_id=123) is None
+
+
+async def test_sync_user_events_http_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_session(monkeypatch, _FakeResponse(500))
+
+    assert await sync_user_events(telegram_id=123) is None
+
+
+async def test_sync_user_events_no_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("core.clients.bonds_sync.client.config.bonds_sync_url", None)
+
+    assert await sync_user_events(telegram_id=123) is None
 
 
 async def test_sync_user_bonds_without_count_in_payload(monkeypatch: pytest.MonkeyPatch) -> None:

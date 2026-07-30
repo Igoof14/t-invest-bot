@@ -73,6 +73,9 @@ class EventName(StrEnum):
     BONDS_SYNCED = "bonds_synced"
     """Завершена синхронизация портфеля. props: count, ok."""
 
+    EVENTS_SYNCED = "events_synced"
+    """Завершена синхронизация истории операций. props: count, ok."""
+
     # --- Явные: использование фич ---
     ALERT_TOGGLED = "alert_toggled"
     """Переключен алерт фичи. props: feature, enabled."""
