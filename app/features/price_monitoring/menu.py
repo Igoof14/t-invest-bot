@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from aiogram.types import InlineKeyboardMarkup
-from core.clients.backend.notifications import PriceAlertSettings
+from core.clients.backend.notifications import NotificationSettings, PriceAlertSettings
 from features.menu import STALE_NOTE, MenuSection, back_to_hub_button, help_button, status_text
 
 from .keyboards import create_price_alerts_keyboard
@@ -58,10 +58,9 @@ async def render(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
     return build_text(settings), builder.as_markup()
 
 
-async def status_badge(telegram_id: int) -> str:
+def status_badge(settings: NotificationSettings) -> str:
     """Бейдж для хаба: ✅ если мониторинг включён."""
-    settings = await AlertSettingsRepository.get(telegram_id)
-    return status_text(settings.alerts_enabled)
+    return status_text(settings.prices.alerts_enabled)
 
 
 SECTION = MenuSection(

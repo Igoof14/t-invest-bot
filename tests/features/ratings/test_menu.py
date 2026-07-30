@@ -5,35 +5,34 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
+from core.clients.backend.notifications import NotificationSettings
 from features.menu.callbacks import MenuCallback
 from features.menu.keyboards import HUB_KEY
 from features.ratings import menu
 from features.ratings.enums import RatingAgency
+from features.ratings.repository import RatingSubscriptions
 
 
-async def test_status_badge_reflects_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        menu.RatingAlertSettingsRepository,
-        "get_enabled_agencies",
-        AsyncMock(return_value={RatingAgency.NRA}),
-    )
-    assert await menu.status_badge(111) == "Включено 🔔"
+def test_status_badge_reflects_enabled() -> None:
+    hub = NotificationSettings(enabled_agencies=frozenset({RatingAgency.NRA.value}))
+    assert menu.status_badge(hub) == "Включено 🔔"
 
 
-async def test_status_badge_when_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        menu.RatingAlertSettingsRepository,
-        "get_enabled_agencies",
-        AsyncMock(return_value=set()),
-    )
-    assert await menu.status_badge(111) == "Выключено 🔕"
+def test_status_badge_when_disabled() -> None:
+    assert menu.status_badge(NotificationSettings()) == "Выключено 🔕"
+
+
+def test_status_badge_ignores_unknown_agency() -> None:
+    """Бэкенд хранит что прислали: незнакомое значение — не подписка."""
+    hub = NotificationSettings(enabled_agencies=frozenset({"unknown"}))
+    assert menu.status_badge(hub) == "Выключено 🔕"
 
 
 async def test_render_includes_back_button(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         menu.RatingAlertSettingsRepository,
-        "get_enabled_agencies",
-        AsyncMock(return_value=set()),
+        "get",
+        AsyncMock(return_value=RatingSubscriptions(agencies=frozenset())),
     )
 
     text, markup = await menu.render(111)

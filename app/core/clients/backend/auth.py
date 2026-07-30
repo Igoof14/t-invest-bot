@@ -7,11 +7,15 @@ Cloud Run сам валидирует id-token на границе сервис�
 
 Токен живёт около часа, поэтому кэшируется по audience и обновляется заранее —
 за :data:`_REFRESH_MARGIN` до `exp`.
+
+Локальный бэкенд (`BACKEND_URL` на loopback-хосте) авторизацию не проверяет —
+запросы к нему уходят без заголовка, см. :func:`is_local_audience`.
 """
 
 import asyncio
 import logging
 import time
+from urllib.parse import urlsplit
 
 from google.auth import jwt
 from google.auth.exceptions import GoogleAuthError
@@ -38,6 +42,31 @@ _LOCAL_AUTH_HINT = (
 
 _cache: dict[str, tuple[str, float]] = {}
 _lock = asyncio.Lock()
+
+# Хосты, которые считаем локальным бэкендом. Cloud Run всегда отдаёт публичный
+# https-домен, поэтому пересечения с продом быть не может.
+_LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+
+
+def is_local_audience(audience: str) -> bool:
+    """Указывает ли базовый URL на локальный бэкенд (loopback-хост).
+
+    Для такого адреса OIDC-авторизация не нужна и невозможна: id-token с
+    audience вида ``http://127.0.0.1:8000`` не выдаст ни metadata server, ни
+    application default credentials. Локальный бэкенд поднимается без проверки
+    токена, поэтому запрос уходит без заголовка ``Authorization``.
+
+    Args:
+        audience: Базовый URL целевого сервиса, без пути.
+
+    Returns:
+        ``True`` для loopback-адреса, иначе ``False``.
+
+    """
+    host = urlsplit(audience).hostname
+    if not host:
+        return False
+    return host in _LOOPBACK_HOSTS or host.endswith(".localhost")
 
 
 def _fetch_id_token(audience: str) -> str | None:
@@ -96,10 +125,16 @@ async def get_id_token(audience: str) -> str:
 async def auth_headers(audience: str) -> dict[str, str]:
     """Заголовок ``Authorization`` с актуальным id-token'ом.
 
+    Для локального бэкенда (см. :func:`is_local_audience`) возвращает пустой
+    словарь — токен не запрашивается вовсе.
+
     Raises:
         BackendAuthError: Токен получить не удалось.
 
     """
+    if is_local_audience(audience):
+        logger.debug(f"Локальный бэкенд {audience} — запрос без OIDC id-token'а")
+        return {}
     return {"Authorization": f"Bearer {await get_id_token(audience)}"}
 
 

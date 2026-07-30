@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 from core.clients.backend import notifications as api
@@ -15,6 +16,21 @@ from core.clients.backend.errors import BackendError
 from .enums import RatingAgency
 
 logger = logging.getLogger(__name__)
+
+
+def parse_agencies(values: Iterable[str]) -> frozenset[RatingAgency]:
+    """Отбирает известные агентства из подписок бэкенда.
+
+    Бэкенд хранит то, что ему прислали, поэтому незнакомое значение — не повод
+    ронять экран и не повод считать пользователя подписанным.
+    """
+    enabled: set[RatingAgency] = set()
+    for value in values:
+        try:
+            enabled.add(RatingAgency(value))
+        except ValueError:
+            logger.warning(f"Неизвестное агентство в подписках: {value}")
+    return frozenset(enabled)
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,16 +68,4 @@ class RatingAlertSettingsRepository:
             logger.error(f"Ошибка при получении подписок пользователя {telegram_id}: {e}")
             return RatingSubscriptions(agencies=frozenset(), stale=True)
 
-        enabled: set[RatingAgency] = set()
-        for value in values:
-            try:
-                enabled.add(RatingAgency(value))
-            except ValueError:
-                # Бэкенд не знает про набор агентств — он хранит то, что ему прислали.
-                logger.warning(f"Неизвестное агентство в подписках: {value}")
-        return RatingSubscriptions(agencies=frozenset(enabled))
-
-    @classmethod
-    async def get_enabled_agencies(cls, telegram_id: int) -> set[RatingAgency]:
-        """Возвращает множество агентств, на которые подписан пользователь."""
-        return set((await cls.get(telegram_id)).agencies)
+        return RatingSubscriptions(agencies=parse_agencies(values))

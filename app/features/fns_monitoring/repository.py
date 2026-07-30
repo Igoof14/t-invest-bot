@@ -39,8 +39,3 @@ class FnsAlertSettingsRepository:
             logger.error(f"Ошибка при получении подписки ФНС {telegram_id}: {e}")
             return FnsAlertSettings(stale=True)
         return FnsAlertSettings(alerts_enabled=enabled)
-
-    @classmethod
-    async def is_enabled(cls, telegram_id: int) -> bool:
-        """Возвращает, подписан ли пользователь на уведомления о блокировках."""
-        return (await cls.get(telegram_id)).alerts_enabled

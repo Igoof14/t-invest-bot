@@ -99,16 +99,18 @@ async def test_prices_toggle(api: AsyncMock) -> None:
     api.toggle.assert_awaited_once_with(111, "prices")
 
 
-async def test_fns_is_enabled(api: AsyncMock) -> None:
+async def test_fns_get_returns_subscription(api: AsyncMock) -> None:
     api.get_settings.return_value = NotificationSettings(fns_enabled=True)
 
-    assert await FnsAlertSettingsRepository.is_enabled(111) is True
+    assert (await FnsAlertSettingsRepository.get(111)).alerts_enabled is True
 
 
-async def test_fns_is_enabled_false_on_error(api: AsyncMock) -> None:
+async def test_fns_get_marks_stale_on_error(api: AsyncMock) -> None:
     api.get_settings.side_effect = BackendError("backend down")
+    settings = await FnsAlertSettingsRepository.get(111)
 
-    assert await FnsAlertSettingsRepository.is_enabled(111) is False
+    assert settings.alerts_enabled is False
+    assert settings.stale is True
 
 
 async def test_fns_toggle(api: AsyncMock) -> None:
@@ -121,7 +123,7 @@ async def test_fns_toggle(api: AsyncMock) -> None:
 async def test_rating_enabled_agencies(api: AsyncMock) -> None:
     api.get_settings.return_value = NotificationSettings(enabled_agencies=frozenset({"nra"}))
 
-    assert await RatingAlertSettingsRepository.get_enabled_agencies(111) == {RatingAgency.NRA}
+    assert (await RatingAlertSettingsRepository.get(111)).agencies == frozenset({RatingAgency.NRA})
 
 
 async def test_rating_unknown_agency_is_skipped(api: AsyncMock) -> None:
@@ -130,13 +132,15 @@ async def test_rating_unknown_agency_is_skipped(api: AsyncMock) -> None:
         enabled_agencies=frozenset({"nra", "who-is-this"})
     )
 
-    assert await RatingAlertSettingsRepository.get_enabled_agencies(111) == {RatingAgency.NRA}
+    assert (await RatingAlertSettingsRepository.get(111)).agencies == frozenset({RatingAgency.NRA})
 
 
-async def test_rating_agencies_empty_on_error(api: AsyncMock) -> None:
+async def test_rating_agencies_empty_and_stale_on_error(api: AsyncMock) -> None:
     api.get_settings.side_effect = BackendError("backend down")
+    subscriptions = await RatingAlertSettingsRepository.get(111)
 
-    assert await RatingAlertSettingsRepository.get_enabled_agencies(111) == set()
+    assert subscriptions.agencies == frozenset()
+    assert subscriptions.stale is True
 
 
 async def test_rating_toggle_sends_agency_code(api: AsyncMock) -> None:

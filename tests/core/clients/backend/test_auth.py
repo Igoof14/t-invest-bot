@@ -70,3 +70,34 @@ async def test_auth_headers_contain_bearer(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setattr(auth, "_expires_at", lambda token: time.time() + 3600)
 
     assert await auth.auth_headers(AUDIENCE) == {"Authorization": "Bearer tok"}
+
+
+@pytest.mark.parametrize(
+    "audience",
+    ["http://127.0.0.1:8000", "http://localhost:8000", "http://[::1]:8000"],
+)
+async def test_local_backend_skips_token(monkeypatch: pytest.MonkeyPatch, audience: str) -> None:
+    def _fail(audience: str) -> str:
+        raise AssertionError("для локального бэкенда токен запрашивать не нужно")
+
+    monkeypatch.setattr(auth, "_fetch_id_token", _fail)
+
+    assert await auth.auth_headers(audience) == {}
+
+
+@pytest.mark.parametrize(
+    ("audience", "expected"),
+    [
+        ("http://127.0.0.1:8000", True),
+        ("http://localhost", True),
+        ("http://LocalHost:8000", True),
+        ("http://[::1]:8000", True),
+        ("http://backend.localhost:8000", True),
+        (AUDIENCE, False),
+        ("https://backend-iyvjwivbpq-ey.a.run.app", False),
+        ("http://10.0.0.5:8000", False),
+        ("", False),
+    ],
+)
+def test_is_local_audience(audience: str, expected: bool) -> None:
+    assert auth.is_local_audience(audience) is expected

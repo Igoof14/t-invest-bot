@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+from core.clients.backend.notifications import NotificationSettings, OfferAlertSettings
 from features.menu.callbacks import MenuCallback
 from features.menu.keyboards import HUB_KEY
 from features.offer_warning import menu
@@ -22,11 +23,13 @@ def _settings(enabled: bool) -> SimpleNamespace:
     )
 
 
-async def test_status_badge(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        menu.OfferSettingsRepository, "get", AsyncMock(return_value=_settings(True))
-    )
-    assert await menu.status_badge(111) == "Включено 🔔"
+def test_status_badge() -> None:
+    hub = NotificationSettings(offers=OfferAlertSettings(alerts_enabled=True))
+    assert menu.status_badge(hub) == "Включено 🔔"
+
+
+def test_status_badge_when_disabled() -> None:
+    assert menu.status_badge(NotificationSettings()) == "Выключено 🔕"
 
 
 async def test_render_has_back_button(monkeypatch: pytest.MonkeyPatch) -> None:

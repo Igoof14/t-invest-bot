@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from aiogram.types import InlineKeyboardMarkup
+from core.clients.backend.notifications import NotificationSettings
 from features.menu import STALE_NOTE, MenuSection, back_to_hub_button, help_button, status_text
 
 from .enums import RATING_ALERTS_DESCRIPTION, RATING_ALERTS_HELP
 from .keyboards import create_rating_alerts_keyboard
-from .repository import RatingAlertSettingsRepository, RatingSubscriptions
+from .repository import RatingAlertSettingsRepository, RatingSubscriptions, parse_agencies
 
 SECTION_KEY = "ratings"
 
@@ -30,10 +31,9 @@ async def render(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
     return build_text(subscriptions), builder.as_markup()
 
 
-async def status_badge(telegram_id: int) -> str:
+def status_badge(settings: NotificationSettings) -> str:
     """Бейдж для хаба: включено, если подписано хотя бы одно агентство."""
-    enabled = await RatingAlertSettingsRepository.get_enabled_agencies(telegram_id)
-    return status_text(bool(enabled))
+    return status_text(bool(parse_agencies(settings.enabled_agencies)))
 
 
 SECTION = MenuSection(

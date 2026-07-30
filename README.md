@@ -61,13 +61,13 @@ URL ngrok на free-плане меняется при каждом переза
 | `ANALYTICS_TRACK_ADMIN` | нет | Трекать ли действия `ADMIN_ID`. По умолчанию `false`, чтобы `/broadcast` и тестовые прожатия не искажали воронку. |
 | `T_INVEST_TOKEN` | нет | Сервисный T-Invest токен для фоновых задач. |
 | `BONDS_SYNC_URL` | нет | Базовый URL сервиса синхронизации облигаций. |
-| `BACKEND_URL` | да | Базовый URL приватного Cloud Run сервиса `backend` (без пути), например `https://backend-iyvjwivbpq-ey.a.run.app`. Он же audience OIDC id-token'а. |
+| `BACKEND_URL` | да | Базовый URL приватного Cloud Run сервиса `backend` (без пути), например `https://backend-iyvjwivbpq-ey.a.run.app`. Он же audience OIDC id-token'а. Loopback-адрес (`http://127.0.0.1:8000`) отключает OIDC-авторизацию — см. ниже. |
 
-Запросы к `backend` авторизуются OIDC id-token'ом: он берётся у metadata server
-(в Cloud Run) или из application default credentials и кэшируется до истечения
-срока. Сервис-аккаунту бота нужна роль `roles/run.invoker` на сервисе `backend`.
-Локально нужны credentials сервис-аккаунта — пользовательские ADC id-token не
-выдают:
+Запросы к облачному `backend` авторизуются OIDC id-token'ом: он берётся у
+metadata server (в Cloud Run) или из application default credentials и
+кэшируется до истечения срока. Сервис-аккаунту бота нужна роль
+`roles/run.invoker` на сервисе `backend`. Для облачного бэкенда локально нужны
+credentials сервис-аккаунта — пользовательские ADC id-token не выдают:
 
 ```bash
 gcloud auth application-default login \
@@ -76,6 +76,19 @@ gcloud auth application-default login \
 
 Без них бот пишет в лог понятную ошибку и отвечает «Не удалось получить данные
 об офертах», а не падает внутри HTTP-клиента.
+
+### Локальный бэкенд
+
+Если `BACKEND_URL` указывает на loopback-хост (`127.0.0.1`, `localhost`, `::1`),
+бот не запрашивает id-token и шлёт запросы без заголовка `Authorization` —
+`gcloud auth application-default login` не нужен. Достаточно одной строки
+в `.env`:
+
+```
+BACKEND_URL=http://127.0.0.1:8000
+```
+
+Прод это не затрагивает: URL Cloud Run всегда публичный https-домен.
 
 Без `WEBHOOK_BASE_URL` сервис падает на старте с `RuntimeError` — webhook-режим
 требует публичного URL.

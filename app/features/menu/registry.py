@@ -10,11 +10,16 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
 from aiogram.types import InlineKeyboardMarkup
+from core.clients.backend.notifications import NotificationSettings
 
 # (telegram_id) -> (текст экрана, инлайн-клавиатура секции).
 RenderFn = Callable[[int], Awaitable[tuple[str, InlineKeyboardMarkup]]]
-# (telegram_id) -> бейдж статуса для хаба (например, "✅"/"❌").
-BadgeFn = Callable[[int], Awaitable[str]]
+# (снимок настроек уведомлений) -> бейдж статуса для хаба.
+#
+# Бейдж не ходит в сеть: хаб читает настройки всех секций одним запросом и
+# раздаёт снимок. Раньше каждая секция запрашивала их сама, хотя эндпоинт
+# отдаёт их целиком — пять одинаковых round-trip'ов на один экран.
+BadgeFn = Callable[[NotificationSettings], str]
 
 
 @dataclass(frozen=True)

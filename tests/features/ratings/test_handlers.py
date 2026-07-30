@@ -9,6 +9,7 @@ from aiogram.types import Message
 from features.ratings import handlers
 from features.ratings.enums import RatingAgency
 from features.ratings.handlers import handle_toggle_agency
+from features.ratings.repository import RatingSubscriptions
 from features.ratings.schemas import RatingAlertCallback
 
 
@@ -27,8 +28,8 @@ async def test_toggle_updates_keyboard_and_answers(monkeypatch: pytest.MonkeyPat
     )
     monkeypatch.setattr(
         handlers.RatingAlertSettingsRepository,
-        "get_enabled_agencies",
-        AsyncMock(return_value={RatingAgency.NRA}),
+        "get",
+        AsyncMock(return_value=RatingSubscriptions(agencies=frozenset({RatingAgency.NRA}))),
     )
     callback = _callback()
 

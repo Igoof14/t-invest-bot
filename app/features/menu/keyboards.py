@@ -7,7 +7,10 @@ import logging
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from core.clients.backend import notifications as notifications_api
 from core.clients.backend import users as users_api
+from core.clients.backend.errors import BackendError
+from core.clients.backend.notifications import NotificationSettings
 
 from .callbacks import MenuCallback
 from .registry import MenuSection
@@ -23,6 +26,13 @@ HUB_TITLE = "<b>🔔 Уведомления</b>\n\nВыберите раздел
 STALE_NOTE = (
     "\n\n⚠️ <i>Не удалось загрузить ваши настройки — показано состояние "
     "по умолчанию. Попробуйте открыть раздел позже.</i>"
+)
+
+# Приписка для хаба, когда настройки не прочитались: бейджи не показываем совсем.
+# Соврать подписанному пользователю «Выключено 🔕» хуже, чем не показать статус.
+HUB_STALE_NOTE = (
+    "\n\n⚠️ <i>Не удалось загрузить статусы разделов. "
+    "Откройте раздел, чтобы увидеть текущие настройки.</i>"
 )
 
 # Приписка для пользователей без токена: объясняет текущий режим и апселл.
@@ -61,9 +71,17 @@ def build_help(section: MenuSection) -> tuple[str, InlineKeyboardMarkup]:
     return section.help_text or "", builder.as_markup()
 
 
-async def _no_badge() -> str:
-    """Заглушка для секций без бейджа: держит порядок результатов ``gather``."""
-    return ""
+async def _notification_settings(telegram_id: int) -> NotificationSettings | None:
+    """Настройки всех секций одним запросом; ``None`` — бэкенд не ответил.
+
+    Раньше за настройками ходила каждая секция отдельно, хотя эндпоинт отдаёт их
+    целиком: пять одинаковых round-trip'ов на один экран.
+    """
+    try:
+        return await notifications_api.get_settings(telegram_id)
+    except BackendError as e:
+        logger.error(f"Не удалось получить настройки уведомлений {telegram_id}: {e}")
+        return None
 
 
 async def _has_token(telegram_id: int) -> bool:
@@ -83,30 +101,36 @@ async def build_hub(
 ) -> tuple[str, InlineKeyboardMarkup]:
     """Собирает экран хаба: строка-кнопка на каждую секцию с бейджем статуса.
 
-    Бейджи запрашиваются параллельно: каждая секция самостоятельно ходит в БД
-    за своими настройками, последовательный цикл складывал их задержки.
-    Сбой одной секции не должен ронять весь экран — такая секция просто
-    остаётся без бейджа.
+    Настройки всех секций читаются одним запросом, а бейджи считаются из этого
+    снимка: эндпоинт отдаёт разделы целиком, поэтому пять секций, ходивших за
+    ними по отдельности, повторяли один и тот же round-trip. Если запрос не
+    удался, бейджей нет ни у одной секции — статус лучше не показать, чем
+    показать неверный.
 
     Проверка токена едет тем же ``gather``: она нужна только для подсказки о
     режиме, и отдельный последовательный round-trip ради неё был бы лишним.
     """
-    *badges, token_state = await asyncio.gather(
-        *(
-            section.status_badge(telegram_id) if section.status_badge is not None else _no_badge()
-            for section in sections
-        ),
+    settings, token_state = await asyncio.gather(
+        _notification_settings(telegram_id),
         _has_token(telegram_id),
         return_exceptions=True,
     )
+    if isinstance(settings, BaseException):
+        # BackendError гасит сам ``_notification_settings``; сюда попадает только
+        # неожидаемое — экран всё равно рисуем, но без бейджей.
+        logger.error(f"Неожиданная ошибка чтения настроек {telegram_id}: {settings}")
+        settings = None
 
     builder = InlineKeyboardBuilder()
-    for section, result in zip(sections, badges, strict=True):
-        if isinstance(result, BaseException):
-            logger.error(f"Не удалось получить бейдж секции {section.key}: {result}")
-            badge = ""
-        else:
-            badge = result
+    for section in sections:
+        badge = ""
+        if section.status_badge is not None and settings is not None:
+            try:
+                badge = section.status_badge(settings)
+            except Exception as e:
+                # Сбой одной секции не должен ронять весь экран — она просто
+                # остаётся без бейджа.
+                logger.error(f"Не удалось получить бейдж секции {section.key}: {e}")
         builder.add(
             InlineKeyboardButton(
                 text=f"{section.title}{f': {badge}' if badge else ''}",
@@ -115,6 +139,8 @@ async def build_hub(
         )
 
     title = HUB_TITLE
+    if settings is None:
+        title += HUB_STALE_NOTE
     if token_state is False:
         # Отложенный импорт: разрывает цикл menu -> users -> base -> menu.
         from features.users.enums import SettingsButtonTexts, SettingsCallbackData

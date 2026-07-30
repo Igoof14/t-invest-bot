@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from aiogram.types import InlineKeyboardMarkup
-from core.clients.backend.notifications import FnsAlertSettings
+from core.clients.backend.notifications import FnsAlertSettings, NotificationSettings
 from features.menu import STALE_NOTE, MenuSection, back_to_hub_button, help_button, status_text
 
 from .enums import FNS_ALERTS_DESCRIPTION, FNS_ALERTS_HELP
@@ -31,10 +31,9 @@ async def render(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
     return build_text(settings), builder.as_markup()
 
 
-async def status_badge(telegram_id: int) -> str:
+def status_badge(settings: NotificationSettings) -> str:
     """Бейдж для хаба: включено, если пользователь подписан."""
-    enabled = await FnsAlertSettingsRepository.is_enabled(telegram_id)
-    return status_text(enabled)
+    return status_text(settings.fns_enabled)
 
 
 SECTION = MenuSection(

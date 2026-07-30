@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
-from core.clients.backend.notifications import DisclosureAlertSettings
+from core.clients.backend.notifications import DisclosureAlertSettings, NotificationSettings
 from features.disclosure import menu
 
 
@@ -19,14 +19,14 @@ def _patch(monkeypatch: pytest.MonkeyPatch, settings: DisclosureAlertSettings) -
     )
 
 
-async def test_status_badge_reflects_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
-    _patch(monkeypatch, _settings(enabled=True))
-    assert await menu.status_badge(111) == "Включено 🔔"
+def test_status_badge_reflects_enabled() -> None:
+    hub = NotificationSettings(disclosure=_settings(enabled=True))
+    assert menu.status_badge(hub) == "Включено 🔔"
 
 
-async def test_status_badge_when_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
-    _patch(monkeypatch, _settings(enabled=False))
-    assert await menu.status_badge(111) == "Выключено 🔕"
+def test_status_badge_when_disabled() -> None:
+    hub = NotificationSettings(disclosure=_settings(enabled=False))
+    assert menu.status_badge(hub) == "Выключено 🔕"
 
 
 async def test_render_marks_current_level(monkeypatch: pytest.MonkeyPatch) -> None:

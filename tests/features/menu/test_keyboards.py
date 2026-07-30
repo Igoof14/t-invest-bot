@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-import asyncio
-import time
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from aiogram.types import InlineKeyboardMarkup
+from core.clients.backend.errors import BackendError
+from core.clients.backend.notifications import NotificationSettings
 from features.menu.callbacks import MenuCallback
 from features.menu.keyboards import (
     HUB_KEY,
+    HUB_STALE_NOTE,
     MARKET_MODE_NOTE,
     back_to_hub_button,
     build_help,
@@ -32,12 +33,20 @@ def user_with_token(monkeypatch):
     return get_token
 
 
+@pytest.fixture(autouse=True)
+def settings(monkeypatch):
+    """Настройки уведомлений — единственный источник бейджей хаба."""
+    get_settings = AsyncMock(return_value=NotificationSettings())
+    monkeypatch.setattr("features.menu.keyboards.notifications_api.get_settings", get_settings)
+    return get_settings
+
+
 def _section(key: str, *, badge: str | None = None) -> MenuSection:
     return MenuSection(
         key=key,
         title=key.title(),
         render=AsyncMock(return_value=("t", InlineKeyboardMarkup(inline_keyboard=[]))),
-        status_badge=AsyncMock(return_value=badge) if badge is not None else None,
+        status_badge=Mock(return_value=badge) if badge is not None else None,
     )
 
 
@@ -51,28 +60,13 @@ async def test_build_hub_lists_sections_with_badges() -> None:
     assert any("Price" in t and "выключено" in t for t in texts)
 
 
-async def test_build_hub_queries_badges_in_parallel() -> None:
-    """Бейджи не должны выстраиваться в очередь: суммарное время ≈ времени одного."""
+async def test_build_hub_reads_settings_once_for_all_sections(settings) -> None:
+    """Настройки читаются одним запросом: эндпоинт отдаёт все секции сразу."""
+    sections = [_section(f"s{i}", badge="включено") for i in range(4)]
 
-    async def slow_badge(_telegram_id: int) -> str:
-        await asyncio.sleep(0.05)
-        return "включено"
-
-    sections = [
-        MenuSection(
-            key=f"s{i}",
-            title=f"S{i}",
-            render=AsyncMock(return_value=("t", InlineKeyboardMarkup(inline_keyboard=[]))),
-            status_badge=slow_badge,
-        )
-        for i in range(4)
-    ]
-
-    started = time.perf_counter()
     _text, markup = await build_hub(111, sections)
-    elapsed = time.perf_counter() - started
 
-    assert elapsed < 0.15, f"бейджи запрашиваются последовательно: {elapsed:.3f}s"
+    settings.assert_awaited_once_with(111)
     assert len([btn for row in markup.inline_keyboard for btn in row]) == 4
 
 
@@ -84,7 +78,7 @@ async def test_build_hub_survives_failing_badge() -> None:
             key="broken",
             title="Broken",
             render=AsyncMock(return_value=("t", InlineKeyboardMarkup(inline_keyboard=[]))),
-            status_badge=AsyncMock(side_effect=RuntimeError("боль")),
+            status_badge=Mock(side_effect=RuntimeError("боль")),
         ),
     ]
 
@@ -92,6 +86,18 @@ async def test_build_hub_survives_failing_badge() -> None:
     texts = [btn.text for row in markup.inline_keyboard for btn in row]
 
     assert texts == ["Ok: включено", "Broken"]
+
+
+async def test_build_hub_hides_badges_when_settings_unavailable(settings) -> None:
+    """Без настроек бейджей нет ни у кого — «Выключено 🔕» было бы враньём."""
+    settings.side_effect = BackendError("бэкенд лёг")
+    sections = [_section("ok", badge="включено"), _section("more", badge="выключено")]
+
+    text, markup = await build_hub(111, sections)
+    texts = [btn.text for row in markup.inline_keyboard for btn in row]
+
+    assert texts == ["Ok", "More"]
+    assert HUB_STALE_NOTE in text
 
 
 async def test_build_hub_without_badge() -> None:
