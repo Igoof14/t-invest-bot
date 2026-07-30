@@ -1,4 +1,4 @@
-"""Обработчик для настроект."""
+"""Хендлеры раздела «Настройки»: подключение, замена и удаление токена."""
 
 import asyncio
 import logging
@@ -8,18 +8,25 @@ from aiogram.exceptions import TelegramAPIError
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
-from common.utils.bot_utils import pluralize_bonds
+from common.token_gate import has_token
+from common.utils.bot_utils import pluralize_bonds, safe_delete, safe_edit_text
+from core.clients.backend.errors import BackendError, UserNotFound
 from core.clients.bonds_sync.client import sync_user_bonds
-from core.clients.t_invest.common_func import check_token
+from core.clients.t_invest.common_func import TokenCheck, check_token
 from features.analytics import EventName, track
-from features.base.keyboards import create_main_keyboard, create_new_user_keyboard
+from features.base.keyboards import create_main_keyboard
 from features.users.repository import BotUserRepository
 
 from .enums import SettingsCallbackData
+from .keyboards import (
+    create_delete_confirm_keyboard,
+    create_settings_keyboard,
+    create_token_input_keyboard,
+    settings_text,
+)
 
 logger = logging.getLogger(__name__)
 router = Router()
-waiting_for_token: set[int] = set()
 
 # Удержание фоновых задач синхронизации облигаций от сборки GC до завершения.
 _SYNC_TASKS: set[asyncio.Task[None]] = set()
@@ -78,22 +85,15 @@ def _schedule_bonds_sync(message: Message, telegram_id: int) -> None:
 
 
 class TokenStates(StatesGroup):
-    """Режим ожидания токена для добавления или удаления."""
+    """Режим ожидания токена."""
 
     waiting_for_token = State()
-    waiting_for_delete_confirmation = State()
-
-
-callback_values = {
-    SettingsCallbackData.ADD_TOKEN.value,
-    SettingsCallbackData.RM_TOKEN.value,
-}
 
 
 async def prompt_for_token(message: Message, state: FSMContext, *, entry: str = "settings") -> None:
     """Показывает экран ввода токена и переводит FSM в ожидание токена.
 
-    Общий шаг для кнопки «Добавить токен» в настройках и финального CTA
+    Общий шаг для кнопки подключения токена в настройках и финального CTA
     онбординг-воронки.
 
     Args:
@@ -104,92 +104,161 @@ async def prompt_for_token(message: Message, state: FSMContext, *, entry: str = 
 
     """
     await message.answer(
-        "*Токен доступа*\n\n"
-        "Отправьте ваш *Read-only* токен сообщением.\n\n"
-        "*Read-only* — токен с правом только на чтение данных. "
+        "<b>Токен доступа</b>\n\n"
+        "Отправьте ваш <b>Read-only</b> токен сообщением.\n\n"
+        "<b>Read-only</b> — токен с правом только на чтение данных. "
         "Он не даёт возможности совершать сделки или переводить средства, "
         "поэтому безопасен для использования в боте.\n\n"
-        "[Как получить токен](https://developer.tbank.ru/invest/intro/intro/token)",
-        parse_mode="Markdown",
+        '<a href="https://developer.tbank.ru/invest/intro/intro/token">Как получить токен</a>',
+        parse_mode="HTML",
         disable_web_page_preview=True,
+        reply_markup=create_token_input_keyboard().as_markup(),
     )
     await state.set_state(TokenStates.waiting_for_token)
     await track(EventName.TOKEN_PROMPT_SHOWN, telegram_id=message.chat.id, entry=entry)
 
 
-@router.callback_query(F.data.in_(callback_values))
-async def handle_settings(callback: CallbackQuery, state: FSMContext) -> None:
-    """Обработчик для настроект."""
+@router.callback_query(F.data == SettingsCallbackData.ADD_TOKEN.value)
+async def handle_add_token(callback: CallbackQuery, state: FSMContext) -> None:
+    """Открывает экран ввода токена."""
+    if isinstance(callback.message, Message):
+        await prompt_for_token(callback.message, state)
+    await callback.answer()
+
+
+@router.callback_query(F.data == SettingsCallbackData.TOKEN_INPUT_CANCEL.value)
+async def handle_token_input_cancel(callback: CallbackQuery, state: FSMContext) -> None:
+    """Выход из ожидания токена: без него состояние было бы некуда деть."""
+    await state.clear()
+    if isinstance(callback.message, Message):
+        await safe_edit_text(callback.message, "Подключение токена отменено.", reply_markup=None)
+    await callback.answer()
+
+
+@router.callback_query(F.data == SettingsCallbackData.RM_TOKEN.value)
+async def handle_rm_token(callback: CallbackQuery) -> None:
+    """Спрашивает подтверждение удаления — но только если удалять есть что.
+
+    Кнопка удаления рисуется лишь при подключённом токене, однако сообщение
+    могло устареть: пользователь мог удалить токен из другого экрана. Поэтому
+    состояние перепроверяется здесь, а не только при отрисовке клавиатуры.
+    """
+    telegram_id = callback.from_user.id
+    if not isinstance(callback.message, Message):
+        await callback.answer()
+        return
+
+    if not await has_token(telegram_id):
+        await safe_edit_text(
+            callback.message,
+            settings_text(False),
+            reply_markup=create_settings_keyboard(False).as_markup(),
+        )
+        await callback.answer("Токен не подключён — удалять нечего")
+        return
+
+    await safe_edit_text(
+        callback.message,
+        "<b>Удалить токен?</b>\n\n"
+        "Портфельные разделы («Купоны», «Погашения», «Оферты») перестанут "
+        "работать, а уведомления начнут приходить по всему рынку.",
+        reply_markup=create_delete_confirm_keyboard().as_markup(),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == SettingsCallbackData.RM_TOKEN_CANCEL.value)
+async def handle_rm_token_cancel(callback: CallbackQuery) -> None:
+    """Возвращает с подтверждения удаления на экран настроек."""
+    if isinstance(callback.message, Message):
+        token_connected = await has_token(callback.from_user.id)
+        await safe_edit_text(
+            callback.message,
+            settings_text(token_connected),
+            reply_markup=create_settings_keyboard(token_connected).as_markup(),
+        )
+    await callback.answer("Удаление отменено")
+
+
+@router.callback_query(F.data == SettingsCallbackData.RM_TOKEN_CONFIRM.value)
+async def handle_rm_token_confirm(callback: CallbackQuery) -> None:
+    """Удаляет токен и честно сообщает, чем закончилась попытка."""
+    telegram_id = callback.from_user.id
+
     try:
-        if callback.data == SettingsCallbackData.ADD_TOKEN.value:
-            if isinstance(callback.message, Message):
-                await prompt_for_token(callback.message, state)
-            await callback.answer()
+        await BotUserRepository.remove_token(telegram_id, raise_on_error=True)
+    except UserNotFound:
+        result, notice = "not_found", "Токен и так не был подключён."
+    except BackendError as e:
+        logger.error(f"Не удалось удалить токен пользователя {telegram_id}: {e}")
+        result, notice = "error", "Не удалось удалить токен, попробуйте позже."
+    else:
+        result, notice = "ok", "Токен удалён."
 
-        elif callback.data == SettingsCallbackData.RM_TOKEN.value:
-            if callback.message:
-                await callback.message.answer(
-                    "Для удаления напиши 'удалить' без кавычек.", parse_mode="HTML"
-                )
-                await state.set_state(TokenStates.waiting_for_delete_confirmation)
-            await callback.answer()
+    await track(EventName.TOKEN_REMOVED, telegram_id=telegram_id, result=result)
 
-    except Exception as e:
-        logger.error(f"Ошибка при обработке запроса: {e}")
-
-        await callback.answer("Произошла ошибка при обработке запроса")
+    if isinstance(callback.message, Message):
+        # Статус перечитываем, а не выводим из результата: при ошибке бэкенда
+        # токен мог остаться на месте, и экран не должен утверждать обратное.
+        token_connected = await has_token(telegram_id)
+        await safe_edit_text(
+            callback.message,
+            f"{notice}\n\n{settings_text(token_connected)}",
+            reply_markup=create_settings_keyboard(token_connected).as_markup(),
+        )
+    await callback.answer(notice)
 
 
 @router.message(TokenStates.waiting_for_token)
 async def handle_token_message(message: Message, state: FSMContext) -> None:
-    """Обработчик для токена."""
+    """Проверяет и сохраняет присланный токен."""
     telegram_id = message.chat.id
     if not message.text:
         await message.answer("Отправьте токен текстовым сообщением")
         return
+
     token = message.text.strip()
     logger.info(f"Получен токен от пользователя {telegram_id}")
-    is_valid = await check_token(token)
-    await track(EventName.TOKEN_SUBMITTED, telegram_id=telegram_id, valid=is_valid)
-    if is_valid:
-        logger.info(f"Токен пользователя {telegram_id} валиден")
-        success = await BotUserRepository.add_token(telegram_id=telegram_id, token=token)
-        if success:
-            await track(EventName.TOKEN_CONNECTED, telegram_id=telegram_id)
-            main_keyboard = create_main_keyboard()
-            await message.answer(
-                "Токен успешно сохранён! Синхронизирую список облигаций...",
-                reply_markup=main_keyboard,
-            )
-            _schedule_bonds_sync(message, telegram_id)
-            await state.clear()
-        else:
-            logger.warning(f"Не удалось сохранить токен для {telegram_id}")
-            await message.answer("Ошибка сохранения токена. Попробуйте /start и повторите попытку.")
-            await state.clear()
-    else:
-        logger.warning(f"Токен пользователя {telegram_id} невалиден")
-        await message.answer("Некорректный токен! Попробуйте ещё раз")
+    # Токен в открытом виде не должен оставаться в истории чата.
+    await safe_delete(message)
 
+    check = await check_token(token)
+    await track(
+        EventName.TOKEN_SUBMITTED,
+        telegram_id=telegram_id,
+        valid=check is TokenCheck.VALID,
+        result=check.value,
+    )
 
-@router.message(TokenStates.waiting_for_delete_confirmation)
-async def handle_delete_confirmation(message: Message, state: FSMContext) -> None:
-    """Обработчик подтверждения удаления токена."""
-    telegram_id = message.chat.id
-    if not message.text:
-        await message.answer("Удаление отменено.")
-        await state.clear()
+    if check is TokenCheck.UNAVAILABLE:
+        await message.answer(
+            "Не удалось проверить токен — сервис T-Invest не ответил. "
+            "Попробуйте отправить его ещё раз через пару минут.",
+            reply_markup=create_token_input_keyboard().as_markup(),
+        )
         return
-    text = message.text.strip().lower()
-    if text == "удалить":
-        success = await BotUserRepository.remove_token(telegram_id=telegram_id)
-        if success:
-            await track(EventName.TOKEN_REMOVED, telegram_id=telegram_id)
-            new_user_keyboard = create_new_user_keyboard()
-            await message.answer("Токен успешно удалён!", reply_markup=new_user_keyboard)
-        else:
-            await message.answer("Ошибка при удалении токена.")
-        await state.clear()
-    else:
-        await message.answer("Удаление отменено.")
-        await state.clear()
+
+    if check is TokenCheck.INVALID:
+        logger.warning(f"Токен пользователя {telegram_id} невалиден")
+        await message.answer(
+            "Некорректный токен! Проверьте, что скопировали его целиком, и отправьте ещё раз.",
+            reply_markup=create_token_input_keyboard().as_markup(),
+        )
+        return
+
+    logger.info(f"Токен пользователя {telegram_id} валиден")
+    if not await BotUserRepository.add_token(telegram_id=telegram_id, token=token):
+        logger.warning(f"Не удалось сохранить токен для {telegram_id}")
+        await message.answer(
+            "Не удалось сохранить токен, попробуйте отправить его ещё раз.",
+            reply_markup=create_token_input_keyboard().as_markup(),
+        )
+        return
+
+    await track(EventName.TOKEN_CONNECTED, telegram_id=telegram_id)
+    await state.clear()
+    await message.answer(
+        "Токен успешно сохранён! Синхронизирую список облигаций...",
+        reply_markup=create_main_keyboard(),
+    )
+    _schedule_bonds_sync(message, telegram_id)

@@ -47,4 +47,4 @@ class DisclosureAlertSettingsRepository:
             return (await api.get_settings(telegram_id)).disclosure
         except BackendError as e:
             logger.error(f"Ошибка при получении настроек раскрытий {telegram_id}: {e}")
-            return DisclosureAlertSettings()
+            return DisclosureAlertSettings(stale=True)

@@ -18,20 +18,32 @@ _DEFAULT_NOTIFICATION_TIME = time(10, 0)
 
 
 @dataclass
-class OfferAlertSettings:
-    """Настройки напоминаний об оферте."""
+class SectionSettings:
+    """Общая часть настроек любой секции.
+
+    ``stale`` поднимается, когда бэкенд не ответил и вместо реальных настроек
+    отдаются дефолты. Без этого признака экран уверенно показывал «Выключено 🔕»
+    подписанному пользователю — то есть врал ровно в тот момент, когда меньше
+    всего мог это проверить.
+    """
 
     alerts_enabled: bool = False
+    stale: bool = False
+
+
+@dataclass
+class OfferAlertSettings(SectionSettings):
+    """Настройки напоминаний об оферте."""
+
     first_alert: int = 14
     second_alert: int = 5
     notification_time: time = _DEFAULT_NOTIFICATION_TIME
 
 
 @dataclass
-class PriceAlertSettings:
+class PriceAlertSettings(SectionSettings):
     """Пороги уведомлений об изменении цены, в процентах."""
 
-    alerts_enabled: bool = False
     # Дублируют дефолты колонок в bondelo-backend (notifications.models) —
     # используются, только если бэкенд не прислал поле.
     drop_warning_threshold: float = 4.0
@@ -41,12 +53,24 @@ class PriceAlertSettings:
 
 
 @dataclass
-class DisclosureAlertSettings:
+class DisclosureAlertSettings(SectionSettings):
     """Подписка на раскрытия эмитентов и минимальный уровень риска."""
 
-    alerts_enabled: bool = False
     # "low" — нижняя граница шкалы, то есть «все события».
     min_risk_level: str = "low"
+
+
+@dataclass
+class FnsAlertSettings(SectionSettings):
+    """Подписка на уведомления о блокировках счетов ФНС."""
+
+
+@dataclass
+class RatingAlertSettings:
+    """Подписки на рейтинговые агентства."""
+
+    enabled_agencies: frozenset[str] = frozenset()
+    stale: bool = False
 
 
 @dataclass
@@ -181,6 +205,4 @@ async def update_disclosure(telegram_id: int, **fields: Any) -> DisclosureAlertS
         BackendError: Ошибка конфигурации, авторизации или запроса.
 
     """
-    return _disclosure(
-        await request("PATCH", _path(telegram_id, "/disclosure"), json=dict(fields))
-    )
+    return _disclosure(await request("PATCH", _path(telegram_id, "/disclosure"), json=dict(fields)))

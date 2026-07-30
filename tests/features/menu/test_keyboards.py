@@ -109,7 +109,7 @@ async def test_build_hub_upsells_token_when_absent(user_with_token) -> None:
     texts = [btn.text for row in markup.inline_keyboard for btn in row]
 
     assert MARKET_MODE_NOTE in text
-    assert texts == ["Plain", "Добавить токен"]
+    assert texts == ["Plain", "Подключить токен"]
 
 
 async def test_build_hub_hides_upsell_when_backend_fails(user_with_token) -> None:

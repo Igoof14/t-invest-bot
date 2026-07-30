@@ -18,6 +18,7 @@ def _settings(enabled: bool) -> SimpleNamespace:
         first_alert=14,
         second_alert=5,
         notification_time=time(10, 0),
+        stale=False,
     )
 
 

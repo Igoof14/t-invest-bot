@@ -18,6 +18,7 @@ def _settings(enabled: bool) -> SimpleNamespace:
         drop_critical_threshold=5.0,
         rise_warning_threshold=3.0,
         rise_critical_threshold=7.0,
+        stale=False,
     )
 
 

@@ -1,11 +1,14 @@
 import logging
 
 from aiogram import Bot, F, Router
+from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
+from common.utils.bot_utils import safe_delete, safe_edit_text
 from features.analytics import EventName, track
+from features.menu import status_text
 
 from .enums import PriceAlertCallbackData
 from .keyboards import create_thresholds_keyboard
@@ -31,7 +34,7 @@ async def handle_price_alerts_menu(callback: CallbackQuery) -> None:
     try:
         text, markup = await render(callback.from_user.id)
         if callback.message and isinstance(callback.message, Message):
-            await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+            await safe_edit_text(callback.message, text, reply_markup=markup)
         await callback.answer()
 
     except Exception as e:
@@ -55,9 +58,9 @@ async def handle_toggle_alerts(callback: CallbackQuery) -> None:
 
         text, markup = await render(telegram_id)
         if callback.message and isinstance(callback.message, Message):
-            await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+            await safe_edit_text(callback.message, text, reply_markup=markup)
 
-        await callback.answer("Уведомления " + ("включены" if new_state else "выключены"))
+        await callback.answer("Мониторинг цен: " + status_text(new_state))
 
     except Exception as e:
         logger.error(f"Ошибка при переключении уведомлений: {e}")
@@ -92,11 +95,7 @@ async def handle_thresholds_menu(callback: CallbackQuery) -> None:
         builder = create_thresholds_keyboard()
 
         if callback.message and isinstance(callback.message, Message):
-            await callback.message.edit_text(
-                message_text,
-                reply_markup=builder.as_markup(),
-                parse_mode="HTML",
-            )
+            await safe_edit_text(callback.message, message_text, reply_markup=builder.as_markup())
         await callback.answer()
 
     except Exception as e:
@@ -140,9 +139,8 @@ async def handle_threshold_select(callback: CallbackQuery, state: FSMContext) ->
             PriceAlertCallbackData.PRICE_ALERTS_RISE_CRITICAL.value: ThresholdStates.waiting_for_rise_critical,
         }
 
-        if threshold_type is not None:
-            prompt = prompts.get(threshold_type)
-            new_state = states.get(threshold_type)
+        prompt = prompts.get(threshold_type) if threshold_type else None
+        new_state = states.get(threshold_type) if threshold_type else None
 
         if prompt and new_state:
             if callback.message:
@@ -157,6 +155,37 @@ async def handle_threshold_select(callback: CallbackQuery, state: FSMContext) ->
     except Exception as e:
         logger.error(f"Ошибка при выборе порога: {e}")
         await callback.answer("Произошла ошибка")
+
+
+# Порог «умеренного» движения обязан быть строго ниже «сильного»: иначе сильное
+# движение никогда не сработает, а экран покажет пару вроде «Умеренное 10% /
+# Сильное 2%», которая ничего не значит.
+_THRESHOLD_PAIRS = {
+    "drop_warning_threshold": ("drop_critical_threshold", "ниже", "порога сильного падения"),
+    "drop_critical_threshold": ("drop_warning_threshold", "выше", "порога умеренного падения"),
+    "rise_warning_threshold": ("rise_critical_threshold", "ниже", "порога сильного роста"),
+    "rise_critical_threshold": ("rise_warning_threshold", "выше", "порога умеренного роста"),
+}
+
+
+async def _threshold_conflict(telegram_id: int, field: str, value: float) -> str | None:
+    """Возвращает текст ошибки, если новое значение ломает пару порогов.
+
+    Args:
+        telegram_id: Чьи текущие пороги проверять.
+        field: Имя изменяемого поля настроек.
+        value: Новое значение в процентах.
+
+    Returns:
+        Сообщение для пользователя или ``None``, если конфликта нет.
+
+    """
+    other_field, direction, other_title = _THRESHOLD_PAIRS[field]
+    other_value = getattr(await AlertSettingsRepository.get(telegram_id), other_field)
+    ok = value < other_value if direction == "ниже" else value > other_value
+    if ok:
+        return None
+    return f"Значение должно быть {direction} {other_title} ({other_value}%). Введите другое число."
 
 
 @router.message(
@@ -198,7 +227,17 @@ async def handle_threshold_input(message: Message, state: FSMContext) -> None:
 
         field = field_map.get(current_state)
         if field:
-            await AlertSettingsRepository.update(telegram_id, **{field: value})
+            conflict = await _threshold_conflict(telegram_id, field, value)
+            if conflict:
+                await message.answer(conflict)
+                return
+
+            if not await AlertSettingsRepository.update(telegram_id, **{field: value}):
+                # Состояние оставляем: ввод можно повторить, не проходя меню заново.
+                await message.answer(
+                    "Не удалось сохранить порог, попробуйте отправить значение ещё раз."
+                )
+                return
             await track(
                 EventName.ALERT_SETTING_CHANGED,
                 telegram_id=telegram_id,
@@ -211,20 +250,15 @@ async def handle_threshold_input(message: Message, state: FSMContext) -> None:
             state_data = await state.get_data()
             prompt_message_id = state_data.get("prompt_message_id")
 
-            if prompt_message_id:
-                from aiogram.exceptions import TelegramBadRequest
-
+            if prompt_message_id and isinstance(message.bot, Bot):
                 try:
-                    if isinstance(message.bot, Bot):
-                        await message.bot.delete_message(
-                            chat_id=message.chat.id, message_id=prompt_message_id
-                        )
-                    else:
-                        logger.warning("bot is not an instance of Bot, skipping delete_message")
-                except TelegramBadRequest as e:
-                    logger.error(f"Неожиданная ошибка при удалении: {e}")
+                    await message.bot.delete_message(
+                        chat_id=message.chat.id, message_id=prompt_message_id
+                    )
+                except TelegramAPIError as e:
+                    logger.info(f"Не удалось удалить приглашение к вводу порога: {e}")
 
-            await message.delete()
+            await safe_delete(message)
 
             await message.answer(f"Порог успешно изменён на {value}%")
             await state.clear()

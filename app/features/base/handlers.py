@@ -5,8 +5,10 @@ from datetime import date
 
 from aiogram import F, Router
 from aiogram.filters import Command, CommandObject
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from common.token_gate import TOKEN_REQUIRED, has_token
+from common.utils.bot_utils import safe_delete
 from core.clients.backend import (
     BackendError,
     MaturityItem,
@@ -21,7 +23,7 @@ from features.analytics import EventName, sanitize_source, track_bg
 from features.coupons.keyboards import create_coupons_keyboard
 from features.menu import render_hub
 from features.onboarding import start_onboarding
-from features.users.keyboards import create_settings_keyboard
+from features.users.keyboards import create_settings_keyboard, settings_text
 from features.users.repository import BotUserRepository
 
 from .keyboards import create_main_keyboard, create_new_user_keyboard
@@ -29,6 +31,10 @@ from .keyboards import create_main_keyboard, create_new_user_keyboard
 logger = logging.getLogger(__name__)
 
 router: Router = Router()
+
+# Роутер-заглушка для неразобранных сообщений. Подключается последним, после
+# всех фичевых роутеров, иначе перехватывал бы их команды и FSM-ввод.
+fallback_router: Router = Router()
 
 
 _CURRENCY_SIGNS = {"SUR": "₽", "RUB": "₽", "USD": "$", "EUR": "€"}
@@ -183,13 +189,33 @@ async def start_handler(message: Message, command: CommandObject) -> None:
         await message.answer("Произошла ошибка при запуске")
 
 
+@router.message(Command("cancel"))
+async def cancel_handler(message: Message, state: FSMContext) -> None:
+    """Выход из любого пошагового ввода.
+
+    Единственная команда, которая гарантированно возвращает пользователя в
+    исходное состояние из любого экрана — ввода токена, порога, времени
+    напоминания или рассылки.
+    """
+    had_state = await state.get_state() is not None
+    await state.clear()
+    await message.answer(
+        "Отменено." if had_state else "Нечего отменять.",
+        reply_markup=create_main_keyboard(),
+    )
+
+
 @router.message(F.text == MainKeyboardButtonTexts.NOTIFICATIONS.value)
 async def handle_notifications_button(message: Message) -> None:
     """Открывает инлайн-хаб «Уведомления»."""
-    telegram_id = _user_id(message)
-    text, markup = await render_hub(telegram_id)
-    await message.answer(text, reply_markup=markup, parse_mode="HTML")
-    await message.delete()
+    try:
+        telegram_id = _user_id(message)
+        text, markup = await render_hub(telegram_id)
+        await safe_delete(message)
+        await message.answer(text, reply_markup=markup, parse_mode="HTML")
+    except Exception as e:
+        logger.error(f"Ошибка при открытии хаба уведомлений: {e}")
+        await message.answer("Произошла ошибка")
 
 
 @router.message(F.text == MainKeyboardButtonTexts.COUPONS.value)
@@ -209,7 +235,7 @@ async def handle_coupons_button(message: Message) -> None:
 async def handle_help_button(message: Message) -> None:
     """Обработка кнопки 'Помощь'."""
     try:
-        await message.delete()
+        await safe_delete(message)
         await message.answer(Messages.HELP_TEXT.value)
     except Exception as e:
         logger.error(f"Ошибка при обработке кнопки помощи: {e}")
@@ -220,9 +246,13 @@ async def handle_help_button(message: Message) -> None:
 async def handle_settings_button(message: Message) -> None:
     """Обработка кнопки 'Настройки'."""
     try:
-        build = create_settings_keyboard()
-        await message.delete()
-        await message.answer("Настройки", reply_markup=build.as_markup())
+        await safe_delete(message)
+        token_connected = await has_token(_user_id(message))
+        await message.answer(
+            settings_text(token_connected),
+            reply_markup=create_settings_keyboard(token_connected).as_markup(),
+            parse_mode="HTML",
+        )
     except Exception as e:
         logger.error(f"Ошибка при обработке кнопки 'Настройки': {e}")
         await message.answer("Произошла ошибка")
@@ -245,7 +275,7 @@ async def handle_maturities_button(message: Message) -> None:
         response = (
             Messages.MATURITIES_TITLE.value + _format_maturities(maturities)
             if maturities
-            else Messages.NO_BONDS.value
+            else Messages.NO_MATURITIES.value
         )
     except UserNotFound:
         # Бэкенд не знает пользователя — портфель ещё не синхронизирован.
@@ -321,8 +351,33 @@ async def handle_offers_button(message: Message) -> None:
 @router.message(F.text == MainKeyboardButtonTexts.PRICE.value)
 async def handle_price_button(message: Message) -> None:
     """Обработка кнопки 'Цена'."""
-    await message.delete()
+    try:
+        await safe_delete(message)
+        await message.answer(
+            text=(
+                "<b>Цена</b>\n\n<b>БЕСПЛАТНО</b>.\n\n"
+                "Бот в активной разработке — присоединяйтесь к обсуждению "
+                "в @bondelo_chat."
+            ),
+            parse_mode="HTML",
+        )
+    except Exception as e:
+        logger.error(f"Ошибка при обработке кнопки 'Цена': {e}")
+        await message.answer("Произошла ошибка")
+
+
+@fallback_router.message()
+async def handle_unknown_message(message: Message) -> None:
+    """Отвечает на сообщение, которое не разобрал ни один хендлер.
+
+    Живёт в отдельном роутере, который подключается последним (``app/bot.py``):
+    в ``base.router`` он перехватывал бы и команды, и ввод внутри FSM-состояний
+    других фич, потому что aiogram останавливается на первом подошедшем роутере.
+
+    Молчание в ответ на произвольный текст выглядело как поломка бота, а
+    аналитика видела только ``matched=False`` без единого ответа пользователю.
+    """
     await message.answer(
-        text="<b>Цена</b>\n\n<b>БЕСПЛАТНО</b>.\n\nПрими участие в развитие — @bondelo_chat.",
-        parse_mode="HTML",
+        "Не понимаю. Выберите раздел на клавиатуре ниже или отправьте /start.",
+        reply_markup=create_main_keyboard(),
     )

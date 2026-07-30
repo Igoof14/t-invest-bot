@@ -17,7 +17,6 @@ class PriceAlertCallbackData(Enum):
 class PriceAlertButtonTexts(Enum):
     """Тексты для инлайн-кнопок при настройке уведомлений о ценах."""
 
-    PRICE_ALERTS = "Уведомления о ценах"
     ALERTS_ENABLED = "Цены: Включено 🔔"
     ALERTS_DISABLED = "Цены: Выключено 🔕"
     ALERTS_SETTINGS = "Настроить пороги"

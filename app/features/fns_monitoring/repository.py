@@ -11,6 +11,7 @@ import logging
 
 from core.clients.backend import notifications as api
 from core.clients.backend.errors import BackendError
+from core.clients.backend.notifications import FnsAlertSettings
 
 logger = logging.getLogger(__name__)
 
@@ -30,10 +31,16 @@ class FnsAlertSettingsRepository:
         return await api.toggle(telegram_id, "fns")
 
     @classmethod
-    async def is_enabled(cls, telegram_id: int) -> bool:
-        """Возвращает, подписан ли пользователь на уведомления о блокировках."""
+    async def get(cls, telegram_id: int) -> FnsAlertSettings:
+        """Возвращает подписку; при ошибке бэкенда — дефолт с меткой ``stale``."""
         try:
-            return (await api.get_settings(telegram_id)).fns_enabled
+            enabled = (await api.get_settings(telegram_id)).fns_enabled
         except BackendError as e:
             logger.error(f"Ошибка при получении подписки ФНС {telegram_id}: {e}")
-            return False
+            return FnsAlertSettings(stale=True)
+        return FnsAlertSettings(alerts_enabled=enabled)
+
+    @classmethod
+    async def is_enabled(cls, telegram_id: int) -> bool:
+        """Возвращает, подписан ли пользователь на уведомления о блокировках."""
+        return (await cls.get(telegram_id)).alerts_enabled

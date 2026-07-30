@@ -5,7 +5,7 @@ from __future__ import annotations
 from aiogram.types import InlineKeyboardMarkup
 from common.utils.bot_utils import pluralize_days
 from core.clients.backend.notifications import OfferAlertSettings
-from features.menu import MenuSection, back_to_hub_button, help_button, status_text
+from features.menu import STALE_NOTE, MenuSection, back_to_hub_button, help_button, status_text
 
 from .keyboards import create_offer_alerts_keyboard
 from .repository import OfferSettingsRepository
@@ -40,6 +40,8 @@ def build_text(settings: OfferAlertSettings) -> str:
             f"{pluralize_days(settings.second_alert)}\n"
             f"Время уведомления: {str(settings.notification_time)[:-3]} МСК"
         )
+    if settings.stale:
+        text += STALE_NOTE
     return text
 
 

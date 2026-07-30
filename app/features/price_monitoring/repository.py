@@ -24,7 +24,7 @@ class AlertSettingsRepository:
             return (await api.get_settings(telegram_id)).prices
         except BackendError as e:
             logger.error(f"Ошибка при получении настроек о ценах {telegram_id}: {e}")
-            return PriceAlertSettings()
+            return PriceAlertSettings(stale=True)
 
     @classmethod
     async def update(cls, telegram_id: int, **fields: object) -> bool:

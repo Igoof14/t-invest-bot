@@ -6,6 +6,7 @@ import logging
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
+from common.utils.bot_utils import safe_edit_text
 from features.analytics import EventName, track
 
 from .enums import RISK_CHOICE_TITLES
@@ -19,10 +20,16 @@ router: Router = Router()
 
 
 async def _refresh(callback: CallbackQuery, telegram_id: int) -> None:
-    """Перерисовывает экран секции после изменения настроек."""
+    """Перерисовывает экран секции после изменения настроек.
+
+    Через ``safe_edit_text``: повторный тап по уже выбранному уровню риска даёт
+    тот же текст и ту же клавиатуру, Telegram отвечает «message is not
+    modified», и раньше пользователь видел «Произошла ошибка» на совершенно
+    нормальном действии.
+    """
     text, markup = await render(telegram_id)
     if callback.message and isinstance(callback.message, Message):
-        await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+        await safe_edit_text(callback.message, text, reply_markup=markup)
 
 
 @router.callback_query(DisclosureAlertCallback.filter(F.action == "toggle"))
@@ -48,9 +55,7 @@ async def handle_toggle(callback: CallbackQuery) -> None:
 
 
 @router.callback_query(DisclosureAlertCallback.filter(F.action == "level"))
-async def handle_level(
-    callback: CallbackQuery, callback_data: DisclosureAlertCallback
-) -> None:
+async def handle_level(callback: CallbackQuery, callback_data: DisclosureAlertCallback) -> None:
     """Меняет минимальный уровень риска, при котором приходит уведомление."""
     telegram_id = callback.from_user.id
     level = callback_data.level

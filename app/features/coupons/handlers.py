@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
+from common.token_gate import TOKEN_REQUIRED
+from common.utils.bot_utils import safe_edit_text
 from common.utils.datetime_utils import DateTimeHelper
 from core.clients.t_invest.bonds import get_coupon_payment
 from features.analytics import EventName, track
@@ -106,36 +108,47 @@ async def handle_coupon_request(callback: CallbackQuery) -> None:
             return
         user_id = callback.from_user.id
         coupon_data = await get_coupon_payment(user_id, start_datetime)
+
+        if coupon_data is None:
+            # ``None`` здесь означает ровно одно — токена нет (см. get_coupon_payment).
+            # Раньше это показывалось как «Нет данных о купонах», и пользователь без
+            # токена не понимал, что именно нужно сделать.
+            outcome, message_text = "no_token", TOKEN_REQUIRED
+        elif not coupon_data.total_amount:
+            outcome, message_text = "no_data", title + "Выплат за этот период не было."
+        else:
+            outcome = "ok"
+            message_text = (
+                title
+                + "".join(f"{key}: {value:,.0f} ₽\n" for key, value in coupon_data.accounts.items())
+                + f"\nИтого: {coupon_data.total_amount:,.0f} ₽"
+            )
+
         await track(
             EventName.DATA_SCREEN_VIEWED,
             telegram_id=user_id,
             action=callback.data,
             screen="coupons",
             items=len(coupon_data.accounts) if coupon_data else 0,
-            outcome="ok" if coupon_data else "no_data",
-        )
-        if not coupon_data:
-            await callback.answer("Нет данных о купонах")
-            return
-
-        message_text = (
-            title
-            + "".join(f"{key}: {value:,.0f} ₽\n" for key, value in coupon_data.accounts.items())
-            + f"\nИтого: {coupon_data.total_amount:,.0f} ₽"
+            outcome=outcome,
         )
 
         if callback.message and isinstance(callback.message, Message):
-            keyboard = create_coupons_keyboard()
-
-            await callback.message.edit_text(
+            await safe_edit_text(
+                callback.message,
                 message_text,
-                parse_mode="HTML",
-                reply_markup=keyboard.as_markup(),
+                reply_markup=create_coupons_keyboard().as_markup(),
             )
         await callback.answer()
 
     except Exception as e:
         logger.error(f"Ошибка при получении купонов: {e}")
         if callback.message and isinstance(callback.message, Message):
-            await callback.message.edit_text("Произошла ошибка при получении данных о купонах")
+            # Клавиатуру возвращаем: без неё экран превращался в тупик, из
+            # которого нельзя было даже повторить запрос.
+            await safe_edit_text(
+                callback.message,
+                "Произошла ошибка при получении данных о купонах",
+                reply_markup=create_coupons_keyboard().as_markup(),
+            )
         await callback.answer()

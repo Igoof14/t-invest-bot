@@ -64,8 +64,7 @@ def _format_single(alert: DisclosureAlert) -> str:
 
     if alert.matched_bonds:
         bonds = "\n".join(
-            f"{escape(bond.name)} <code>{escape(bond.isin)}</code>"
-            for bond in alert.matched_bonds
+            f"{escape(bond.name)} <code>{escape(bond.isin)}</code>" for bond in alert.matched_bonds
         )
         lines.append(f"\nЗатронутые выпуски:\n{bonds}")
 

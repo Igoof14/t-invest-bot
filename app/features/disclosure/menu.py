@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from aiogram.types import InlineKeyboardMarkup
 from core.clients.backend.notifications import DisclosureAlertSettings
-from features.menu import MenuSection, back_to_hub_button, help_button, status_text
+from features.menu import STALE_NOTE, MenuSection, back_to_hub_button, help_button, status_text
 
 from .enums import (
     DISCLOSURE_ALERTS_DESCRIPTION,
@@ -29,7 +29,7 @@ def build_text(settings: DisclosureAlertSettings) -> str:
     status = "включено" if settings.alerts_enabled else "выключено"
     text = f"{DISCLOSURE_ALERTS_DESCRIPTION}\n\nСтатус: <b>{status}</b>"
     if not settings.alerts_enabled:
-        return text
+        return text + (STALE_NOTE if settings.stale else "")
 
     level = settings.min_risk_level
     # Шкала принадлежит воркеру и расширяется без миграций, поэтому незнакомый

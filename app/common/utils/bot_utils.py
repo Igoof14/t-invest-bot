@@ -3,7 +3,7 @@
 import logging
 
 from aiogram import Bot
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 from aiogram.types import BotCommand, InlineKeyboardMarkup, Message
 
 logger = logging.getLogger(__name__)
@@ -43,6 +43,29 @@ async def safe_edit_text(
         if _NOT_MODIFIED not in str(e):
             raise
         logger.debug(f"Повторный тап: сообщение {message.message_id} не изменилось")
+        return False
+    return True
+
+
+async def safe_delete(message: Message) -> bool:
+    """Удаляет сообщение, не считая отказ Telegram ошибкой флоу.
+
+    Удалять чужое сообщение можно не всегда: старше 48 часов, нет прав в группе,
+    сообщение уже удалено. Ни один из этих случаев не должен ронять хендлер —
+    удаление здесь всегда косметика (убрать нажатую кнопку меню, стереть
+    отправленный токен из истории).
+
+    Args:
+        message: Сообщение, которое нужно удалить.
+
+    Returns:
+        True, если Telegram действительно удалил сообщение.
+
+    """
+    try:
+        await message.delete()
+    except TelegramAPIError as e:
+        logger.info(f"Не удалось удалить сообщение {message.message_id}: {e}")
         return False
     return True
 
@@ -106,6 +129,7 @@ class BotUtils:
         """
         commands = [
             BotCommand(command="start", description="Запустить бота"),
+            BotCommand(command="cancel", description="Отменить текущий ввод"),
         ]
 
         try:

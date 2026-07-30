@@ -73,12 +73,26 @@ class BotUserRepository:
         return True
 
     @classmethod
-    async def remove_token(cls, telegram_id: int) -> bool:
-        """Удаляет токен пользователя."""
+    async def remove_token(cls, telegram_id: int, *, raise_on_error: bool = False) -> bool:
+        """Удаляет токен пользователя.
+
+        Args:
+            telegram_id: Чей токен удалить.
+            raise_on_error: Пробросить `BackendError` вместо `False`. Нужно там,
+                где пользователю показывают разные сообщения на «токена и не
+                было» (`UserNotFound`) и «бэкенд не ответил» — из одного `False`
+                эти случаи неразличимы.
+
+        Raises:
+            BackendError: Только при ``raise_on_error=True``.
+
+        """
         try:
             await users_api.delete_token(telegram_id)
         except BackendError as e:
             logger.error(f"Ошибка при удалении токена пользователя {telegram_id}: {e}")
+            if raise_on_error:
+                raise
             return False
         return True
 

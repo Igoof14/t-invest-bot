@@ -48,7 +48,7 @@ async def start_broadcast(message: Message, state: FSMContext) -> None:
     await state.set_state(BroadcastStates.waiting_for_message)
     await message.answer(
         "Пришлите сообщение для рассылки (текст, фото — что угодно).\n"
-        "Оно уйдёт пользователям как есть. Для отмены — /start."
+        "Оно уйдёт пользователям как есть. Для отмены — /cancel."
     )
 
 

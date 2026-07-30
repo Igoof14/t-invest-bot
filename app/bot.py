@@ -3,6 +3,7 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiohttp import web
 from api import create_app
+from common.fsm_reset import FsmResetMiddleware
 from common.utils.bot_utils import BotUtils
 from core.config import config
 from core.database import db_manager
@@ -78,6 +79,10 @@ def main() -> None:
     # ровно один раз, включая те, для которых не нашлось хендлера.
     dp.update.outer_middleware(analytics.AnalyticsMiddleware())
 
+    # Уход в главное меню завершает пошаговый ввод. Outer-мидлварь на message:
+    # состояние надо снять до того, как апдейт достанется хендлеру.
+    dp.message.outer_middleware(FsmResetMiddleware())
+
     dp.include_routers(
         base.router,
         broadcast.router,
@@ -90,6 +95,8 @@ def main() -> None:
         fns_monitoring.router,
         disclosure.router,
         menu_feature.router,
+        # Строго последним: отвечает на всё, что не разобрали фичевые роутеры.
+        base.fallback_router,
     )
 
     dp.startup.register(on_startup)

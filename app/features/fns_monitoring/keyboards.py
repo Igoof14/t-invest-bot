@@ -24,10 +24,7 @@ def create_fns_alerts_keyboard(enabled: bool) -> InlineKeyboardBuilder:
             callback_data=FnsAlertCallback(action="toggle").pack(),
         )
     )
-    builder.row(
-        InlineKeyboardButton(
-            text="🔍 Проверить моих эмитентов",
-            callback_data=FnsAlertCallback(action="scan").pack(),
-        )
-    )
+    # Кнопка «🔍 Проверить моих эмитентов» убрана: разовая проверка отключена
+    # (см. handlers.handle_scan), и нажатие приводило к «Модуль в ремонте»
+    # после минуты ожидания. Вернуть вместе с включением сервиса.
     return builder

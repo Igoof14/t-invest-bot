@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from aiogram.types import InlineKeyboardMarkup
 from core.clients.backend.notifications import PriceAlertSettings
-from features.menu import MenuSection, back_to_hub_button, help_button, status_text
+from features.menu import STALE_NOTE, MenuSection, back_to_hub_button, help_button, status_text
 
 from .keyboards import create_price_alerts_keyboard
 from .repository import AlertSettingsRepository
@@ -39,6 +39,8 @@ def build_text(settings: PriceAlertSettings) -> str:
             f"  • Умеренное: {settings.rise_warning_threshold}%\n"
             f"  • Сильное: {settings.rise_critical_threshold}%"
         )
+    if settings.stale:
+        text += STALE_NOTE
     return text
 
 

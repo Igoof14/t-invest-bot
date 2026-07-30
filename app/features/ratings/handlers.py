@@ -6,6 +6,7 @@ import logging
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
+from common.utils.bot_utils import safe_edit_text
 from features.analytics import EventName, track
 
 from .enums import RatingAgency
@@ -42,7 +43,7 @@ async def handle_toggle_agency(callback: CallbackQuery, callback_data: RatingAle
 
         text, markup = await render(telegram_id)
         if callback.message and isinstance(callback.message, Message):
-            await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+            await safe_edit_text(callback.message, text, reply_markup=markup)
 
         await callback.answer(
             f"{agency.display_name}: " + ("Включено 🔔" if new_state else "Выключено 🔕")
