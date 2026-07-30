@@ -73,7 +73,7 @@ def format_offer_alerts(offers: list[BondOffer], scope: AlertScope = AlertScope.
         if offer.offerdateend:
             last_deadline = _fmt_date(offer.offerdateend)
 
-    if last_deadline:
+    if last_deadline and not scope.is_market:
         blocks.append(
             f"\nПодайте поручение брокеру <b>до {last_deadline}</b> — "
             "приём заявок закрывается раньше даты оферты."
