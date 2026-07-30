@@ -323,10 +323,6 @@ async def handle_price_button(message: Message) -> None:
     """Обработка кнопки 'Цена'."""
     await message.delete()
     await message.answer(
-        text="<b>Цена</b>\n\n"
-        "Сейчас бот полностью <b>бесплатный</b>.\n\n"
-        "Он находится в стадии разработки, тестирование текущего функционала "
-        "и внедрении нового.\n\n"
-        "Прими участие в развитие — @bondelo_chat.",
+        text="<b>Цена</b>\n\n<b>БЕСПЛАТНО</b>.\n\nПрими участие в развитие — @bondelo_chat.",
         parse_mode="HTML",
     )
