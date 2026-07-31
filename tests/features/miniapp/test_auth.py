@@ -49,10 +49,22 @@ def test_valid_init_data_returns_user() -> None:
     assert user.username == "ivan"
 
 
-def test_signature_field_excluded_from_check() -> None:
-    """Поле signature Telegram добавляет после хэша и в подпись не входит."""
-    raw = make_init_data(extra={}) + "&signature=abc"
+def test_signature_field_participates_in_check() -> None:
+    """Поле signature входит в строку проверки наравне с остальными.
+
+    Его исключают только при сторонней проверке по Ed25519, без токена бота.
+    Клиенты Telegram присылают signature всегда, так что выбросив его, мы
+    отклоняли бы вообще все настоящие запросы.
+    """
+    raw = make_init_data(extra={"signature": "Ed25519-подпись"})
     assert parse_init_data(raw, BOT_TOKEN).telegram_id == 42
+
+
+def test_field_appended_after_signing_rejected() -> None:
+    """Дописанное к готовой строке поле ломает проверку, а не игнорируется."""
+    raw = make_init_data() + "&is_premium=true"
+    with pytest.raises(InitDataError):
+        parse_init_data(raw, BOT_TOKEN)
 
 
 def test_forged_hash_rejected() -> None:
