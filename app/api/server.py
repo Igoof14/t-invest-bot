@@ -9,7 +9,7 @@ from core.config import config
 from features.disclosure import api as disclosure_api
 from features.fns_monitoring import api as fns_monitoring_api
 from features.miniapp import api as miniapp_api
-from features.miniapp import auth_middleware, create_cors_middleware
+from features.miniapp import auth_middleware, create_cors_middleware, no_store_middleware
 from features.offer_warning import api as offer_warning_api
 from features.price_monitoring import api as price_monitoring_api
 from features.ratings import api as ratings_api
@@ -45,6 +45,7 @@ def create_app(bot: Bot, dp: Dispatcher) -> web.Application:
             # CORS снаружи аутентификации: иначе отказ 401 приходил бы в браузер
             # без заголовков и выглядел бы как поломка сети, а не как отказ.
             create_cors_middleware(config.miniapp_origin),
+            no_store_middleware,
             auth_middleware,
         ]
     )

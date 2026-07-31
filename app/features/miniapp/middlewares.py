@@ -43,6 +43,30 @@ def _dev_user() -> MiniAppUser | None:
 
 
 @web.middleware
+async def no_store_middleware(request: web.Request, handler: _Handler) -> web.StreamResponse:
+    """Запрещает кэширование ответов API.
+
+    Ответы зависят от того, кто спрашивает, и меняются на каждое переключение
+    тумблера. Без явного запрета их складывает у себя любой общий кэш на пути
+    (Firebase Hosting раздаёт мини-апп через CDN) — и в худшем случае отдаёт
+    настройки одного пользователя другому.
+    """
+    if not request.path.startswith(PREFIX):
+        return await handler(request)
+
+    try:
+        response = await handler(request)
+    except web.HTTPException as exc:
+        # Отказы кэшировать тем более нельзя: протухший 404 или 401 переживёт
+        # выкатку исправления и будет выглядеть как «ничего не починилось».
+        exc.headers["Cache-Control"] = "no-store"
+        raise
+
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@web.middleware
 async def auth_middleware(request: web.Request, handler: _Handler) -> web.StreamResponse:
     """Пропускает запрос дальше, только если подпись Telegram сошлась."""
     if not request.path.startswith(PREFIX):

@@ -20,7 +20,7 @@ from core.clients.backend.notifications import (
 from core.clients.backend.users import Registration
 from core.config import config
 from features.miniapp import api as miniapp_api
-from features.miniapp.middlewares import auth_middleware
+from features.miniapp.middlewares import auth_middleware, no_store_middleware
 from pydantic import SecretStr
 
 from .test_auth import BOT_TOKEN, make_init_data
@@ -53,7 +53,7 @@ def bot_token(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest_asyncio.fixture
 async def client() -> AsyncIterator[TestClient]:
     """Клиент к приложению с аутентификацией и роутами мини-аппа."""
-    app = web.Application(middlewares=[auth_middleware])
+    app = web.Application(middlewares=[no_store_middleware, auth_middleware])
     app.add_routes(miniapp_api.routes)
     async with TestClient(TestServer(app)) as client:
         yield client
@@ -283,3 +283,33 @@ async def test_empty_token_rejected(client: TestClient) -> None:
     """Пустой токен не сохраняется."""
     response = await client.put("/miniapp/api/token", headers=auth(), json={"token": ""})
     assert response.status == 400
+
+
+async def test_responses_are_not_cacheable(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ответы API не кэшируются: они зависят от того, кто спрашивает."""
+    monkeypatch.setattr(
+        notifications_api, "get_settings", AsyncMock(return_value=_settings())
+    )
+
+    response = await client.get("/miniapp/api/notifications", headers=auth())
+
+    assert response.headers["Cache-Control"] == "no-store"
+
+
+async def test_rejections_are_not_cacheable(client: TestClient) -> None:
+    """Отказ тоже не кэшируется — иначе он переживёт выкатку исправления."""
+    unauthorized = await client.get("/miniapp/api/notifications")
+    not_found = await client.post(
+        "/miniapp/api/notifications/whatever/toggle", headers=auth()
+    )
+    bad_request = await client.patch(
+        "/miniapp/api/notifications/offers", headers=auth(), json={"first_alert": 0}
+    )
+
+    assert unauthorized.status == 401
+    assert not_found.status == 404
+    assert bad_request.status == 400
+    for response in (unauthorized, not_found, bad_request):
+        assert response.headers["Cache-Control"] == "no-store"

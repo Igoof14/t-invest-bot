@@ -24,7 +24,7 @@ import logging
 from aiohttp import web
 from core.config import config
 from features.miniapp import api as miniapp_api
-from features.miniapp import auth_middleware, create_cors_middleware
+from features.miniapp import auth_middleware, create_cors_middleware, no_store_middleware
 
 logging.basicConfig(level=logging.INFO)
 
@@ -41,7 +41,9 @@ DEFAULT_ORIGIN = "http://localhost:5173"
 def create_app() -> web.Application:
     """Приложение только с роутами мини-аппа."""
     origin = config.miniapp_origin or DEFAULT_ORIGIN
-    app = web.Application(middlewares=[create_cors_middleware(origin), auth_middleware])
+    app = web.Application(
+        middlewares=[create_cors_middleware(origin), no_store_middleware, auth_middleware]
+    )
     app.add_routes(miniapp_api.routes)
     return app
 

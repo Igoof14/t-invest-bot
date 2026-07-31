@@ -8,7 +8,12 @@
 
 from .api import routes
 from .auth import InitDataError, MiniAppUser, parse_init_data
-from .middlewares import auth_middleware, create_cors_middleware, current_user
+from .middlewares import (
+    auth_middleware,
+    create_cors_middleware,
+    current_user,
+    no_store_middleware,
+)
 
 __all__ = [
     "InitDataError",
@@ -16,6 +21,7 @@ __all__ = [
     "auth_middleware",
     "create_cors_middleware",
     "current_user",
+    "no_store_middleware",
     "parse_init_data",
     "routes",
 ]
