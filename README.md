@@ -62,6 +62,9 @@ URL ngrok на free-плане меняется при каждом переза
 | `T_INVEST_TOKEN` | нет | Сервисный T-Invest токен для фоновых задач. |
 | `BONDS_SYNC_URL` | нет | Базовый URL сервиса синхронизации облигаций. |
 | `BACKEND_URL` | да | Базовый URL приватного Cloud Run сервиса `backend` (без пути), например `https://backend-iyvjwivbpq-ey.a.run.app`. Он же audience OIDC id-token'а. Loopback-адрес (`http://127.0.0.1:8000`) отключает OIDC-авторизацию — см. ниже. |
+| `MINIAPP_URL` | нет | Публичный HTTPS-адрес мини-аппа. Пока не задан, кнопки «Открыть приложение» в меню нет. |
+| `MINIAPP_ORIGIN` | нет | Origin, которому разрешён CORS к `/miniapp/api` (например `http://localhost:5173`). Пусто — заголовки CORS не выставляются. |
+| `MINIAPP_DEV_TELEGRAM_ID` | нет | **Только для разработки.** Запрос к `/miniapp/api` без подписи Telegram считается запросом этого пользователя. В проде задавать нельзя — API окажется открыт всем. |
 
 Запросы к облачному `backend` авторизуются OIDC id-token'ом: он берётся у
 metadata server (в Cloud Run) или из application default credentials и
@@ -89,6 +92,32 @@ BACKEND_URL=http://127.0.0.1:8000
 ```
 
 Прод это не затрагивает: URL Cloud Run всегда публичный https-домен.
+
+### Mini App
+
+`app/features/miniapp` — BFF для Telegram Mini App (фронтенд лежит в
+`bondelo-miniapp`). Роуты живут под `/miniapp/api`, каждый запрос обязан нести
+заголовок `Authorization: tma <initData>`: подпись проверяется токеном бота, и
+`telegram_id` берётся только из неё. Бэкенд принимает id прямо в пути и не
+аутентифицирует вызывающего, поэтому напрямую из браузера к нему обращаться
+нельзя.
+
+Для разработки фронтенда полный бот не нужен — он работает по webhook и требует
+туннеля. Достаточно поднять только BFF:
+
+```
+BACKEND_URL=http://127.0.0.1:8000     # loopback: запросы идут без OIDC
+MINIAPP_ORIGIN=http://localhost:5173
+MINIAPP_DEV_TELEGRAM_ID=<ваш telegram id>
+```
+
+```bash
+uv run python app/miniapp_dev.py
+```
+
+Сервер слушает `127.0.0.1:8080` — тот же порт, что и боевой сервис, поэтому
+dev-сервер Vite настраивать не нужно. Без `MINIAPP_DEV_TELEGRAM_ID` запросы без
+подписи Telegram отклоняются с 401.
 
 Без `WEBHOOK_BASE_URL` сервис падает на старте с `RuntimeError` — webhook-режим
 требует публичного URL.

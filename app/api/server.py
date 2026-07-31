@@ -8,6 +8,8 @@ from aiohttp import web
 from core.config import config
 from features.disclosure import api as disclosure_api
 from features.fns_monitoring import api as fns_monitoring_api
+from features.miniapp import api as miniapp_api
+from features.miniapp import auth_middleware, create_cors_middleware
 from features.offer_warning import api as offer_warning_api
 from features.price_monitoring import api as price_monitoring_api
 from features.ratings import api as ratings_api
@@ -39,7 +41,11 @@ def create_app(bot: Bot, dp: Dispatcher) -> web.Application:
             create_oidc_middleware(
                 audience=config.api_audience,
                 service_account_email=config.tasks_service_account_email,
-            )
+            ),
+            # CORS снаружи аутентификации: иначе отказ 401 приходил бы в браузер
+            # без заголовков и выглядел бы как поломка сети, а не как отказ.
+            create_cors_middleware(config.miniapp_origin),
+            auth_middleware,
         ]
     )
     app[BOT_KEY] = bot
@@ -49,6 +55,7 @@ def create_app(bot: Bot, dp: Dispatcher) -> web.Application:
     app.add_routes(fns_monitoring_api.routes)
     app.add_routes(ratings_api.routes)
     app.add_routes(disclosure_api.routes)
+    app.add_routes(miniapp_api.routes)
 
     secret = config.webhook_secret.get_secret_value() if config.webhook_secret else None
     SimpleRequestHandler(dispatcher=dp, bot=bot, secret_token=secret).register(

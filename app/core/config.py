@@ -71,6 +71,18 @@ class Settings(BaseSettings):
     webhook_path: str = "/webhook"
     webhook_secret: SecretStr | None = None
 
+    # Telegram Mini App. `miniapp_url` — публичный HTTPS-адрес фронтенда, его
+    # открывает кнопка запуска. `miniapp_origin` — источник, которому разрешён
+    # CORS: нужен, когда статика отдаётся не с этого домена (в разработке —
+    # dev-сервер Vite). Пусто — заголовки CORS не выставляются.
+    miniapp_url: str | None = None
+    miniapp_origin: str | None = None
+
+    # Дев-режим мини-аппа: запрос без подписи Telegram считается запросом от
+    # этого пользователя. Нужен, чтобы открывать фронтенд в обычном браузере.
+    # В проде переменная не задаётся — иначе API открыт кому угодно.
+    miniapp_dev_telegram_id: int | None = None
+
     @property
     def webhook_url(self) -> str | None:
         """Полный URL webhook'а или ``None``, если базовый URL не задан."""

@@ -5,12 +5,13 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from core.clients.backend import notifications as notifications_api
 from core.clients.backend import users as users_api
 from core.clients.backend.errors import BackendError
 from core.clients.backend.notifications import NotificationSettings
+from core.config import config
 
 from .callbacks import MenuCallback
 from .registry import MenuSection
@@ -36,6 +37,8 @@ HUB_STALE_NOTE = (
 )
 
 # Приписка для пользователей без токена: объясняет текущий режим и апселл.
+MINIAPP_BUTTON_TEXT = "Открыть приложение"
+
 MARKET_MODE_NOTE = (
     "\n\n📡 <i>Сейчас вы получаете события по всему рынку. "
     "Подключите токен — останутся только ваши бумаги.</i>"
@@ -135,6 +138,16 @@ async def build_hub(
             InlineKeyboardButton(
                 text=f"{section.title}{f': {badge}' if badge else ''}",
                 callback_data=MenuCallback(section=section.key).pack(),
+            )
+        )
+
+    # Кнопка запуска мини-аппа. Появляется, только когда фронтенд задеплоен и
+    # его адрес задан: меню бота остаётся полноценным и без неё.
+    if config.miniapp_url:
+        builder.add(
+            InlineKeyboardButton(
+                text=MINIAPP_BUTTON_TEXT,
+                web_app=WebAppInfo(url=config.miniapp_url),
             )
         )
 

@@ -9,10 +9,12 @@ from aiogram.types import InlineKeyboardMarkup
 from core.clients.backend.errors import BackendError
 from core.clients.backend.notifications import NotificationSettings
 from features.menu.callbacks import MenuCallback
+from core.config import config
 from features.menu.keyboards import (
     HUB_KEY,
     HUB_STALE_NOTE,
     MARKET_MODE_NOTE,
+    MINIAPP_BUTTON_TEXT,
     back_to_hub_button,
     build_help,
     build_hub,
@@ -163,3 +165,25 @@ async def test_build_help_shows_text_and_back_to_section() -> None:
     assert text == "<b>Как это работает</b>"
     assert back.section == "ratings"
     assert back.action == "open"
+
+
+async def test_hub_without_miniapp_url_has_no_app_button(monkeypatch) -> None:
+    """Пока фронтенд не задеплоен, кнопки запуска в меню нет."""
+    monkeypatch.setattr(config, "miniapp_url", None)
+
+    _text, markup = await build_hub(111, [_section("ratings")])
+    texts = [btn.text for row in markup.inline_keyboard for btn in row]
+
+    assert MINIAPP_BUTTON_TEXT not in texts
+
+
+async def test_hub_with_miniapp_url_opens_web_app(monkeypatch) -> None:
+    """С заданным адресом хаб получает кнопку запуска мини-аппа."""
+    monkeypatch.setattr(config, "miniapp_url", "https://app.example.com")
+
+    _text, markup = await build_hub(111, [_section("ratings")])
+    buttons = [btn for row in markup.inline_keyboard for btn in row]
+    app_button = next(btn for btn in buttons if btn.text == MINIAPP_BUTTON_TEXT)
+
+    assert app_button.web_app is not None
+    assert app_button.web_app.url == "https://app.example.com"
