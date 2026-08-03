@@ -26,10 +26,12 @@ from core.clients.backend.notifications import (
     OfferAlertSettings,
     PriceAlertSettings,
 )
+from core.config import config
 from features.ratings.enums import AVAILABLE_AGENCIES
 from pydantic import BaseModel, Field, ValidationError
 
 from .middlewares import current_user
+from .session import issue_session
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +149,20 @@ def _settings_payload(settings: NotificationSettings) -> dict[str, Any]:
         "fns": {"alerts_enabled": settings.fns_enabled},
         "disclosure": _disclosure_payload(settings.disclosure),
     }
+
+
+@routes.post("/miniapp/api/session")
+async def create_session(request: web.Request) -> web.Response:
+    """Меняет подпись Telegram на сессию — и продлевает уже выданную.
+
+    Продление по действующей сессии разрешено намеренно. Telegram обновляет
+    ``initData`` только при запуске страницы, а мини-апп при закрытии не
+    выгружается: требуя свежую подпись раз в месяц, мы вернули бы ровно ту
+    поломку, ради которой сессии и заведены. Плата — скользящий срок жизни;
+    отозвать все сессии можно ротацией токена бота.
+    """
+    token, expires_at = issue_session(current_user(request), config.bot_token.get_secret_value())
+    return web.json_response({"token": token, "expires_at": expires_at})
 
 
 @routes.get("/miniapp/api/me")

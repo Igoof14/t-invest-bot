@@ -1,7 +1,13 @@
-"""Middleware мини-аппа: аутентификация по initData и CORS.
+"""Middleware мини-аппа: аутентификация и CORS.
 
 Обе трогают только пути под ``/miniapp/`` — приём событий Cloud Tasks
 (``/events/``) и webhook Telegram проходят мимо без изменений.
+
+Подтвердиться можно двумя способами. ``Authorization: tma <initData>`` — подпись
+Telegram, ею мини-апп пользуется один раз при входе. ``Authorization: Bearer
+<token>`` — сессия, выданная в обмен на эту подпись; ею идут все остальные
+запросы. Разделение нужно потому, что Telegram обновляет ``initData`` только при
+запуске страницы, а мини-апп при закрытии не выгружается: см. ``session``.
 """
 
 from __future__ import annotations
@@ -13,6 +19,7 @@ from aiohttp import web
 from core.config import config
 
 from .auth import InitDataError, MiniAppUser, parse_init_data
+from .session import SessionError, verify_session
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +31,8 @@ PREFIX = "/miniapp/"
 # Ключ запроса с подтверждённым пользователем.
 USER_KEY = "miniapp_user"
 
-_AUTH_SCHEME = "tma "
+_INIT_DATA_SCHEME = "tma "
+_SESSION_SCHEME = "Bearer "
 
 
 def _dev_user() -> MiniAppUser | None:
@@ -68,7 +76,7 @@ async def no_store_middleware(request: web.Request, handler: _Handler) -> web.St
 
 @web.middleware
 async def auth_middleware(request: web.Request, handler: _Handler) -> web.StreamResponse:
-    """Пропускает запрос дальше, только если подпись Telegram сошлась."""
+    """Пропускает запрос дальше, только если подпись Telegram или сессия сошлись."""
     if not request.path.startswith(PREFIX):
         return await handler(request)
 
@@ -77,9 +85,25 @@ async def auth_middleware(request: web.Request, handler: _Handler) -> web.Stream
         return await handler(request)
 
     header = request.headers.get("Authorization", "")
-    if not header.startswith(_AUTH_SCHEME):
-        user = _dev_user()
-        if user is None:
+    token = config.bot_token.get_secret_value()
+
+    if header.startswith(_SESSION_SCHEME):
+        try:
+            user = verify_session(header.removeprefix(_SESSION_SCHEME), token)
+        except SessionError as e:
+            # Обычный конец жизни сессии, а не поломка: мини-апп в ответ на 401
+            # сам обменяет подпись Telegram на новую.
+            logger.info("Сессия мини-аппа не принята: %s", e)
+            return web.json_response({"error": "invalid session"}, status=401)
+    elif header.startswith(_INIT_DATA_SCHEME):
+        try:
+            user = parse_init_data(header.removeprefix(_INIT_DATA_SCHEME), token)
+        except InitDataError as e:
+            logger.warning("Отклонён запрос мини-аппа: %s", e)
+            return web.json_response({"error": "invalid init data"}, status=401)
+    else:
+        dev_user = _dev_user()
+        if dev_user is None:
             # Голый 401 в логе неотличим от «сломалось»: чаще всего это открытый
             # в обычном браузере фронтенд, которому не включили дев-режим.
             logger.warning(
@@ -88,15 +112,7 @@ async def auth_middleware(request: web.Request, handler: _Handler) -> web.Stream
                 request.path,
             )
             return web.json_response({"error": "missing init data"}, status=401)
-    else:
-        try:
-            user = parse_init_data(
-                header.removeprefix(_AUTH_SCHEME),
-                config.bot_token.get_secret_value(),
-            )
-        except InitDataError as e:
-            logger.warning("Отклонён запрос мини-аппа: %s", e)
-            return web.json_response({"error": "invalid init data"}, status=401)
+        user = dev_user
 
     request[USER_KEY] = user
     return await handler(request)

@@ -1,5 +1,6 @@
 """Тесты HTTP API мини-аппа."""
 
+import time as time_module
 from collections.abc import AsyncIterator
 from datetime import time
 from unittest.mock import AsyncMock
@@ -93,13 +94,78 @@ async def test_dev_mode_allows_request_without_signature(
     get_settings.assert_awaited_once_with(777)
 
 
+async def test_session_exchanges_signature_for_token(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Подпись меняется на сессию, и по ней API доступен."""
+    get_settings = AsyncMock(return_value=_settings())
+    monkeypatch.setattr(notifications_api, "get_settings", get_settings)
+
+    issued = await client.post("/miniapp/api/session", headers=auth())
+    assert issued.status == 200
+    payload = await issued.json()
+
+    response = await client.get(
+        "/miniapp/api/notifications",
+        headers={"Authorization": f"Bearer {payload['token']}"},
+    )
+
+    assert response.status == 200
+    get_settings.assert_awaited_once_with(TELEGRAM_ID)
+
+
+async def test_session_outlives_stale_init_data(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Смысл сессии: подпись протухла, а доступ остался.
+
+    Воспроизводит поломку, ради которой сессии и появились: Telegram отдаёт
+    initData только при запуске страницы, а мини-апп при закрытии не
+    выгружается — трёхдневная подпись на входе уже не годится, но выданная по
+    ней сессия обязана работать.
+    """
+    monkeypatch.setattr(notifications_api, "get_settings", AsyncMock(return_value=_settings()))
+    issued = await client.post("/miniapp/api/session", headers=auth())
+    token = (await issued.json())["token"]
+
+    stale = make_init_data(auth_date=int(time_module.time()) - 3 * 24 * 60 * 60)
+    with_stale_signature = await client.get(
+        "/miniapp/api/notifications", headers={"Authorization": f"tma {stale}"}
+    )
+    with_session = await client.get(
+        "/miniapp/api/notifications", headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert with_stale_signature.status == 401
+    assert with_session.status == 200
+
+
+async def test_session_renews_itself(client: TestClient) -> None:
+    """Сессия продлевается собой: свежая подпись раз в месяц не нужна."""
+    issued = await client.post("/miniapp/api/session", headers=auth())
+    first = await issued.json()
+
+    renewed = await client.post(
+        "/miniapp/api/session", headers={"Authorization": f"Bearer {first['token']}"}
+    )
+
+    assert renewed.status == 200
+    assert (await renewed.json())["expires_at"] >= first["expires_at"]
+
+
+async def test_forged_session_rejected(client: TestClient) -> None:
+    """Подделанный токен сессии не пускает дальше."""
+    response = await client.get(
+        "/miniapp/api/notifications", headers={"Authorization": "Bearer eyJ0aWQiOjQyfQ.AAAA"}
+    )
+    assert response.status == 401
+
+
 async def test_notifications_returns_all_sections(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Все пять разделов приходят одним ответом."""
-    monkeypatch.setattr(
-        notifications_api, "get_settings", AsyncMock(return_value=_settings())
-    )
+    monkeypatch.setattr(notifications_api, "get_settings", AsyncMock(return_value=_settings()))
 
     response = await client.get("/miniapp/api/notifications", headers=auth())
 
@@ -137,9 +203,7 @@ async def test_toggle_uses_id_from_signature(
 
 async def test_unknown_section_returns_404(client: TestClient) -> None:
     """Раздела нет — до бэкенда запрос не доходит."""
-    response = await client.post(
-        "/miniapp/api/notifications/whatever/toggle", headers=auth()
-    )
+    response = await client.post("/miniapp/api/notifications/whatever/toggle", headers=auth())
     assert response.status == 404
 
 
@@ -151,16 +215,12 @@ async def test_unknown_agency_returns_404(client: TestClient) -> None:
     assert response.status == 404
 
 
-async def test_toggle_known_agency(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_toggle_known_agency(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     """Известное агентство переключается."""
     toggle = AsyncMock(return_value=True)
     monkeypatch.setattr(notifications_api, "toggle_agency", toggle)
 
-    response = await client.post(
-        "/miniapp/api/notifications/ratings/nra/toggle", headers=auth()
-    )
+    response = await client.post("/miniapp/api/notifications/ratings/nra/toggle", headers=auth())
 
     assert response.status == 200
     toggle.assert_awaited_once_with(TELEGRAM_ID, "nra")
@@ -199,9 +259,7 @@ async def test_update_offers_passes_only_sent_fields(
         ("/miniapp/api/notifications/disclosure", {"min_risk_level": "extreme"}),
     ],
 )
-async def test_out_of_range_values_rejected(
-    client: TestClient, path: str, body: dict
-) -> None:
+async def test_out_of_range_values_rejected(client: TestClient, path: str, body: dict) -> None:
     """Значения вне допустимого диапазона до бэкенда не доходят."""
     response = await client.patch(path, headers=auth(), json=body)
     assert response.status == 400
@@ -236,9 +294,7 @@ async def test_unknown_user_returns_404(
     assert response.status == 404
 
 
-async def test_me_registers_user(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_me_registers_user(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     """/me регистрирует открывшего мини-апп: он мог не нажимать /start."""
     register = AsyncMock(return_value=Registration(is_new_user=True, has_token=False))
     monkeypatch.setattr(users_api, "register", register)
@@ -259,18 +315,14 @@ async def test_me_registers_user(
     )
 
 
-async def test_set_and_delete_token(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_set_and_delete_token(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     """Токен подключается и отключается для пользователя из подписи."""
     set_token = AsyncMock()
     delete_token = AsyncMock()
     monkeypatch.setattr(users_api, "set_token", set_token)
     monkeypatch.setattr(users_api, "delete_token", delete_token)
 
-    saved = await client.put(
-        "/miniapp/api/token", headers=auth(), json={"token": "t.secret"}
-    )
+    saved = await client.put("/miniapp/api/token", headers=auth(), json={"token": "t.secret"})
     removed = await client.delete("/miniapp/api/token", headers=auth())
 
     assert (saved.status, await saved.json()) == (200, {"has_token": True})
@@ -289,9 +341,7 @@ async def test_responses_are_not_cacheable(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Ответы API не кэшируются: они зависят от того, кто спрашивает."""
-    monkeypatch.setattr(
-        notifications_api, "get_settings", AsyncMock(return_value=_settings())
-    )
+    monkeypatch.setattr(notifications_api, "get_settings", AsyncMock(return_value=_settings()))
 
     response = await client.get("/miniapp/api/notifications", headers=auth())
 
@@ -301,9 +351,7 @@ async def test_responses_are_not_cacheable(
 async def test_rejections_are_not_cacheable(client: TestClient) -> None:
     """Отказ тоже не кэшируется — иначе он переживёт выкатку исправления."""
     unauthorized = await client.get("/miniapp/api/notifications")
-    not_found = await client.post(
-        "/miniapp/api/notifications/whatever/toggle", headers=auth()
-    )
+    not_found = await client.post("/miniapp/api/notifications/whatever/toggle", headers=auth())
     bad_request = await client.patch(
         "/miniapp/api/notifications/offers", headers=auth(), json={"first_alert": 0}
     )
