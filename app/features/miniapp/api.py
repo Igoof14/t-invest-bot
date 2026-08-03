@@ -13,19 +13,24 @@ from __future__ import annotations
 import functools
 import logging
 from collections.abc import Awaitable, Callable
-from datetime import time
+from datetime import date, time
 from typing import Any, Literal
 
 from aiohttp import web
+from core.clients.backend import maturities as maturities_api
 from core.clients.backend import notifications as notifications_api
+from core.clients.backend import offers as offers_api
 from core.clients.backend import users as users_api
+from core.clients.backend.common import PositionAccount
 from core.clients.backend.errors import BackendError, UserNotFound
+from core.clients.backend.maturities import MaturityItem
 from core.clients.backend.notifications import (
     DisclosureAlertSettings,
     NotificationSettings,
     OfferAlertSettings,
     PriceAlertSettings,
 )
+from core.clients.backend.offers import OfferItem
 from core.config import config
 from features.ratings.enums import AVAILABLE_AGENCIES
 from pydantic import BaseModel, Field, ValidationError
@@ -43,6 +48,10 @@ _Handler = Callable[[web.Request], Awaitable[web.StreamResponse]]
 _TOGGLE_SECTIONS = frozenset({"offers", "prices", "fns", "disclosure"})
 
 _AGENCY_CODES = {agency.value: agency for agency in AVAILABLE_AGENCIES}
+
+# Сколько ближайших событий портфеля отдавать, если мини-апп не попросил иначе.
+# Границы 1..50 бэкенда соблюдает сам клиент (`fetch_user_items`).
+_DEFAULT_EVENTS_LIMIT = 10
 
 RiskLevel = Literal["low", "medium", "high", "critical"]
 
@@ -151,6 +160,66 @@ def _settings_payload(settings: NotificationSettings) -> dict[str, Any]:
     }
 
 
+def _events_limit(request: web.Request) -> int:
+    """Сколько ближайших событий запросить у бэкенда.
+
+    Мусор в query не повод отказывать: подставляем значение по умолчанию, а
+    границы 1..50 всё равно зажимает клиент бэкенда.
+    """
+    try:
+        return int(request.query["limit"])
+    except (KeyError, ValueError):
+        return _DEFAULT_EVENTS_LIMIT
+
+
+def _iso(value: date | None) -> str | None:
+    return value.isoformat() if value else None
+
+
+def _account_payload(account: PositionAccount) -> dict[str, Any]:
+    return {
+        "broker": account.broker,
+        "account_id": account.account_id,
+        "account_name": account.account_name,
+        "quantity": account.quantity,
+    }
+
+
+def _bond_payload(item: OfferItem | MaturityItem) -> dict[str, Any]:
+    """Общая часть события портфеля — сама облигация и позиция по ней."""
+    return {
+        "secid": item.secid,
+        "isin": item.isin,
+        "shortname": item.shortname,
+        "name": item.name,
+        "facevalue": item.facevalue,
+        "faceunit": item.faceunit,
+        "maturity_date": _iso(item.maturity_date),
+        "quantity": item.quantity,
+        "accounts": [_account_payload(account) for account in item.accounts],
+        "moex_link": item.moex_link,
+    }
+
+
+def _offer_payload(item: OfferItem) -> dict[str, Any]:
+    """Оферта в плоской форме: вложенность бэкенда фронтенду не нужна."""
+    return {
+        **_bond_payload(item),
+        "days_left": item.days_left,
+        "offer_date": _iso(item.offer_date),
+        "offer_type": item.offer_type,
+        "date_start": _iso(item.date_start),
+        "date_end": _iso(item.date_end),
+        "price": item.price,
+        "value": item.value,
+        "agent": item.agent,
+    }
+
+
+def _maturity_payload(item: MaturityItem) -> dict[str, Any]:
+    return {**_bond_payload(item), "days_left": item.days_left}
+
+
 @routes.post("/miniapp/api/session")
 async def create_session(request: web.Request) -> web.Response:
     """Меняет подпись Telegram на сессию — и продлевает уже выданную.
@@ -189,6 +258,24 @@ async def get_me(request: web.Request) -> web.Response:
             "has_token": registration.has_token,
         }
     )
+
+
+@routes.get("/miniapp/api/offers")
+@handle_backend_errors
+async def get_offers(request: web.Request) -> web.Response:
+    """Ближайшие оферты по облигациям из портфеля пользователя."""
+    items = await offers_api.get_offers(current_user(request).telegram_id, _events_limit(request))
+    return web.json_response([_offer_payload(item) for item in items])
+
+
+@routes.get("/miniapp/api/maturities")
+@handle_backend_errors
+async def get_maturities(request: web.Request) -> web.Response:
+    """Ближайшие погашения облигаций из портфеля пользователя."""
+    items = await maturities_api.get_maturities(
+        current_user(request).telegram_id, _events_limit(request)
+    )
+    return web.json_response([_maturity_payload(item) for item in items])
 
 
 @routes.get("/miniapp/api/notifications")
