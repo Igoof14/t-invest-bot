@@ -140,6 +140,44 @@ async def test_session_outlives_stale_init_data(
     assert with_session.status == 200
 
 
+async def test_stale_signature_still_buys_a_session(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Трёхдневная подпись не годится для запроса, но годится для входа.
+
+    Telegram отдаёт мини-аппу подпись первого запуска и не обновляет её ни при
+    повторном открытии, ни после перезагрузки устройства. Если бы вход требовал
+    свежую подпись, пользователь не мог бы войти вообще: взять новую ему негде.
+    """
+    monkeypatch.setattr(notifications_api, "get_settings", AsyncMock(return_value=_settings()))
+    stale = {
+        "Authorization": f"tma {make_init_data(auth_date=int(time_module.time()) - 3 * 24 * 60 * 60)}"
+    }
+
+    rejected = await client.get("/miniapp/api/notifications", headers=stale)
+    issued = await client.post("/miniapp/api/session", headers=stale)
+
+    assert rejected.status == 401
+    assert issued.status == 200
+
+    token = (await issued.json())["token"]
+    allowed = await client.get(
+        "/miniapp/api/notifications", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert allowed.status == 200
+
+
+async def test_ancient_signature_still_rejected_on_login(client: TestClient) -> None:
+    """Послабление не бесконечное: подпись годовой давности не пускает."""
+    ancient = make_init_data(auth_date=int(time_module.time()) - 365 * 24 * 60 * 60)
+
+    response = await client.post(
+        "/miniapp/api/session", headers={"Authorization": f"tma {ancient}"}
+    )
+
+    assert response.status == 401
+
+
 async def test_session_renews_itself(client: TestClient) -> None:
     """Сессия продлевается собой: свежая подпись раз в месяц не нужна."""
     issued = await client.post("/miniapp/api/session", headers=auth())

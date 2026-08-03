@@ -18,7 +18,13 @@ from collections.abc import Awaitable, Callable
 from aiohttp import web
 from core.config import config
 
-from .auth import InitDataError, MiniAppUser, parse_init_data
+from .auth import (
+    LOGIN_MAX_AGE_SECONDS,
+    MAX_AGE_SECONDS,
+    InitDataError,
+    MiniAppUser,
+    parse_init_data,
+)
 from .session import SessionError, verify_session
 
 logger = logging.getLogger(__name__)
@@ -30,6 +36,9 @@ PREFIX = "/miniapp/"
 
 # Ключ запроса с подтверждённым пользователем.
 USER_KEY = "miniapp_user"
+
+# Ручка обмена подписи на сессию — единственная, где подпись вообще нужна.
+SESSION_PATH = "/miniapp/api/session"
 
 _INIT_DATA_SCHEME = "tma "
 _SESSION_SCHEME = "Bearer "
@@ -96,8 +105,12 @@ async def auth_middleware(request: web.Request, handler: _Handler) -> web.Stream
             logger.info("Сессия мини-аппа не принята: %s", e)
             return web.json_response({"error": "invalid session"}, status=401)
     elif header.startswith(_INIT_DATA_SCHEME):
+        # На входе допускается заметно более старая подпись: свежую Telegram
+        # выдаёт не всегда, и починить это изнутри приложения нельзя. Дальше,
+        # по сессии, возраст подписи роли уже не играет.
+        max_age = LOGIN_MAX_AGE_SECONDS if request.path == SESSION_PATH else MAX_AGE_SECONDS
         try:
-            user = parse_init_data(header.removeprefix(_INIT_DATA_SCHEME), token)
+            user = parse_init_data(header.removeprefix(_INIT_DATA_SCHEME), token, max_age=max_age)
         except InitDataError as e:
             logger.warning("Отклонён запрос мини-аппа: %s", e)
             return web.json_response({"error": "invalid init data"}, status=401)
