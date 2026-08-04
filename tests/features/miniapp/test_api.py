@@ -269,7 +269,12 @@ async def test_agencies_listed_from_enum(client: TestClient) -> None:
     response = await client.get("/miniapp/api/ratings/agencies", headers=auth())
 
     assert response.status == 200
-    assert {"code": "nra", "name": "НРА"} in await response.json()
+    assert await response.json() == [
+        {"code": "nra", "name": "НРА"},
+        {"code": "nkr", "name": "НКР"},
+        {"code": "acra", "name": "АКРА"},
+        {"code": "ra", "name": "Эксперт РА"},
+    ]
 
 
 async def test_update_offers_passes_only_sent_fields(
