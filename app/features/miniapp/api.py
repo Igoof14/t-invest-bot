@@ -17,11 +17,13 @@ from datetime import date, time
 from typing import Any, Literal
 
 from aiohttp import web
+from core.clients.backend import coupons as coupons_api
 from core.clients.backend import maturities as maturities_api
 from core.clients.backend import notifications as notifications_api
 from core.clients.backend import offers as offers_api
 from core.clients.backend import users as users_api
 from core.clients.backend.common import PositionAccount
+from core.clients.backend.coupons import CouponItem
 from core.clients.backend.errors import BackendError, UserNotFound
 from core.clients.backend.maturities import MaturityItem
 from core.clients.backend.notifications import (
@@ -185,7 +187,7 @@ def _account_payload(account: PositionAccount) -> dict[str, Any]:
     }
 
 
-def _bond_payload(item: OfferItem | MaturityItem) -> dict[str, Any]:
+def _bond_payload(item: OfferItem | MaturityItem | CouponItem) -> dict[str, Any]:
     """Общая часть события портфеля — сама облигация и позиция по ней."""
     return {
         "secid": item.secid,
@@ -218,6 +220,45 @@ def _offer_payload(item: OfferItem) -> dict[str, Any]:
 
 def _maturity_payload(item: MaturityItem) -> dict[str, Any]:
     return {**_bond_payload(item), "days_left": item.days_left}
+
+
+def _coupon_payload(item: CouponItem) -> dict[str, Any]:
+    """Купон в плоской форме.
+
+    ``days_left`` тут всегда ``None``: все купоны ответа платят в один день, и
+    считать до него нечего — поле остаётся ради общей формы события портфеля.
+    """
+    return {
+        **_bond_payload(item),
+        "days_left": None,
+        "coupon_date": _iso(item.coupon_date),
+        "coupon_start_date": _iso(item.coupon_start_date),
+        "coupon_value": item.coupon_value,
+        "total_value": item.total_value,
+        "is_disclosure": item.is_disclosure,
+        "disclosure": (
+            None
+            if item.disclosure is None
+            else {
+                "total_payment_amount": item.disclosure.total_payment_amount,
+                "payment_per_security_value": item.disclosure.payment_per_security_value,
+                "event_url": item.disclosure.event_url,
+            }
+        ),
+        "nsd": {"is_paid": item.nsd.is_paid, "url": item.nsd.url},
+    }
+
+
+def _coupons_date(request: web.Request) -> date | None:
+    """Дата выплаты из query.
+
+    Мусор в параметре не повод отказывать: ``None`` означает «сегодня», и это
+    ровно то, что нужно экрану по умолчанию.
+    """
+    try:
+        return date.fromisoformat(request.query["date"])
+    except (KeyError, ValueError):
+        return None
 
 
 @routes.post("/miniapp/api/session")
@@ -276,6 +317,25 @@ async def get_maturities(request: web.Request) -> web.Response:
         current_user(request).telegram_id, _events_limit(request)
     )
     return web.json_response([_maturity_payload(item) for item in items])
+
+
+@routes.get("/miniapp/api/coupons")
+@handle_backend_errors
+async def get_coupons(request: web.Request) -> web.Response:
+    """Купоны по портфелю пользователя, выплачиваемые в запрошенный день.
+
+    Список не режется `limit`: в один день выплат немного, и обрезать его
+    значило бы скрыть от пользователя часть сегодняшних денег.
+    """
+    payments = await coupons_api.get_coupons(
+        current_user(request).telegram_id, _coupons_date(request)
+    )
+    return web.json_response(
+        {
+            "date": _iso(payments.date),
+            "items": [_coupon_payload(item) for item in payments.items],
+        }
+    )
 
 
 @routes.get("/miniapp/api/notifications")

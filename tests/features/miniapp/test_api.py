@@ -2,15 +2,18 @@
 
 import time as time_module
 from collections.abc import AsyncIterator
-from datetime import time
+from datetime import date, time
 from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
+from core.clients.backend import coupons as coupons_api
 from core.clients.backend import notifications as notifications_api
 from core.clients.backend import users as users_api
+from core.clients.backend.common import PositionAccount
+from core.clients.backend.coupons import CouponItem, CouponPayments, DisclosureInfo, NsdInfo
 from core.clients.backend.errors import BackendError, UserNotFound
 from core.clients.backend.notifications import (
     DisclosureAlertSettings,
@@ -335,6 +338,83 @@ async def test_unknown_user_returns_404(
     response = await client.get("/miniapp/api/notifications", headers=auth())
 
     assert response.status == 404
+
+
+def _coupon() -> CouponItem:
+    return CouponItem(
+        secid="RU000A10AU73",
+        isin="RU000A10AU73",
+        shortname="ГТЛК 2P-07",
+        name="ГТЛК БО 002P-07",
+        facevalue=1000.0,
+        faceunit="SUR",
+        maturity_date=date(2028, 8, 4),
+        coupon_date=date(2026, 8, 6),
+        coupon_start_date=date(2026, 5, 6),
+        coupon_value=22.44,
+        total_value=1795.2,
+        is_disclosure=True,
+        disclosure=DisclosureInfo(
+            total_payment_amount=224400000.0,
+            payment_per_security_value=22.44,
+            event_url="https://e-disclosure.ru/event/123",
+        ),
+        nsd=NsdInfo(is_paid=False, url=None),
+        quantity=80.0,
+        accounts=[
+            PositionAccount(broker="tbank", account_id="204", account_name="ИИСус", quantity=80.0)
+        ],
+    )
+
+
+async def test_coupons_returns_flat_items(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Купон приезжает плоским: вложенность бэкенда фронтенду не нужна."""
+    get_coupons = AsyncMock(return_value=CouponPayments(date=date(2026, 8, 6), items=[_coupon()]))
+    monkeypatch.setattr(coupons_api, "get_coupons", get_coupons)
+
+    response = await client.get("/miniapp/api/coupons", headers=auth())
+
+    assert response.status == 200
+    payload = await response.json()
+    assert payload["date"] == "2026-08-06"
+    item = payload["items"][0]
+    assert item["shortname"] == "ГТЛК 2P-07"
+    assert item["coupon_date"] == "2026-08-06"
+    assert item["total_value"] == 1795.2
+    assert item["is_disclosure"] is True
+    assert item["disclosure"]["event_url"] == "https://e-disclosure.ru/event/123"
+    assert item["nsd"] == {"is_paid": False, "url": None}
+    assert item["moex_link"].endswith("code=RU000A10AU73")
+    # Купоны одного ответа платят в один день — считать до него нечего.
+    assert item["days_left"] is None
+
+
+async def test_coupons_use_id_from_signature(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Дату берём из query, а telegram_id — только из подписи."""
+    get_coupons = AsyncMock(return_value=CouponPayments(date=date(2026, 8, 1), items=[]))
+    monkeypatch.setattr(coupons_api, "get_coupons", get_coupons)
+
+    response = await client.get("/miniapp/api/coupons?date=2026-08-01", headers=auth())
+
+    assert response.status == 200
+    get_coupons.assert_awaited_once_with(TELEGRAM_ID, date(2026, 8, 1))
+
+
+async def test_coupons_ignore_broken_date(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Мусор в date не отказ, а «сегодня»: экран открывается всё равно."""
+    get_coupons = AsyncMock(return_value=CouponPayments(date=date(2026, 8, 6), items=[]))
+    monkeypatch.setattr(coupons_api, "get_coupons", get_coupons)
+
+    response = await client.get("/miniapp/api/coupons?date=вчера", headers=auth())
+
+    assert response.status == 200
+    get_coupons.assert_awaited_once_with(TELEGRAM_ID, None)
 
 
 async def test_me_registers_user(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
