@@ -1,11 +1,18 @@
-"""Функции для работы с облигациями через T-Invest API."""
+"""Функции для работы с облигациями через T-Invest API.
+
+Канал собирается вручную из ``create_channel`` + ``AsyncServices``, а не через
+``AsyncClient``: вход в его контекстный менеджер вызывает ``sentry_sdk.init()``,
+который перехватывает Sentry-клиент всего процесса и начинает отправлять наши
+трейсбеки в error hub Т-Банка. Во всём остальном вызов идентичен.
+"""
 
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 
 from features.users.repository import BotUserRepository
-from t_tech.invest import AsyncClient
+from t_tech.invest.async_services import AsyncServices
+from t_tech.invest.channels import create_channel
 from t_tech.invest.schemas import (
     GetAccountsResponse,
     OperationsResponse,
@@ -43,7 +50,8 @@ async def get_coupon_payment(
         logger.warning(f"Token not found for telegram_id={telegram_id}")
         return None
 
-    async with AsyncClient(token) as client:
+    async with create_channel(force_async=True) as channel:
+        client = AsyncServices(channel, token=token)
         accounts: GetAccountsResponse = await client.users.get_accounts()
 
         response: CouponPaymentsByAccount = CouponPaymentsByAccount()

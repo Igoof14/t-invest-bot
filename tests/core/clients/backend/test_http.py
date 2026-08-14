@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import pytest
-from core.clients.backend.errors import BackendError, BackendNotConfigured, UserNotFound
+from core.clients.backend.errors import (
+    BackendError,
+    BackendNotConfigured,
+    InvalidToken,
+    UpstreamUnavailable,
+    UserNotFound,
+)
 from core.clients.backend.http import fetch_user_items, request
 
 BASE_URL = "https://backend.example.run.app"
@@ -28,7 +35,8 @@ class _FakeResponse:
         return self._payload
 
     async def text(self) -> str:
-        return str(self._payload)
+        # Именно JSON, а не repr словаря: по этому телу клиент разбирает `code`.
+        return json.dumps(self._payload, ensure_ascii=False)
 
 
 class _FakeSession:
@@ -145,3 +153,53 @@ async def test_error_body_is_kept_in_message(monkeypatch: pytest.MonkeyPatch) ->
 
     with pytest.raises(BackendError, match="too short"):
         await request("PUT", "/api/v1/users/42/token", json={"token": ""})
+
+
+# --- разбор `code` в теле ошибки ---------------------------------------------
+#
+# Бот показывает разные тексты на «токен не подошёл» и «проверить не удалось»,
+# и различает эти случаи только по `code` — из голого статуса они неразличимы.
+
+
+async def test_rejected_token_raises_invalid_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    patch_session(
+        monkeypatch,
+        _FakeResponse(400, {"detail": "T-Invest rejected the token", "code": "invalid_token"}),
+    )
+
+    with pytest.raises(InvalidToken):
+        await request("PUT", "/api/v1/users/42/token", json={"token": "t.bad"})
+
+
+async def test_unreachable_broker_raises_upstream_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    patch_session(
+        monkeypatch,
+        _FakeResponse(503, {"detail": "T-Invest is unreachable", "code": "upstream_unavailable"}),
+    )
+
+    with pytest.raises(UpstreamUnavailable):
+        await request("PUT", "/api/v1/users/42/token", json={"token": "t.secret"})
+
+
+async def test_unknown_code_stays_generic(monkeypatch: pytest.MonkeyPatch) -> None:
+    patch_session(monkeypatch, _FakeResponse(400, {"detail": "nope", "code": "something_else"}))
+
+    with pytest.raises(BackendError) as exc:
+        await request("PUT", "/api/v1/users/42/token", json={"token": "t.secret"})
+    assert type(exc.value) is BackendError
+
+
+async def test_non_json_error_body_stays_generic(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Перед приложением стоит Cloud Run — его отказы приходят не JSON-ом."""
+
+    class _HtmlResponse(_FakeResponse):
+        async def text(self) -> str:
+            return "<html>403 Forbidden</html>"
+
+    patch_session(monkeypatch, _HtmlResponse(403))
+
+    with pytest.raises(BackendError) as exc:
+        await request("PUT", "/api/v1/users/42/token", json={"token": "t.secret"})
+    assert type(exc.value) is BackendError

@@ -10,9 +10,13 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from common.token_gate import has_token
 from common.utils.bot_utils import pluralize_bonds, safe_delete, safe_edit_text
-from core.clients.backend.errors import BackendError, UserNotFound
+from core.clients.backend.errors import (
+    BackendError,
+    InvalidToken,
+    UpstreamUnavailable,
+    UserNotFound,
+)
 from core.clients.bonds_sync.client import sync_user_bonds, sync_user_events
-from core.clients.t_invest.common_func import TokenCheck, check_token
 from features.analytics import EventName, track
 from features.base.keyboards import create_main_keyboard
 from features.users.repository import BotUserRepository
@@ -254,35 +258,42 @@ async def handle_token_message(message: Message, state: FSMContext) -> None:
     # Токен в открытом виде не должен оставаться в истории чата.
     await safe_delete(message)
 
-    check = await check_token(token)
+    # Валидность токена проверяет бэкенд: он спрашивает у T-Invest, прежде чем
+    # сохранить. Своей проверки здесь нет намеренно — иначе бот и мини-апп судят
+    # о токене каждый по-своему, а бот ещё и требует прямого доступа к брокеру.
+    try:
+        await BotUserRepository.add_token(telegram_id=telegram_id, token=token)
+    except InvalidToken:
+        logger.warning(f"Токен пользователя {telegram_id} невалиден")
+        outcome = "invalid"
+        reply = "Некорректный токен! Проверьте, что скопировали его целиком, и отправьте ещё раз."
+    except UpstreamUnavailable:
+        outcome = "unavailable"
+        reply = (
+            "Не удалось проверить токен — сервис T-Invest не ответил. "
+            "Попробуйте отправить его ещё раз через пару минут."
+        )
+    except BackendError:
+        # Вердикта о токене мы так и не получили, поэтому для воронки это тот же
+        # `unavailable`, что и недоступный брокер: «плохим» токен назвать нельзя.
+        logger.warning(f"Не удалось сохранить токен для {telegram_id}")
+        outcome = "unavailable"
+        reply = "Не удалось сохранить токен, попробуйте отправить его ещё раз."
+    else:
+        logger.info(f"Токен пользователя {telegram_id} валиден")
+        outcome = "valid"
+        reply = None
+
     await track(
         EventName.TOKEN_SUBMITTED,
         telegram_id=telegram_id,
-        valid=check is TokenCheck.VALID,
-        result=check.value,
+        valid=outcome == "valid",
+        result=outcome,
     )
 
-    if check is TokenCheck.UNAVAILABLE:
+    if reply is not None:
         await message.answer(
-            "Не удалось проверить токен — сервис T-Invest не ответил. "
-            "Попробуйте отправить его ещё раз через пару минут.",
-            reply_markup=create_token_input_keyboard().as_markup(),
-        )
-        return
-
-    if check is TokenCheck.INVALID:
-        logger.warning(f"Токен пользователя {telegram_id} невалиден")
-        await message.answer(
-            "Некорректный токен! Проверьте, что скопировали его целиком, и отправьте ещё раз.",
-            reply_markup=create_token_input_keyboard().as_markup(),
-        )
-        return
-
-    logger.info(f"Токен пользователя {telegram_id} валиден")
-    if not await BotUserRepository.add_token(telegram_id=telegram_id, token=token):
-        logger.warning(f"Не удалось сохранить токен для {telegram_id}")
-        await message.answer(
-            "Не удалось сохранить токен, попробуйте отправить его ещё раз.",
+            reply,
             reply_markup=create_token_input_keyboard().as_markup(),
         )
         return

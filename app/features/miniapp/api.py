@@ -24,7 +24,12 @@ from core.clients.backend import offers as offers_api
 from core.clients.backend import users as users_api
 from core.clients.backend.common import PositionAccount
 from core.clients.backend.coupons import CouponItem
-from core.clients.backend.errors import BackendError, UserNotFound
+from core.clients.backend.errors import (
+    BackendError,
+    InvalidToken,
+    UpstreamUnavailable,
+    UserNotFound,
+)
 from core.clients.backend.maturities import MaturityItem
 from core.clients.backend.notifications import (
     DisclosureAlertSettings,
@@ -71,6 +76,12 @@ def handle_backend_errors(handler: _Handler) -> _Handler:
             return await handler(request)
         except UserNotFound:
             return web.json_response({"error": "пользователь не найден"}, status=404)
+        except InvalidToken:
+            # Единственная ошибка, которую чинит сам пользователь, — про неё
+            # фронтенду нужно сказать прямо, а не общим «сервис недоступен».
+            return web.json_response({"error": "T-Инвестиции отвергли токен"}, status=400)
+        except UpstreamUnavailable:
+            return web.json_response({"error": "T-Инвестиции не отвечают"}, status=503)
         except BackendError as e:
             logger.error("Ошибка бэкенда в запросе мини-аппа %s: %s", request.path, e)
             return web.json_response({"error": "сервис временно недоступен"}, status=502)

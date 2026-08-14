@@ -57,7 +57,7 @@ def _patch_request(monkeypatch: pytest.MonkeyPatch, payload: dict[str, Any]) -> 
 
 
 async def test_parses_item(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Полный элемент разбирается со всеми блоками: купон, раскрытие, НДЦ."""
+    """Полный элемент разбирается со всеми блоками: купон, раскрытие, НРД."""
     _patch_request(monkeypatch, {"date": "2026-08-06", "items": [ITEM]})
 
     payments = await get_coupons(telegram_id=1825344258)
@@ -99,7 +99,7 @@ async def test_passes_requested_date(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 async def test_missing_optional_blocks(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Раскрытия может не быть вовсе, а блок НДЦ бэкенд пока не заполняет."""
+    """Раскрытия может не быть вовсе, а блок НРД бэкенд пока не заполняет."""
     raw = {
         "bond": {"secid": "RU000A106Z38"},
         "coupon": {"date": "2026-08-06"},

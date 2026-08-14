@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from pydantic import AliasChoices, Field, SecretStr
@@ -43,6 +44,14 @@ class Settings(BaseSettings):
 
     # Сервисный T-Invest токен для фоновых задач (синхронизация реестра эмитентов).
     t_invest_token: SecretStr | None = None
+
+    # T-Invest отдаётся под «Русским доверенным корневым CA», которого нет ни в
+    # одном системном хранилище. SDK везёт этот корень с собой и подставляет его
+    # только когда в окружении стоит SSL_TBANK_VERIFY — без этого любой вызов
+    # падает на TLS handshake. Значение читается самим SDK из os.environ в момент
+    # сборки канала, поэтому на старте его приходится класть обратно в окружение
+    # (см. `app/bot.py`) — иначе значение из .env до SDK не доедет.
+    ssl_tbank_verify: bool = True
 
     # Базовый URL Cloud Run сервиса синхронизации облигаций пользователя
     bonds_sync_url: str | None = None
@@ -94,3 +103,9 @@ class Settings(BaseSettings):
 
 
 config = Settings()  # type: ignore
+
+# SDK читает SSL_TBANK_VERIFY из окружения в момент сборки gRPC-канала, поэтому
+# настройку нужно положить обратно в os.environ — значение из .env иначе до него
+# не доедет. Делается здесь, а не в точке входа, потому что точек входа несколько
+# (`bot.py`, `miniapp_dev.py`, HTTP API), а `config` импортируют все.
+os.environ["SSL_TBANK_VERIFY"] = str(config.ssl_tbank_verify).lower()

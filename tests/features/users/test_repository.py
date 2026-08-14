@@ -2,7 +2,7 @@
 
 Данные живут в бэкенде, поэтому здесь проверяется ровно то, за что репозиторий
 теперь отвечает: он зовёт нужный метод API и не даёт его ошибке дойти до хендлера
-(кроме регистрации — там ошибка пробрасывается).
+(кроме регистрации и добавления токена — там ошибка пробрасывается).
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
-from core.clients.backend.errors import BackendError, UserNotFound
+from core.clients.backend.errors import BackendError, InvalidToken, UserNotFound
 from core.clients.backend.users import Registration
 from features.users.repository import BotUserRepository
 
@@ -63,14 +63,16 @@ async def test_get_token_swallows_unknown_user(api: AsyncMock) -> None:
 
 
 async def test_add_token(api: AsyncMock) -> None:
-    assert await BotUserRepository.add_token(3, "t.secret") is True
+    await BotUserRepository.add_token(3, "t.secret")
     api.set_token.assert_awaited_once_with(3, "t.secret")
 
 
-async def test_add_token_returns_false_for_unknown_user(api: AsyncMock) -> None:
-    api.set_token.side_effect = UserNotFound("нет такого")
+async def test_add_token_propagates_backend_errors(api: AsyncMock) -> None:
+    """Причину отказа глушить нельзя: хендлер по ней выбирает текст пользователю."""
+    api.set_token.side_effect = InvalidToken("T-Invest отверг токен")
 
-    assert await BotUserRepository.add_token(999, "t.secret") is False
+    with pytest.raises(InvalidToken):
+        await BotUserRepository.add_token(999, "t.secret")
 
 
 async def test_remove_token(api: AsyncMock) -> None:

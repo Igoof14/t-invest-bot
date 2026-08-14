@@ -7,8 +7,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from aiogram.types import Message
-from core.clients.backend.errors import BackendError, UserNotFound
-from core.clients.t_invest.common_func import TokenCheck
+from core.clients.backend.errors import (
+    BackendError,
+    InvalidToken,
+    UpstreamUnavailable,
+    UserNotFound,
+)
 from features.users import handlers as users_handlers
 from features.users.handlers import (
     handle_rm_token,
@@ -70,10 +74,7 @@ async def _drain_background_tasks() -> None:
 async def test_valid_token_schedules_bonds_sync(
     monkeypatch: pytest.MonkeyPatch, state: MagicMock
 ) -> None:
-    monkeypatch.setattr(
-        users_handlers, "check_token", AsyncMock(return_value=TokenCheck.VALID)
-    )
-    monkeypatch.setattr(users_handlers.BotUserRepository, "add_token", AsyncMock(return_value=True))
+    monkeypatch.setattr(users_handlers.BotUserRepository, "add_token", AsyncMock())
     sync_user_bonds = AsyncMock(return_value=7)
     monkeypatch.setattr(users_handlers, "sync_user_bonds", sync_user_bonds)
 
@@ -92,8 +93,7 @@ async def test_valid_token_syncs_events_after_bonds(
 ) -> None:
     """История операций догружается после облигаций — она привязана к бумагам."""
     order: list[str] = []
-    monkeypatch.setattr(users_handlers, "check_token", AsyncMock(return_value=TokenCheck.VALID))
-    monkeypatch.setattr(users_handlers.BotUserRepository, "add_token", AsyncMock(return_value=True))
+    monkeypatch.setattr(users_handlers.BotUserRepository, "add_token", AsyncMock())
 
     async def _bonds(telegram_id: int) -> int:
         order.append("bonds")
@@ -121,8 +121,7 @@ async def test_events_sync_failure_stays_silent(
     monkeypatch: pytest.MonkeyPatch, state: MagicMock, sync_user_events: AsyncMock
 ) -> None:
     """Сбой синка операций не мешает сообщению об облигациях."""
-    monkeypatch.setattr(users_handlers, "check_token", AsyncMock(return_value=TokenCheck.VALID))
-    monkeypatch.setattr(users_handlers.BotUserRepository, "add_token", AsyncMock(return_value=True))
+    monkeypatch.setattr(users_handlers.BotUserRepository, "add_token", AsyncMock())
     monkeypatch.setattr(users_handlers, "sync_user_bonds", AsyncMock(return_value=7))
     sync_user_events.return_value = None
 
@@ -137,10 +136,7 @@ async def test_token_message_is_deleted_from_chat(
     monkeypatch: pytest.MonkeyPatch, state: MagicMock
 ) -> None:
     """Токен в открытом виде не должен оставаться в истории чата."""
-    monkeypatch.setattr(
-        users_handlers, "check_token", AsyncMock(return_value=TokenCheck.VALID)
-    )
-    monkeypatch.setattr(users_handlers.BotUserRepository, "add_token", AsyncMock(return_value=True))
+    monkeypatch.setattr(users_handlers.BotUserRepository, "add_token", AsyncMock())
     monkeypatch.setattr(users_handlers, "sync_user_bonds", AsyncMock(return_value=0))
 
     message = _message("t.valid")
@@ -163,10 +159,7 @@ async def test_token_message_is_deleted_from_chat(
 async def test_sync_result_is_reported_to_user(
     monkeypatch: pytest.MonkeyPatch, state: MagicMock, bonds_synced: int | None, expected: str
 ) -> None:
-    monkeypatch.setattr(
-        users_handlers, "check_token", AsyncMock(return_value=TokenCheck.VALID)
-    )
-    monkeypatch.setattr(users_handlers.BotUserRepository, "add_token", AsyncMock(return_value=True))
+    monkeypatch.setattr(users_handlers.BotUserRepository, "add_token", AsyncMock())
     monkeypatch.setattr(users_handlers, "sync_user_bonds", AsyncMock(return_value=bonds_synced))
 
     message = _message("t.valid")
@@ -179,10 +172,8 @@ async def test_sync_result_is_reported_to_user(
 async def test_invalid_token_does_not_schedule_sync(
     monkeypatch: pytest.MonkeyPatch, state: MagicMock, sync_user_events: AsyncMock
 ) -> None:
-    monkeypatch.setattr(
-        users_handlers, "check_token", AsyncMock(return_value=TokenCheck.INVALID)
-    )
-    add_token = AsyncMock()
+    """Токен, который отверг сам T-Invest, бэкенд не сохраняет — синка нет."""
+    add_token = AsyncMock(side_effect=InvalidToken("T-Invest отверг токен"))
     monkeypatch.setattr(users_handlers.BotUserRepository, "add_token", add_token)
     sync_user_bonds = AsyncMock()
     monkeypatch.setattr(users_handlers, "sync_user_bonds", sync_user_bonds)
@@ -190,7 +181,6 @@ async def test_invalid_token_does_not_schedule_sync(
     message = _message("t.invalid")
     await handle_token_message(message, state)
 
-    add_token.assert_not_called()
     sync_user_bonds.assert_not_called()
     sync_user_events.assert_not_called()
     assert "Некорректный токен" in message.answer.await_args.args[0]
@@ -202,16 +192,15 @@ async def test_unreachable_t_invest_is_not_reported_as_bad_token(
     monkeypatch: pytest.MonkeyPatch, state: MagicMock
 ) -> None:
     """Сбой связи с T-Invest — не «некорректный токен»."""
-    monkeypatch.setattr(
-        users_handlers, "check_token", AsyncMock(return_value=TokenCheck.UNAVAILABLE)
-    )
-    add_token = AsyncMock()
+    add_token = AsyncMock(side_effect=UpstreamUnavailable("T-Invest не отвечает"))
     monkeypatch.setattr(users_handlers.BotUserRepository, "add_token", add_token)
+    sync_user_bonds = AsyncMock()
+    monkeypatch.setattr(users_handlers, "sync_user_bonds", sync_user_bonds)
 
     message = _message("t.valid")
     await handle_token_message(message, state)
 
-    add_token.assert_not_called()
+    sync_user_bonds.assert_not_called()
     text = message.answer.await_args.args[0]
     assert "Не удалось проверить токен" in text
     assert "Некорректный" not in text
@@ -221,17 +210,18 @@ async def test_save_failure_does_not_schedule_sync(
     monkeypatch: pytest.MonkeyPatch, state: MagicMock
 ) -> None:
     monkeypatch.setattr(
-        users_handlers, "check_token", AsyncMock(return_value=TokenCheck.VALID)
-    )
-    monkeypatch.setattr(
-        users_handlers.BotUserRepository, "add_token", AsyncMock(return_value=False)
+        users_handlers.BotUserRepository,
+        "add_token",
+        AsyncMock(side_effect=BackendError("бэкенд недоступен")),
     )
     sync_user_bonds = AsyncMock()
     monkeypatch.setattr(users_handlers, "sync_user_bonds", sync_user_bonds)
 
-    await handle_token_message(_message("t.valid"), state)
+    message = _message("t.valid")
+    await handle_token_message(message, state)
 
     sync_user_bonds.assert_not_called()
+    assert "Не удалось сохранить токен" in message.answer.await_args.args[0]
 
 
 # --- удаление токена ---------------------------------------------------------

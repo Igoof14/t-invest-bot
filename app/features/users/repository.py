@@ -5,9 +5,12 @@
 ходил в БД напрямую: вызывающий код от переезда не поменялся.
 
 Контракт на ошибки тоже прежний: сетевой сбой или отказ бэкенда не роняют хендлер,
-а превращаются в «ничего не вышло» (False/None/пустой список). Исключение —
-:meth:`BotUserRepository.register_and_get_state`: на `/start` без регистрации
-показывать нечего, и ошибку ловит уже сам хендлер.
+а превращаются в «ничего не вышло» (False/None/пустой список). Исключений два:
+
+* :meth:`BotUserRepository.register_and_get_state` — на `/start` без регистрации
+  показывать нечего, и ошибку ловит уже сам хендлер;
+* :meth:`BotUserRepository.add_token` — токен проверяет бэкенд, и хендлер по
+  причине отказа выбирает, что сказать пользователю.
 """
 
 import logging
@@ -62,15 +65,26 @@ class BotUserRepository:
         return token or None
 
     @classmethod
-    async def add_token(cls, telegram_id: int, token: str) -> bool:
-        """Добавляет токен пользователя."""
+    async def add_token(cls, telegram_id: int, token: str) -> None:
+        """Добавляет токен пользователя.
+
+        Валидирует токен сам бэкенд — он спрашивает у T-Invest, прежде чем
+        сохранить. Поэтому ошибка здесь пробрасывается, а не гасится в ``bool``:
+        «токен не подошёл» и «проверить не удалось» требуют разных действий от
+        пользователя, и из одного ``False`` эти случаи неразличимы.
+
+        Raises:
+            InvalidToken: T-Invest отверг токен.
+            UpstreamUnavailable: Бэкенд не смог достучаться до T-Invest.
+            BackendError: Прочие ошибки бэкенда.
+
+        """
         try:
             await users_api.set_token(telegram_id, token)
         except BackendError as e:
             logger.error(f"Ошибка при добавлении токена пользователя {telegram_id}: {e}")
-            return False
+            raise
         logger.info(f"Токен добавлен для пользователя {telegram_id}")
-        return True
 
     @classmethod
     async def remove_token(cls, telegram_id: int, *, raise_on_error: bool = False) -> bool:
