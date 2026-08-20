@@ -122,7 +122,7 @@ class DisclosurePatch(BaseModel):
 class TokenPayload(BaseModel):
     """Токен брокера, только на чтение."""
 
-    token: str = Field(min_length=1, max_length=255)
+    token: str = Field(min_length=1, max_length=2048)
 
 
 async def _validated(request: web.Request, model: type[BaseModel]) -> Any:
