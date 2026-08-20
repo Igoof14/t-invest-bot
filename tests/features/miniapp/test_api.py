@@ -9,6 +9,7 @@ import pytest
 import pytest_asyncio
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
+from common.brokers import Broker
 from core.clients.backend import coupons as coupons_api
 from core.clients.backend import notifications as notifications_api
 from core.clients.backend import users as users_api
@@ -438,25 +439,60 @@ async def test_me_registers_user(client: TestClient, monkeypatch: pytest.MonkeyP
     )
 
 
+@pytest.fixture(autouse=True)
+def _stub_portfolio_sync(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Синхронизация портфеля идёт в отдельный Cloud Run сервис — здесь не тестируем сеть."""
+    monkeypatch.setattr(miniapp_api, "sync_user_bonds", AsyncMock(return_value=0))
+    monkeypatch.setattr(miniapp_api, "sync_user_events", AsyncMock(return_value=0))
+
+
 async def test_set_and_delete_token(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Токен подключается и отключается для пользователя из подписи."""
+    """Токен подключается и отключается для пользователя из подписи, для своего брокера."""
     set_token = AsyncMock()
     delete_token = AsyncMock()
     monkeypatch.setattr(users_api, "set_token", set_token)
     monkeypatch.setattr(users_api, "delete_token", delete_token)
 
-    saved = await client.put("/miniapp/api/token", headers=auth(), json={"token": "t.secret"})
-    removed = await client.delete("/miniapp/api/token", headers=auth())
+    saved = await client.put(
+        "/miniapp/api/tokens/finam", headers=auth(), json={"token": "f.secret"}
+    )
+    removed = await client.delete("/miniapp/api/tokens/finam", headers=auth())
 
     assert (saved.status, await saved.json()) == (200, {"has_token": True})
     assert (removed.status, await removed.json()) == (200, {"has_token": False})
-    set_token.assert_awaited_once_with(TELEGRAM_ID, "t.secret")
-    delete_token.assert_awaited_once_with(TELEGRAM_ID)
+    set_token.assert_awaited_once_with(TELEGRAM_ID, Broker.FINAM, "f.secret")
+    delete_token.assert_awaited_once_with(TELEGRAM_ID, Broker.FINAM)
+
+
+async def test_set_token_schedules_portfolio_sync(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(users_api, "set_token", AsyncMock())
+    sync_bonds = AsyncMock(return_value=3)
+    sync_events = AsyncMock(return_value=5)
+    monkeypatch.setattr(miniapp_api, "sync_user_bonds", sync_bonds)
+    monkeypatch.setattr(miniapp_api, "sync_user_events", sync_events)
+
+    await client.put("/miniapp/api/tokens/tinvest", headers=auth(), json={"token": "t.secret"})
+    for task in list(miniapp_api._SYNC_TASKS):
+        await task
+
+    sync_bonds.assert_awaited_once_with(TELEGRAM_ID)
+    sync_events.assert_awaited_once_with(TELEGRAM_ID)
+
+
+async def test_unknown_broker_is_404(client: TestClient) -> None:
+    response = await client.put(
+        "/miniapp/api/tokens/unknown", headers=auth(), json={"token": "t.secret"}
+    )
+    assert response.status == 404
 
 
 async def test_empty_token_rejected(client: TestClient) -> None:
     """Пустой токен не сохраняется."""
-    response = await client.put("/miniapp/api/token", headers=auth(), json={"token": ""})
+    response = await client.put(
+        "/miniapp/api/tokens/tinvest", headers=auth(), json={"token": ""}
+    )
     assert response.status == 400
 
 

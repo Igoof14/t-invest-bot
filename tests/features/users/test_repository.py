@@ -2,7 +2,7 @@
 
 Данные живут в бэкенде, поэтому здесь проверяется ровно то, за что репозиторий
 теперь отвечает: он зовёт нужный метод API и не даёт его ошибке дойти до хендлера
-(кроме регистрации и добавления токена — там ошибка пробрасывается).
+(кроме регистрации — там ошибка пробрасывается).
 """
 
 from __future__ import annotations
@@ -10,7 +10,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
-from core.clients.backend.errors import BackendError, InvalidToken, UserNotFound
+from common.brokers import Broker
+from core.clients.backend.errors import BackendError, UserNotFound
 from core.clients.backend.users import Registration
 from features.users.repository import BotUserRepository
 
@@ -47,6 +48,14 @@ async def test_get_token(api: AsyncMock) -> None:
     api.get_token.return_value = "t.secret"
 
     assert await BotUserRepository.get_token_by_telegram_id(3) == "t.secret"
+    api.get_token.assert_awaited_once_with(3, Broker.TINVEST)
+
+
+async def test_get_token_accepts_a_broker(api: AsyncMock) -> None:
+    api.get_token.return_value = "f.secret"
+
+    assert await BotUserRepository.get_token_by_telegram_id(3, Broker.FINAM) == "f.secret"
+    api.get_token.assert_awaited_once_with(3, Broker.FINAM)
 
 
 @pytest.mark.parametrize("value", [None, ""])
@@ -60,30 +69,6 @@ async def test_get_token_swallows_unknown_user(api: AsyncMock) -> None:
     api.get_token.side_effect = UserNotFound("нет такого")
 
     assert await BotUserRepository.get_token_by_telegram_id(999) is None
-
-
-async def test_add_token(api: AsyncMock) -> None:
-    await BotUserRepository.add_token(3, "t.secret")
-    api.set_token.assert_awaited_once_with(3, "t.secret")
-
-
-async def test_add_token_propagates_backend_errors(api: AsyncMock) -> None:
-    """Причину отказа глушить нельзя: хендлер по ней выбирает текст пользователю."""
-    api.set_token.side_effect = InvalidToken("T-Invest отверг токен")
-
-    with pytest.raises(InvalidToken):
-        await BotUserRepository.add_token(999, "t.secret")
-
-
-async def test_remove_token(api: AsyncMock) -> None:
-    assert await BotUserRepository.remove_token(3) is True
-    api.delete_token.assert_awaited_once_with(3)
-
-
-async def test_remove_token_returns_false_on_error(api: AsyncMock) -> None:
-    api.delete_token.side_effect = BackendError("backend down")
-
-    assert await BotUserRepository.remove_token(3) is False
 
 
 async def test_active_users_listing(api: AsyncMock) -> None:

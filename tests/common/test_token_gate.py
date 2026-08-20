@@ -11,8 +11,8 @@ from core.clients.backend.errors import BackendError, UserNotFound
 
 @pytest.fixture
 def get_token(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
-    mock = AsyncMock(return_value="t0ken")
-    monkeypatch.setattr("common.token_gate.users_api.get_token", mock)
+    mock = AsyncMock(return_value=True)
+    monkeypatch.setattr("common.token_gate.users_api.has_any_token", mock)
     return mock
 
 
@@ -22,7 +22,7 @@ async def test_token_connected(get_token: AsyncMock) -> None:
 
 
 async def test_token_absent(get_token: AsyncMock) -> None:
-    get_token.return_value = None
+    get_token.return_value = False
 
     assert await has_token(1) is False
 

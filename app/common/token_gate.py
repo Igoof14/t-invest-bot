@@ -33,7 +33,7 @@ async def has_token(telegram_id: int) -> bool:
     у кого токен есть.
     """
     try:
-        return await users_api.get_token(telegram_id) is not None
+        return await users_api.has_any_token(telegram_id)
     except UserNotFound:
         # Пользователя нет в бэкенде — токена тем более нет.
         return False

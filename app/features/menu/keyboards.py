@@ -96,7 +96,7 @@ async def _has_token(telegram_id: int) -> bool:
     показать подсказку, чем предложить подключить токен тому, у кого он уже
     есть. Исключение ловит ``gather`` в :func:`build_hub`.
     """
-    return await users_api.get_token(telegram_id) is not None
+    return await users_api.has_any_token(telegram_id)
 
 
 async def build_hub(

@@ -7,6 +7,8 @@
 import logging
 from dataclasses import dataclass
 
+from common.brokers import Broker
+
 from .http import request
 
 logger = logging.getLogger(__name__)
@@ -50,38 +52,50 @@ async def register(
     )
 
 
-async def get_token(telegram_id: int) -> str | None:
-    """Read-only токен T-Invest пользователя; None, если не подключён.
+async def get_token(telegram_id: int, broker: Broker) -> str | None:
+    """Read-only токен указанного брокера; None, если не подключён.
 
     Raises:
         UserNotFound: Бэкенд не знает такого пользователя.
         BackendError: Ошибка конфигурации, авторизации или запроса.
 
     """
-    payload = await request("GET", f"{_USERS}/{telegram_id}/token")
+    payload = await request("GET", f"{_USERS}/{telegram_id}/tokens/{broker.value}")
     return payload.get("token")
 
 
-async def set_token(telegram_id: int, token: str) -> None:
-    """Сохраняет токен T-Invest.
+async def set_token(telegram_id: int, broker: Broker, token: str) -> None:
+    """Сохраняет токен указанного брокера.
 
     Raises:
         UserNotFound: Бэкенд не знает такого пользователя.
         BackendError: Ошибка конфигурации, авторизации или запроса.
 
     """
-    await request("PUT", f"{_USERS}/{telegram_id}/token", json={"token": token})
+    await request("PUT", f"{_USERS}/{telegram_id}/tokens/{broker.value}", json={"token": token})
 
 
-async def delete_token(telegram_id: int) -> None:
-    """Отвязывает токен T-Invest.
+async def delete_token(telegram_id: int, broker: Broker) -> None:
+    """Отвязывает токен указанного брокера.
 
     Raises:
         UserNotFound: Бэкенд не знает такого пользователя.
         BackendError: Ошибка конфигурации, авторизации или запроса.
 
     """
-    await request("DELETE", f"{_USERS}/{telegram_id}/token")
+    await request("DELETE", f"{_USERS}/{telegram_id}/tokens/{broker.value}")
+
+
+async def has_any_token(telegram_id: int) -> bool:
+    """Подключён ли у пользователя токен хоть одного брокера.
+
+    Raises:
+        UserNotFound: Бэкенд не знает такого пользователя.
+        BackendError: Ошибка конфигурации, авторизации или запроса.
+
+    """
+    payload = await request("GET", f"{_USERS}/{telegram_id}/tokens")
+    return bool(payload.get("has_token"))
 
 
 async def deactivate(telegram_id: int) -> None:

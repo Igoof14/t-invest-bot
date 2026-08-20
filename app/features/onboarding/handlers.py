@@ -9,7 +9,6 @@ from __future__ import annotations
 import logging
 
 from aiogram import F, Router
-from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from common.utils.bot_utils import safe_edit_text
 from features.analytics import EventName, track
@@ -62,14 +61,14 @@ async def handle_nav(callback: CallbackQuery, callback_data: OnboardingNav) -> N
 
 
 @router.callback_query(F.data == TOKEN_CALLBACK)
-async def handle_token_cta(callback: CallbackQuery, state: FSMContext) -> None:
-    """Финальный CTA: открывает ввод токена."""
+async def handle_token_cta(callback: CallbackQuery) -> None:
+    """Финальный CTA: показывает кнопку открытия мини-аппа."""
     # Отложенный импорт: разрывает цикл base -> onboarding -> users -> base.
-    from features.users.handlers import prompt_for_token
+    from features.users.handlers import prompt_open_miniapp
 
     await track(EventName.ONBOARDING_CTA_CLICKED, telegram_id=callback.from_user.id)
     if isinstance(callback.message, Message):
-        await prompt_for_token(callback.message, state, entry="onboarding")
+        await prompt_open_miniapp(callback.message, entry="onboarding")
     await callback.answer()
 
 

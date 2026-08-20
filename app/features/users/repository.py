@@ -5,16 +5,17 @@
 ходил в БД напрямую: вызывающий код от переезда не поменялся.
 
 Контракт на ошибки тоже прежний: сетевой сбой или отказ бэкенда не роняют хендлер,
-а превращаются в «ничего не вышло» (False/None/пустой список). Исключений два:
+а превращаются в «ничего не вышло» (False/None/пустой список). Исключение —
+:meth:`BotUserRepository.register_and_get_state`: на `/start` без регистрации
+показывать нечего, и ошибку ловит уже сам хендлер.
 
-* :meth:`BotUserRepository.register_and_get_state` — на `/start` без регистрации
-  показывать нечего, и ошибку ловит уже сам хендлер;
-* :meth:`BotUserRepository.add_token` — токен проверяет бэкенд, и хендлер по
-  причине отказа выбирает, что сказать пользователю.
+Добавление и удаление токена бот больше не делает сам — это переехало в мини-апп
+(`features/miniapp/api.py`), который ходит в `core.clients.backend.users` напрямую.
 """
 
 import logging
 
+from common.brokers import Broker
 from core.clients.backend import users as users_api
 from core.clients.backend.errors import BackendError
 
@@ -54,61 +55,17 @@ class BotUserRepository:
         return registration.is_new_user, registration.has_token
 
     @classmethod
-    async def get_token_by_telegram_id(cls, telegram_id: int) -> str | None:
+    async def get_token_by_telegram_id(
+        cls, telegram_id: int, broker: Broker = Broker.TINVEST
+    ) -> str | None:
         """Достает токен пользователя по телеграм id."""
         try:
-            token = await users_api.get_token(telegram_id)
+            token = await users_api.get_token(telegram_id, broker)
         except BackendError as e:
             logger.error(f"Ошибка при получении токена для пользователя {telegram_id}: {e}")
             return None
         logger.debug(f"Токен пользователя {telegram_id}: {'найден' if token else 'не найден'}")
         return token or None
-
-    @classmethod
-    async def add_token(cls, telegram_id: int, token: str) -> None:
-        """Добавляет токен пользователя.
-
-        Валидирует токен сам бэкенд — он спрашивает у T-Invest, прежде чем
-        сохранить. Поэтому ошибка здесь пробрасывается, а не гасится в ``bool``:
-        «токен не подошёл» и «проверить не удалось» требуют разных действий от
-        пользователя, и из одного ``False`` эти случаи неразличимы.
-
-        Raises:
-            InvalidToken: T-Invest отверг токен.
-            UpstreamUnavailable: Бэкенд не смог достучаться до T-Invest.
-            BackendError: Прочие ошибки бэкенда.
-
-        """
-        try:
-            await users_api.set_token(telegram_id, token)
-        except BackendError as e:
-            logger.error(f"Ошибка при добавлении токена пользователя {telegram_id}: {e}")
-            raise
-        logger.info(f"Токен добавлен для пользователя {telegram_id}")
-
-    @classmethod
-    async def remove_token(cls, telegram_id: int, *, raise_on_error: bool = False) -> bool:
-        """Удаляет токен пользователя.
-
-        Args:
-            telegram_id: Чей токен удалить.
-            raise_on_error: Пробросить `BackendError` вместо `False`. Нужно там,
-                где пользователю показывают разные сообщения на «токена и не
-                было» (`UserNotFound`) и «бэкенд не ответил» — из одного `False`
-                эти случаи неразличимы.
-
-        Raises:
-            BackendError: Только при ``raise_on_error=True``.
-
-        """
-        try:
-            await users_api.delete_token(telegram_id)
-        except BackendError as e:
-            logger.error(f"Ошибка при удалении токена пользователя {telegram_id}: {e}")
-            if raise_on_error:
-                raise
-            return False
-        return True
 
     @classmethod
     async def get_all_active_users(cls) -> list[int]:

@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import functools
 import logging
 from collections.abc import Awaitable, Callable
@@ -17,6 +18,7 @@ from datetime import date, time
 from typing import Any, Literal
 
 from aiohttp import web
+from common.brokers import Broker
 from core.clients.backend import coupons as coupons_api
 from core.clients.backend import maturities as maturities_api
 from core.clients.backend import notifications as notifications_api
@@ -38,7 +40,9 @@ from core.clients.backend.notifications import (
     PriceAlertSettings,
 )
 from core.clients.backend.offers import OfferItem
+from core.clients.bonds_sync.client import sync_user_bonds, sync_user_events
 from core.config import config
+from features.analytics import EventName, track
 from features.ratings.enums import AVAILABLE_AGENCIES
 from pydantic import BaseModel, Field, ValidationError
 
@@ -48,6 +52,9 @@ from .session import issue_session
 logger = logging.getLogger(__name__)
 
 routes = web.RouteTableDef()
+
+# Удержание фоновых задач синхронизации портфеля от сборки GC до завершения.
+_SYNC_TASKS: set[asyncio.Task[None]] = set()
 
 _Handler = Callable[[web.Request], Awaitable[web.StreamResponse]]
 
@@ -79,9 +86,9 @@ def handle_backend_errors(handler: _Handler) -> _Handler:
         except InvalidToken:
             # Единственная ошибка, которую чинит сам пользователь, — про неё
             # фронтенду нужно сказать прямо, а не общим «сервис недоступен».
-            return web.json_response({"error": "T-Инвестиции отвергли токен"}, status=400)
+            return web.json_response({"error": "Брокер отверг токен"}, status=400)
         except UpstreamUnavailable:
-            return web.json_response({"error": "T-Инвестиции не отвечают"}, status=503)
+            return web.json_response({"error": "Брокер не отвечает"}, status=503)
         except BackendError as e:
             logger.error("Ошибка бэкенда в запросе мини-аппа %s: %s", request.path, e)
             return web.json_response({"error": "сервис временно недоступен"}, status=502)
@@ -113,7 +120,7 @@ class DisclosurePatch(BaseModel):
 
 
 class TokenPayload(BaseModel):
-    """Токен Т-Инвестиций, только на чтение."""
+    """Токен брокера, только на чтение."""
 
     token: str = Field(min_length=1, max_length=255)
 
@@ -428,18 +435,67 @@ async def list_agencies(_: web.Request) -> web.Response:
     )
 
 
-@routes.put("/miniapp/api/token")
+def _broker(request: web.Request) -> Broker | None:
+    """Брокер из пути, или None — если код неизвестен."""
+    try:
+        return Broker(request.match_info["broker"])
+    except ValueError:
+        return None
+
+
+async def _sync_portfolio(telegram_id: int) -> None:
+    """Синхронизирует портфель после подключения токена.
+
+    Сначала список облигаций, затем историю операций — она привязана к уже
+    сохранённым бумагам. В отличие от старого бот-флоу здесь некому сообщить
+    результат: фронтенд узнаёт о нём через собственный опрос данных, а не
+    через сообщение в чат.
+    """
+    bonds_synced = await sync_user_bonds(telegram_id)
+    await track(
+        EventName.BONDS_SYNCED,
+        telegram_id=telegram_id,
+        count=bonds_synced,
+        ok=bonds_synced is not None,
+    )
+
+    events_synced = await sync_user_events(telegram_id)
+    await track(
+        EventName.EVENTS_SYNCED,
+        telegram_id=telegram_id,
+        count=events_synced,
+        ok=events_synced is not None,
+    )
+
+
+def _schedule_portfolio_sync(telegram_id: int) -> None:
+    task = asyncio.create_task(_sync_portfolio(telegram_id))
+    _SYNC_TASKS.add(task)
+    task.add_done_callback(_SYNC_TASKS.discard)
+
+
+@routes.put("/miniapp/api/tokens/{broker}")
 @handle_backend_errors
 async def set_token(request: web.Request) -> web.Response:
-    """Подключает токен Т-Инвестиций."""
+    """Подключает токен указанного брокера и запускает синхронизацию портфеля."""
+    broker = _broker(request)
+    if broker is None:
+        return web.json_response({"error": "неизвестный брокер"}, status=404)
+
     payload: TokenPayload = await _validated(request, TokenPayload)
-    await users_api.set_token(current_user(request).telegram_id, payload.token)
+    telegram_id = current_user(request).telegram_id
+    await users_api.set_token(telegram_id, broker, payload.token)
+    _schedule_portfolio_sync(telegram_id)
     return web.json_response({"has_token": True})
 
 
-@routes.delete("/miniapp/api/token")
+@routes.delete("/miniapp/api/tokens/{broker}")
 @handle_backend_errors
 async def delete_token(request: web.Request) -> web.Response:
-    """Отвязывает токен Т-Инвестиций."""
-    await users_api.delete_token(current_user(request).telegram_id)
+    """Отвязывает токен указанного брокера."""
+    broker = _broker(request)
+    if broker is None:
+        return web.json_response({"error": "неизвестный брокер"}, status=404)
+
+    await users_api.delete_token(current_user(request).telegram_id, broker)
     return web.json_response({"has_token": False})

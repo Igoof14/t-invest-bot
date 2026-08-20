@@ -7,6 +7,7 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
+from common.brokers import Broker
 from core.clients.backend import users
 
 
@@ -50,22 +51,29 @@ async def test_register_defaults_missing_flags_to_false(request_mock: AsyncMock)
 async def test_get_token_returns_none_when_not_connected(request_mock: AsyncMock) -> None:
     request_mock.return_value = {"token": None}
 
-    assert await users.get_token(42) is None
-    assert call(request_mock)[0] == ("GET", "/api/v1/users/42/token")
+    assert await users.get_token(42, Broker.TINVEST) is None
+    assert call(request_mock)[0] == ("GET", "/api/v1/users/42/tokens/tinvest")
 
 
 async def test_set_token_uses_put(request_mock: AsyncMock) -> None:
-    await users.set_token(42, "t.secret")
+    await users.set_token(42, Broker.FINAM, "t.secret")
 
     args, kwargs = call(request_mock)
-    assert args == ("PUT", "/api/v1/users/42/token")
+    assert args == ("PUT", "/api/v1/users/42/tokens/finam")
     assert kwargs["json"] == {"token": "t.secret"}
 
 
 async def test_delete_token_uses_delete(request_mock: AsyncMock) -> None:
-    await users.delete_token(42)
+    await users.delete_token(42, Broker.BCS)
 
-    assert call(request_mock)[0] == ("DELETE", "/api/v1/users/42/token")
+    assert call(request_mock)[0] == ("DELETE", "/api/v1/users/42/tokens/bcs")
+
+
+async def test_has_any_token_reads_aggregate_status(request_mock: AsyncMock) -> None:
+    request_mock.return_value = {"has_token": True}
+
+    assert await users.has_any_token(42) is True
+    assert call(request_mock)[0] == ("GET", "/api/v1/users/42/tokens")
 
 
 async def test_deactivate_uses_post(request_mock: AsyncMock) -> None:

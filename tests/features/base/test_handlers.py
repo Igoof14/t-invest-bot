@@ -13,8 +13,8 @@ from features.base import handlers
 @pytest.fixture
 def token(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     """Ответ бэкенда на запрос токена. По умолчанию токен подключён."""
-    get_token = AsyncMock(return_value="t0ken")
-    monkeypatch.setattr("common.token_gate.users_api.get_token", get_token)
+    get_token = AsyncMock(return_value=True)
+    monkeypatch.setattr("common.token_gate.users_api.has_any_token", get_token)
     return get_token
 
 
@@ -37,7 +37,7 @@ def _message() -> MagicMock:
 )
 async def test_portfolio_sections_require_token(handler, token: AsyncMock) -> None:
     """Без токена раздел отвечает заглушкой и не ходит за данными."""
-    token.return_value = None
+    token.return_value = False
     message = _message()
 
     await handler(message)
@@ -56,7 +56,7 @@ async def test_coupons_open_with_token(token: AsyncMock) -> None:
 
 async def test_notifications_open_without_token(token: AsyncMock, monkeypatch) -> None:
     """Хаб уведомлений доступен без токена — там настраивается рыночный режим."""
-    token.return_value = None
+    token.return_value = False
     render_hub = AsyncMock(return_value=("хаб", MagicMock()))
     monkeypatch.setattr(handlers, "render_hub", render_hub)
     message = _message()

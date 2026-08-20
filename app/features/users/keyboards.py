@@ -1,6 +1,6 @@
 """Keyboards for users/settings feature."""
 
-from aiogram.types import InlineKeyboardButton
+from aiogram.types import InlineKeyboardButton, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from .enums import SettingsButtonTexts, SettingsCallbackData
@@ -9,12 +9,12 @@ from .enums import SettingsButtonTexts, SettingsCallbackData
 def create_settings_keyboard(has_token: bool) -> InlineKeyboardBuilder:
     """Создаёт инлайн-клавиатуру настроек под текущее состояние токена.
 
-    Удалять нечего, пока токен не подключён, — кнопки удаления в этом случае
-    просто нет. А кнопка подключения меняет подпись: с токеном она перезаписывает
-    существующий, а не «добавляет» ещё один.
+    Единственная кнопка меняет подпись: с токеном она ведёт к замене
+    существующего, а не к добавлению ещё одного. Управление конкретными
+    брокерами (добавление, замена, удаление) целиком в мини-аппе.
 
     Args:
-        has_token: Подключён ли у пользователя токен T-Invest.
+        has_token: Подключён ли у пользователя токен хотя бы одного брокера.
 
     """
     builder = InlineKeyboardBuilder()
@@ -28,49 +28,26 @@ def create_settings_keyboard(has_token: bool) -> InlineKeyboardBuilder:
             callback_data=SettingsCallbackData.ADD_TOKEN.value,
         )
     )
-    if has_token:
-        builder.add(
-            InlineKeyboardButton(
-                text=SettingsButtonTexts.RM_TOKEN.value,
-                callback_data=SettingsCallbackData.RM_TOKEN.value,
-            )
-        )
-    builder.adjust(2)
     return builder
 
 
-def create_delete_confirm_keyboard() -> InlineKeyboardBuilder:
-    """Клавиатура подтверждения удаления токена: «Да, удалить» / «Отмена»."""
+def create_open_miniapp_keyboard(web_app: WebAppInfo) -> InlineKeyboardBuilder:
+    """Клавиатура экрана открытия мини-аппа: сама кнопка и возврат в настройки."""
     builder = InlineKeyboardBuilder()
     builder.add(
-        InlineKeyboardButton(
-            text=SettingsButtonTexts.RM_TOKEN_CONFIRM.value,
-            callback_data=SettingsCallbackData.RM_TOKEN_CONFIRM.value,
-        )
+        InlineKeyboardButton(text=SettingsButtonTexts.OPEN_MINIAPP.value, web_app=web_app)
     )
     builder.add(
         InlineKeyboardButton(
-            text=SettingsButtonTexts.CANCEL.value,
-            callback_data=SettingsCallbackData.RM_TOKEN_CANCEL.value,
+            text=SettingsButtonTexts.BACK.value,
+            callback_data=SettingsCallbackData.BACK_TO_SETTINGS.value,
         )
     )
-    builder.adjust(2)
-    return builder
-
-
-def create_token_input_keyboard() -> InlineKeyboardBuilder:
-    """Клавиатура экрана ввода токена: единственный выход из ожидания ввода."""
-    builder = InlineKeyboardBuilder()
-    builder.add(
-        InlineKeyboardButton(
-            text=SettingsButtonTexts.CANCEL.value,
-            callback_data=SettingsCallbackData.TOKEN_INPUT_CANCEL.value,
-        )
-    )
+    builder.adjust(1)
     return builder
 
 
 def settings_text(has_token: bool) -> str:
     """Текст экрана настроек: без статуса токена экран не объясняет свои кнопки."""
     status = "подключён ✅" if has_token else "не подключён ❌"
-    return f"<b>Настройки</b>\n\nТокен T-Invest: {status}"
+    return f"<b>Настройки</b>\n\nТокен брокера: {status}"

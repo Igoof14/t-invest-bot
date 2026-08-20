@@ -14,7 +14,6 @@ from features.onboarding.handlers import (
 )
 from features.onboarding.schemas import OnboardingNav
 from features.onboarding.texts import STEPS
-from features.users.handlers import TokenStates
 
 
 def _message() -> MagicMock:
@@ -109,14 +108,16 @@ async def test_market_cta_opens_notifications_hub(monkeypatch) -> None:
     callback.answer.assert_awaited_once()
 
 
-async def test_token_cta_prompts_for_token() -> None:
+async def test_token_cta_shows_miniapp_button(monkeypatch) -> None:
+    from core.config import config
+
+    monkeypatch.setattr(config, "miniapp_url", "https://app.example.com")
     message = _message()
     callback = _callback(message)
-    state = MagicMock()
-    state.set_state = AsyncMock()
 
-    await handle_token_cta(callback, state)
+    await handle_token_cta(callback)
 
     message.answer.assert_awaited_once()
-    state.set_state.assert_awaited_once_with(TokenStates.waiting_for_token)
+    markup = message.answer.await_args.kwargs["reply_markup"]
+    assert markup.inline_keyboard[0][0].web_app.url == "https://app.example.com/profile"
     callback.answer.assert_awaited_once()

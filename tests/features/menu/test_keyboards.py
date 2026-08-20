@@ -30,8 +30,8 @@ def user_with_token(monkeypatch):
 
     Без этого каждый тест хаба ходил бы в реальный бэкенд.
     """
-    get_token = AsyncMock(return_value="t0ken")
-    monkeypatch.setattr("features.menu.keyboards.users_api.get_token", get_token)
+    get_token = AsyncMock(return_value=True)
+    monkeypatch.setattr("features.menu.keyboards.users_api.has_any_token", get_token)
     return get_token
 
 
@@ -111,7 +111,7 @@ async def test_build_hub_without_badge() -> None:
 
 async def test_build_hub_upsells_token_when_absent(user_with_token) -> None:
     """Без токена хаб объясняет режим и предлагает его подключить."""
-    user_with_token.return_value = None
+    user_with_token.return_value = False
 
     text, markup = await build_hub(111, [_section("plain")])
     texts = [btn.text for row in markup.inline_keyboard for btn in row]
