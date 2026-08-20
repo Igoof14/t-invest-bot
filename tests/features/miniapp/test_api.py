@@ -422,6 +422,8 @@ async def test_me_registers_user(client: TestClient, monkeypatch: pytest.MonkeyP
     """/me регистрирует открывшего мини-апп: он мог не нажимать /start."""
     register = AsyncMock(return_value=Registration(is_new_user=True, has_token=False))
     monkeypatch.setattr(users_api, "register", register)
+    get_token = AsyncMock(return_value=None)
+    monkeypatch.setattr(users_api, "get_token", get_token)
 
     response = await client.get("/miniapp/api/me", headers=auth())
 
@@ -432,11 +434,41 @@ async def test_me_registers_user(client: TestClient, monkeypatch: pytest.MonkeyP
         "first_name": "Иван",
         "last_name": None,
         "username": "ivan",
-        "has_token": False,
+        "tokens": [
+            {"broker": "tinvest", "has_token": False},
+            {"broker": "finam", "has_token": False},
+            {"broker": "bcs", "has_token": False},
+        ],
     }
     register.assert_awaited_once_with(
         TELEGRAM_ID, username="ivan", first_name="Иван", last_name=None
     )
+    assert get_token.await_count == len(Broker)
+
+
+async def test_me_reports_per_broker_token_status(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Каждый брокер получает свой статус — не общий флаг на всех."""
+    monkeypatch.setattr(
+        users_api,
+        "register",
+        AsyncMock(return_value=Registration(is_new_user=False, has_token=True)),
+    )
+
+    async def get_token(_telegram_id: int, broker: Broker) -> str | None:
+        return "secret" if broker is Broker.TINVEST else None
+
+    monkeypatch.setattr(users_api, "get_token", get_token)
+
+    response = await client.get("/miniapp/api/me", headers=auth())
+
+    payload = await response.json()
+    assert payload["tokens"] == [
+        {"broker": "tinvest", "has_token": True},
+        {"broker": "finam", "has_token": False},
+        {"broker": "bcs", "has_token": False},
+    ]
 
 
 @pytest.fixture(autouse=True)
@@ -490,9 +522,7 @@ async def test_unknown_broker_is_404(client: TestClient) -> None:
 
 async def test_empty_token_rejected(client: TestClient) -> None:
     """Пустой токен не сохраняется."""
-    response = await client.put(
-        "/miniapp/api/tokens/tinvest", headers=auth(), json={"token": ""}
-    )
+    response = await client.put("/miniapp/api/tokens/tinvest", headers=auth(), json={"token": ""})
     assert response.status == 400
 
 

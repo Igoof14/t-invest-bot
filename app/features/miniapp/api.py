@@ -293,20 +293,37 @@ async def create_session(request: web.Request) -> web.Response:
     return web.json_response({"token": token, "expires_at": expires_at})
 
 
+async def _broker_tokens(telegram_id: int) -> list[dict[str, Any]]:
+    """Статус токена по каждому известному брокеру.
+
+    Бэкенд хранит токены по отдельности на брокера и не отдаёт агрегат одним
+    запросом, поэтому читаем каждый параллельно — иначе профиль ждал бы три
+    последовательных round-trip'а.
+    """
+    tokens = await asyncio.gather(*(users_api.get_token(telegram_id, broker) for broker in Broker))
+    return [
+        {"broker": broker.value, "has_token": token is not None}
+        for broker, token in zip(Broker, tokens, strict=True)
+    ]
+
+
 @routes.get("/miniapp/api/me")
 @handle_backend_errors
 async def get_me(request: web.Request) -> web.Response:
-    """Профиль пользователя и статус токена.
+    """Профиль пользователя и статус токена по каждому брокеру.
 
     Заодно регистрирует пользователя: мини-апп можно открыть из ссылки, ни разу
     не нажав `/start`, и без этого бэкенд не знал бы о нём.
     """
     user = current_user(request)
-    registration = await users_api.register(
-        user.telegram_id,
-        username=user.username,
-        first_name=user.first_name,
-        last_name=user.last_name,
+    _registration, tokens = await asyncio.gather(
+        users_api.register(
+            user.telegram_id,
+            username=user.username,
+            first_name=user.first_name,
+            last_name=user.last_name,
+        ),
+        _broker_tokens(user.telegram_id),
     )
     return web.json_response(
         {
@@ -314,7 +331,7 @@ async def get_me(request: web.Request) -> web.Response:
             "first_name": user.first_name,
             "last_name": user.last_name,
             "username": user.username,
-            "has_token": registration.has_token,
+            "tokens": tokens,
         }
     )
 
