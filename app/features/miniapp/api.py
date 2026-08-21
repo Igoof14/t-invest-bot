@@ -19,11 +19,13 @@ from typing import Any, Literal
 
 from aiohttp import web
 from common.brokers import Broker
+from core.clients.backend import analytics as analytics_api
 from core.clients.backend import coupons as coupons_api
 from core.clients.backend import maturities as maturities_api
 from core.clients.backend import notifications as notifications_api
 from core.clients.backend import offers as offers_api
 from core.clients.backend import users as users_api
+from core.clients.backend.analytics import BondBreakdown, Cashflow
 from core.clients.backend.common import PositionAccount
 from core.clients.backend.coupons import CouponItem
 from core.clients.backend.errors import (
@@ -279,6 +281,84 @@ def _coupons_date(request: web.Request) -> date | None:
         return None
 
 
+def _analytics_range(request: web.Request) -> tuple[date | None, date | None]:
+    """Границы диапазона из query.
+
+    Мусор в параметре не повод отказывать: ``None`` означает «пусть решает
+    бэкенд», а он подставляет первую операцию пользователя и сегодняшний день.
+    """
+    return _query_date(request, "date_from"), _query_date(request, "date_to")
+
+
+def _query_date(request: web.Request, name: str) -> date | None:
+    try:
+        return date.fromisoformat(request.query[name])
+    except (KeyError, ValueError):
+        return None
+
+
+def _granularity(request: web.Request) -> str:
+    """Гранулярность колонок. Неизвестное значение — как будто его не просили."""
+    value = request.query.get("granularity", analytics_api.DEFAULT_GRANULARITY)
+    return value if value in analytics_api.GRANULARITIES else analytics_api.DEFAULT_GRANULARITY
+
+
+def _bonds_limit(request: web.Request) -> int:
+    try:
+        return int(request.query["limit"])
+    except (KeyError, ValueError):
+        return analytics_api.DEFAULT_BONDS_LIMIT
+
+
+def _cashflow_payload(report: Cashflow) -> dict[str, Any]:
+    """Метрики уезжают списком, а не полями: их состав задаёт бэкенд."""
+    return {
+        "granularity": report.granularity,
+        "date_from": _iso(report.date_from),
+        "date_to": _iso(report.date_to),
+        "periods": [
+            {
+                "key": period.key,
+                "label": period.label,
+                "start": _iso(period.start),
+                "end": _iso(period.end),
+            }
+            for period in report.periods
+        ],
+        "metrics": [
+            {
+                "key": series.key,
+                "label": series.label,
+                "sign": series.sign,
+                "values": series.values,
+                "total": series.total,
+            }
+            for series in report.metrics
+        ],
+    }
+
+
+def _bonds_payload(report: BondBreakdown) -> dict[str, Any]:
+    return {
+        "date_from": _iso(report.date_from),
+        "date_to": _iso(report.date_to),
+        "columns": [
+            {"key": column.key, "label": column.label, "sign": column.sign}
+            for column in report.columns
+        ],
+        "items": [
+            {
+                "isin": row.isin,
+                "ticker": row.ticker,
+                "name": row.name,
+                "events": row.events,
+                "values": row.values,
+            }
+            for row in report.items
+        ],
+    }
+
+
 @routes.post("/miniapp/api/session")
 async def create_session(request: web.Request) -> web.Response:
     """Меняет подпись Telegram на сессию — и продлевает уже выданную.
@@ -371,6 +451,28 @@ async def get_coupons(request: web.Request) -> web.Response:
             "items": [_coupon_payload(item) for item in payments.items],
         }
     )
+
+
+@routes.get("/miniapp/api/analytics/cashflow")
+@handle_backend_errors
+async def get_analytics_cashflow(request: web.Request) -> web.Response:
+    """Денежный поток по облигациям пользователя, разложенный по периодам."""
+    date_from, date_to = _analytics_range(request)
+    report = await analytics_api.get_cashflow(
+        current_user(request).telegram_id, _granularity(request), date_from, date_to
+    )
+    return web.json_response(_cashflow_payload(report))
+
+
+@routes.get("/miniapp/api/analytics/bonds")
+@handle_backend_errors
+async def get_analytics_bonds(request: web.Request) -> web.Response:
+    """Те же метрики в разрезе бумаг, по убыванию чистого потока."""
+    date_from, date_to = _analytics_range(request)
+    report = await analytics_api.get_bond_breakdown(
+        current_user(request).telegram_id, date_from, date_to, _bonds_limit(request)
+    )
+    return web.json_response(_bonds_payload(report))
 
 
 @routes.get("/miniapp/api/notifications")

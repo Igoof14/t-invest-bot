@@ -10,9 +10,18 @@ import pytest_asyncio
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 from common.brokers import Broker
+from core.clients.backend import analytics as analytics_api
 from core.clients.backend import coupons as coupons_api
 from core.clients.backend import notifications as notifications_api
 from core.clients.backend import users as users_api
+from core.clients.backend.analytics import (
+    BondBreakdown,
+    BondRow,
+    Cashflow,
+    MetricColumn,
+    MetricSeries,
+    Period,
+)
 from core.clients.backend.common import PositionAccount
 from core.clients.backend.coupons import CouponItem, CouponPayments, DisclosureInfo, NsdInfo
 from core.clients.backend.errors import BackendError, UserNotFound
@@ -550,3 +559,108 @@ async def test_rejections_are_not_cacheable(client: TestClient) -> None:
     assert bad_request.status == 400
     for response in (unauthorized, not_found, bad_request):
         assert response.headers["Cache-Control"] == "no-store"
+
+
+def _cashflow() -> Cashflow:
+    return Cashflow(
+        granularity="month",
+        date_from=date(2026, 1, 1),
+        date_to=date(2026, 2, 28),
+        periods=[
+            Period(key="2026-01", label="янв 2026", start=date(2026, 1, 1), end=date(2026, 1, 31)),
+            Period(key="2026-02", label="фев 2026", start=date(2026, 2, 1), end=date(2026, 2, 28)),
+        ],
+        metrics=[
+            MetricSeries(
+                key="coupons", label="Купоны", sign="income", values=[100.0, 0.0], total=100.0
+            ),
+            MetricSeries(
+                key="deposits", label="Пополнения", sign="neutral", values=[900.0, 0.0], total=900.0
+            ),
+        ],
+    )
+
+
+async def test_cashflow_keeps_metrics_a_list(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Метрики уезжают списком: их состав задаёт бэкенд, а не схема ответа."""
+    get_cashflow = AsyncMock(return_value=_cashflow())
+    monkeypatch.setattr(analytics_api, "get_cashflow", get_cashflow)
+
+    response = await client.get("/miniapp/api/analytics/cashflow", headers=auth())
+
+    assert response.status == 200
+    payload = await response.json()
+    assert [period["key"] for period in payload["periods"]] == ["2026-01", "2026-02"]
+    assert [metric["key"] for metric in payload["metrics"]] == ["coupons", "deposits"]
+    assert payload["metrics"][0]["values"] == [100.0, 0.0]
+    assert payload["date_to"] == "2026-02-28"
+
+
+async def test_cashflow_uses_id_from_signature(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Диапазон и гранулярность берём из query, telegram_id — только из подписи."""
+    get_cashflow = AsyncMock(return_value=_cashflow())
+    monkeypatch.setattr(analytics_api, "get_cashflow", get_cashflow)
+
+    response = await client.get(
+        "/miniapp/api/analytics/cashflow?granularity=week&date_from=2026-01-01&date_to=2026-02-28",
+        headers=auth(),
+    )
+
+    assert response.status == 200
+    get_cashflow.assert_awaited_once_with(TELEGRAM_ID, "week", date(2026, 1, 1), date(2026, 2, 28))
+
+
+async def test_cashflow_ignores_broken_params(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Мусор в query не отказ: экран открывается на значениях по умолчанию."""
+    get_cashflow = AsyncMock(return_value=_cashflow())
+    monkeypatch.setattr(analytics_api, "get_cashflow", get_cashflow)
+
+    response = await client.get(
+        "/miniapp/api/analytics/cashflow?granularity=час&date_from=вчера", headers=auth()
+    )
+
+    assert response.status == 200
+    get_cashflow.assert_awaited_once_with(TELEGRAM_ID, "month", None, None)
+
+
+async def test_bond_breakdown_passthrough(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Колонки тоже приезжают данными — таблица рисует то, что пришло."""
+    get_bonds = AsyncMock(
+        return_value=BondBreakdown(
+            date_from=date(2026, 1, 1),
+            date_to=date(2026, 1, 31),
+            columns=[
+                MetricColumn(key="coupons", label="Купоны", sign="income"),
+                MetricColumn(key="taxes", label="Налоги", sign="expense"),
+            ],
+            items=[
+                BondRow(
+                    isin="RU000A10AU73",
+                    ticker="GTLK",
+                    name="ГТЛК",
+                    events=3,
+                    values={"coupons": 100.0, "taxes": 13.0},
+                )
+            ],
+        )
+    )
+    monkeypatch.setattr(analytics_api, "get_bond_breakdown", get_bonds)
+
+    response = await client.get(
+        "/miniapp/api/analytics/bonds?limit=5&date_from=2026-01-01", headers=auth()
+    )
+
+    assert response.status == 200
+    payload = await response.json()
+    assert [column["key"] for column in payload["columns"]] == ["coupons", "taxes"]
+    assert payload["items"][0]["values"]["taxes"] == 13.0
+    assert payload["items"][0]["events"] == 3
+    get_bonds.assert_awaited_once_with(TELEGRAM_ID, date(2026, 1, 1), None, 5)

@@ -8,8 +8,8 @@ import pytest
 from aiogram.types import InlineKeyboardMarkup
 from core.clients.backend.errors import BackendError
 from core.clients.backend.notifications import NotificationSettings
-from features.menu.callbacks import MenuCallback
 from core.config import config
+from features.menu.callbacks import MenuCallback
 from features.menu.keyboards import (
     HUB_KEY,
     HUB_STALE_NOTE,
